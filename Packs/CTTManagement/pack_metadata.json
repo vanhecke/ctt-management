@@ -1,0 +1,28 @@
+{
+  "name": "CTT Management",
+  "description": "CTT Management: guidelines monitoring, tenant statistics and the CTT Assistant agent for a shared Cortex Team Tenant (CTT).",
+  "support": "community",
+  "currentVersion": "1.0.0",
+  "author": "Joris Vanhecke",
+  "url": "https://github.com/vanhecke/ctt-management",
+  "email": "",
+  "categories": [
+    "Utilities"
+  ],
+  "tags": [],
+  "useCases": [],
+  "keywords": [
+    "CTT",
+    "Cortex Team Tenant",
+    "hygiene",
+    "governance",
+    "health",
+    "agentix",
+    "agent"
+  ],
+  "marketplaces": [
+    "marketplacev2",
+    "platform"
+  ],
+  "githubUser": []
+}
