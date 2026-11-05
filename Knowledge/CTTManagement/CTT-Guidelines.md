@@ -170,8 +170,8 @@ Before you leave the team, delete your objects or hand them over to another DC, 
 
 - The CTT Management pack watches the management audit log and runs a daily sweep.
 - When a guideline is broken, it raises a **health issue** named
-  `CTT - Hygiene - <guideline ID> - <what happened>`. Health issues appear under Health and in the
-  Issues table (domain Health). They never create cases.
+  `CTT - Hygiene - <guideline ID> - <what happened>`. Each one appears in the Issues table and
+  opens its own case, both in the **Health** domain, apart from the Security cases you demo with.
 - Each issue names the guideline, the object and the person who made the change.
 - Nothing is changed or deleted automatically, and nobody is messaged yet. A future CTT agent will
   follow up on these issues and talk to the owner on Slack.

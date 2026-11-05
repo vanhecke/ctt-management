@@ -19,7 +19,7 @@ commit as any change to a rule, a sweep check or a guideline.
   catches the current state, including objects created before monitoring started.
 
 Issue names follow `CTT - Hygiene - <ID> - <what happened>`. Every issue is Medium severity or
-higher, in the Health domain, and never creates a case.
+higher and opens its own case, both in the Health domain (verified on joris on 2026-11-05).
 
 ## Coverage
 

@@ -1,0 +1,20 @@
+{
+    "id": "CTT - Registry Source",
+    "name": "CTT - Registry Source",
+    "type": "plain_text",
+    "description": "Fallback CTT registry as CSV, used by CTTRegistrySync when no Google Sheet is configured. One row per tag. Managed in git.",
+    "data": "tag,owner_email,owner_name,role,team,lab_octet,active,notes\nCTT,jvanhecke@paloaltonetworks.com,CTT admins,central,CTT,,true,Central content (reserved tag)\njvanhecke,jvanhecke@paloaltonetworks.com,Joris Vanhecke,admin,ASEAN,,true,Example row: set lab_octet\n",
+    "version": -1,
+    "fromVersion": "8.9.0",
+    "itemVersion": "",
+    "locked": false,
+    "nameLocked": false,
+    "packID": "CTTManagement",
+    "system": false,
+    "allRead": true,
+    "allReadWrite": false,
+    "marketplaces": [
+        "marketplacev2",
+        "platform"
+    ]
+}
