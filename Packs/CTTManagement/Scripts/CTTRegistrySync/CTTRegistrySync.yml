@@ -1,0 +1,67 @@
+commonfields:
+  id: CTTRegistrySync
+  version: -1
+name: CTTRegistrySync
+comment: Syncs the CTT registry (DC tags, lab octets, Slack IDs, admins) from the Google Sheet, or the "CTT - Registry Source" list as a fallback, into the ctt_registry lookup dataset and the "CTT - Registry" list. Settings come from the "CTT - Config" list.
+script: '-'
+type: python
+subtype: python3
+dockerimage: demisto/python3:3.12.15.14069087
+runas: DBotWeakRole
+enabled: true
+tags:
+- CTT
+args:
+- name: source
+  auto: PREDEFINED
+  predefined:
+  - auto
+  - sheet
+  - list
+  description: Where to read the registry. auto tries the Google Sheet and falls back to the list. Defaults to registry.source in "CTT - Config".
+- name: dry_run
+  auto: PREDEFINED
+  predefined:
+  - "true"
+  - "false"
+  defaultValue: "false"
+  description: Validate and show the registry without writing the lookup dataset or the list.
+outputs:
+- contextPath: CTT.Registry.tag
+  description: Tag (lower case).
+  type: String
+- contextPath: CTT.Registry.primary_tag
+  description: The owner's primary tag.
+  type: String
+- contextPath: CTT.Registry.owner_email
+  description: Owner email (lower case).
+  type: String
+- contextPath: CTT.Registry.owner_name
+  description: Owner name.
+  type: String
+- contextPath: CTT.Registry.slack_id
+  description: Owner Slack member ID.
+  type: String
+- contextPath: CTT.Registry.role
+  description: admin, dc or central.
+  type: String
+- contextPath: CTT.Registry.lab_octet
+  description: The x in the owner's lab range 10.x.0.0/16.
+  type: String
+- contextPath: CTT.Registry.active
+  description: true or false.
+  type: String
+- contextPath: CTT.Registry.tag_kind
+  description: primary, extra or central.
+  type: String
+dependson:
+  must:
+  - core-api-post
+  should:
+  - google-sheets-spreadsheet-get
+fromversion: 8.9.0
+marketplaces:
+- marketplacev2
+- platform
+tests:
+- No tests (auto formatted)
