@@ -19,7 +19,7 @@ Monitoring raises health issues, assigns each to the person responsible and send
 | Correlation rule | CTT - Hygiene - Endpoint outside owner's lab range | Daily: endpoint in an unassigned or someone else's 10.x.0.0/16 range (CTT-LAB-01) |
 | (not shipped) | CTT - Hygiene - Endpoint without owner tag | Spec in tools/, ships once CTT-LAB-02 is accepted |
 | (not shipped) | CTT - Hygiene - API key created without expiry | Spec in tools/, ships once CTT-CEN-02 is accepted |
-| Job + playbook | CTT - Registry Sync | Every 6 hours: Google Sheet registry to the `ctt_registry` lookup and the `CTT - Registry` list |
+| Job + playbook | CTT - Registry Sync | Every hour: Google Sheet registry to the `ctt_registry` lookup and the `CTT - Registry` list |
 | Job + playbook | CTT - Hygiene - Daily Sweep | 08:30 SGT: inventory and stale-case checks, one issue per guideline and owner |
 | Job + playbook | CTT - Tenant Status | Daily 09:00 SGT: replaces the Tenant Status canvas and sets the CTT channel topic |
 | Playbook | CTT - Hygiene - Notify Owner | Per CTT hygiene issue: assign it to its owner and send a Slack DM (FOUND / RULE / FIX template, or AI text with `notify.use_ai`) |

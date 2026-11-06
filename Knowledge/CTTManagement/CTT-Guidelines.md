@@ -29,7 +29,7 @@ admins and are not monitored yet.
 ## Your tag
 
 Every DC owns tags, listed in the CTT registry: a Google Sheet maintained by the CTT admins and
-synced into the tenant every 6 hours.
+synced into the tenant every hour.
 
 - Your **primary tag** is your email username, for example `jvanhecke`.
 - You also get a short **alias**, usually three letters, for example `jva`. Both are yours; use

@@ -18,10 +18,10 @@ JOBS = [
     {
         "name": "CTT - Registry Sync",
         "script": "CTTRegistrySync",
-        "description": "Syncs the CTT registry (tags, lab octets, Slack IDs, admins) from the Google Sheet into the ctt_registry lookup dataset and the 'CTT - Registry' list. Run by the job of the same name every 6 hours.",
+        "description": "Syncs the CTT registry (tags, lab octets, Slack IDs, admins) from the Google Sheet into the ctt_registry lookup dataset and the 'CTT - Registry' list. Run by the job of the same name every hour.",
         "task": "Sync the CTT registry",
         "inputs": {"source": ("", "auto, sheet or list. Empty uses registry.source in 'CTT - Config'.")},
-        "cron": {"timePeriodType": "hours", "timePeriod": 6},
+        "cron": {"timePeriodType": "hours", "timePeriod": 1},
     },
     {
         "name": "CTT - Hygiene - Daily Sweep",
