@@ -84,15 +84,23 @@ def check_case(case: dict, now_ms: int, stale_days: int) -> dict | None:
     }
 
 
+def item_key(f: dict) -> str:
+    """Stable identity of a finding (kind and name only), so details that change daily (a case's
+    idle days) don't count as a change. Short, to keep the state list small."""
+    return hashlib.sha256(f"{f['kind']}|{f['name']}".encode()).hexdigest()[:8]
+
+
 def group_findings(findings: list[dict]) -> dict[str, dict]:
     groups: dict[str, dict] = {}
     for f in findings:
         key = f"{f['guideline']}|{f['owner']}"
-        g = groups.setdefault(key, {"guideline": f["guideline"], "owner": f["owner"], "items": []})
+        g = groups.setdefault(key, {"guideline": f["guideline"], "owner": f["owner"], "items": [], "keys": set()})
         g["items"].append(f"{f['kind']} '{f['name']}': {f['detail']}")
+        g["keys"].add(item_key(f))
     for g in groups.values():
         g["items"] = sorted(set(g["items"]))
-        g["fingerprint"] = hashlib.sha256("\n".join(g["items"]).encode()).hexdigest()[:16]
+        g["keys"] = sorted(g["keys"])
+        g["fingerprint"] = hashlib.sha256("".join(g["keys"]).encode()).hexdigest()[:16]
     return groups
 
 
@@ -108,7 +116,7 @@ def plan(groups: dict[str, dict], state: dict[str, dict]) -> tuple[list[str], li
         if not prev:
             raise_keys.append(key)
         elif prev.get("fingerprint") != group["fingerprint"]:
-            if set(group["items"]) - set(prev.get("items") or []):
+            if set(group["keys"]) - set(prev.get("keys") or []):
                 raise_keys.append(key)
                 resolve_keys.append(key)
             else:
@@ -354,13 +362,13 @@ def main():  # pragma: no cover
                     state[key] = {
                         "fingerprint": groups[key]["fingerprint"],
                         "external_id": ext,
-                        "items": groups[key]["items"],
+                        "keys": groups[key]["keys"],
                     }
                     raised.append(key)
                 except Exception as e:
                     errors.append(f"raise {key}: {e}")
             for key in update_keys:
-                state[key].update(fingerprint=groups[key]["fingerprint"], items=groups[key]["items"])
+                state[key].update(fingerprint=groups[key]["fingerprint"], keys=groups[key]["keys"])
             save_list_json(STATE_LIST, state)
 
         rows = [

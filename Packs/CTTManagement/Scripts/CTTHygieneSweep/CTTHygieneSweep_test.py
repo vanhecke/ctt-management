@@ -73,14 +73,26 @@ def test_group_and_plan():
     ]
     groups = group_findings(findings)
     key = "CTT-TAG-01|u"
+    keys = groups[key]["keys"]
     assert list(groups) == [key]
+    assert len(keys) == 2
     assert plan(groups, {}) == ([key], [], [])
-    same = {key: {"fingerprint": groups[key]["fingerprint"], "items": groups[key]["items"]}, "CTT-CASE-01|x": {"items": ["old"]}}
+    same = {key: {"fingerprint": groups[key]["fingerprint"], "keys": keys}, "CTT-CASE-01|x": {"keys": ["old"]}}
     assert plan(groups, same) == ([], ["CTT-CASE-01|x"], [])
-    shrunk = {key: {"fingerprint": "older", "items": [*groups[key]["items"], "Script 'c': no tag prefix"]}}
+    shrunk = {key: {"fingerprint": "older", "keys": [*keys, "deadbeef"]}}
     assert plan(groups, shrunk) == ([], [], [key])
-    grew = {key: {"fingerprint": "older", "items": groups[key]["items"][:1]}}
+    grew = {key: {"fingerprint": "older", "keys": keys[:1]}}
     assert plan(groups, grew) == ([key], [key], [])
+
+
+def test_changing_detail_is_not_a_change():
+    day1 = group_findings(
+        [{"kind": "Case", "name": "#7 Lab", "guideline": "CTT-CASE-01", "owner": "u", "detail": "no change for 8 days"}]
+    )
+    day2 = group_findings(
+        [{"kind": "Case", "name": "#7 Lab", "guideline": "CTT-CASE-01", "owner": "u", "detail": "no change for 9 days"}]
+    )
+    assert day1["CTT-CASE-01|u"]["fingerprint"] == day2["CTT-CASE-01|u"]["fingerprint"]
 
 
 def test_issue_body():
