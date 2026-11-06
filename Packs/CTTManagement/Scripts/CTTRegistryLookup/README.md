@@ -1,0 +1,1 @@
+Looks up the CTT registry by tag, email, name, lab octet or a `10.x.y.z` address and returns each matching person with all their tags, lab range, role and active flag. Reads the `CTT - Registry` list that CTTRegistrySync writes. Backs the CTT Assistant agent.

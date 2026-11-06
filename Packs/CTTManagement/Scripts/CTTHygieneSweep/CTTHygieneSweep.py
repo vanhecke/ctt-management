@@ -54,6 +54,13 @@ def check_object(obj: dict, registry: dict[str, dict]) -> list[dict]:
     return findings
 
 
+def inventory_entry(obj: dict, registry: dict[str, dict]) -> dict:
+    tag = parse_tag(obj.get("name") or "")
+    entry = registry.get(tag or "")
+    owner = (entry.get("owner_email") or "central") if entry else (obj.get("creator") or "unknown").lower()
+    return {"kind": obj["kind"], "name": obj.get("name") or "", "tag": tag if entry else None, "owner": owner}
+
+
 def check_case(case: dict, now_ms: int, stale_days: int) -> dict | None:
     modified = case.get("modification_time") or case.get("creation_time") or now_ms
     idle_days = int((now_ms - modified) // DAY_MS)
@@ -265,6 +272,7 @@ def main():  # pragma: no cover
     try:
         args = demisto.args()
         dry_run = argToBoolean(args.get("dry_run", "false"))
+        include_inventory = argToBoolean(args.get("include_inventory", "false"))
         cfg = get_list_json(CONFIG_LIST, {})
         sweep_cfg = cfg.get("sweep", {})
         stale_days = int(args.get("stale_case_days") or sweep_cfg.get("stale_case_days", 7))
@@ -277,8 +285,10 @@ def main():  # pragma: no cover
 
         errors: list[str] = []
         findings: list[dict] = []
-        for obj in collect_objects(errors):
+        objects = collect_objects(errors)
+        for obj in objects:
             findings.extend(check_object(obj, registry))
+        inventory = [inventory_entry(o, registry) for o in objects] if include_inventory else []
         try:
             for case in collect_open_security_cases(stale_days, now_ms):
                 f = check_case(case, now_ms, stale_days)
@@ -326,7 +336,7 @@ def main():  # pragma: no cover
             CommandResults(
                 readable_output=md,
                 outputs_prefix="CTT.Sweep",
-                outputs={"Findings": findings, "Raised": raised, "Resolved": resolved, "Errors": errors},
+                outputs={"Findings": findings, "Inventory": inventory, "Raised": raised, "Resolved": resolved, "Errors": errors},
             )
         )
     except Exception as e:

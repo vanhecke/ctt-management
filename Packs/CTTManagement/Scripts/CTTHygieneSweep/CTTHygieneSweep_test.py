@@ -1,4 +1,14 @@
-from CTTHygieneSweep import DAY_MS, check_case, check_object, group_findings, issue_body, parse_tag, plan, registry_index
+from CTTHygieneSweep import (
+    DAY_MS,
+    check_case,
+    check_object,
+    group_findings,
+    inventory_entry,
+    issue_body,
+    parse_tag,
+    plan,
+    registry_index,
+)
 
 REGISTRY = registry_index(
     [
@@ -83,3 +93,14 @@ def test_issue_body():
     assert issue["issue_domain"] == "Health"
     assert issue["severity"] == "MEDIUM"
     assert "and 10 more" in issue["description"]
+
+
+def test_inventory_entry():
+    assert inventory_entry({"kind": "Script", "name": "ali_Thing"}, REGISTRY) == {
+        "kind": "Script",
+        "name": "ali_Thing",
+        "tag": "ali",
+        "owner": "alice@x.com",
+    }
+    assert inventory_entry({"kind": "Job", "name": "CTT - Sync"}, REGISTRY)["owner"] == "central"
+    assert inventory_entry({"kind": "Script", "name": "Loose", "creator": "Z@x.com"}, REGISTRY)["owner"] == "z@x.com"

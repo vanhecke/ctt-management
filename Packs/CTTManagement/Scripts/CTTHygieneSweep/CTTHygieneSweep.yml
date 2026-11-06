@@ -19,11 +19,21 @@ args:
   - "false"
   defaultValue: "false"
   description: Report findings without raising or resolving issues.
+- name: include_inventory
+  auto: PREDEFINED
+  predefined:
+  - "true"
+  - "false"
+  defaultValue: "false"
+  description: Also return every inspected object with its tag and owner (CTT.Sweep.Inventory).
 - name: stale_case_days
   description: Days without change after which an open Security case counts as stale. Defaults to sweep.stale_case_days in "CTT - Config".
 outputs:
 - contextPath: CTT.Sweep.Findings
   description: One entry per finding (kind, name, guideline, owner, detail).
+  type: Unknown
+- contextPath: CTT.Sweep.Inventory
+  description: With include_inventory, every inspected object (kind, name, tag, owner).
   type: Unknown
 - contextPath: CTT.Sweep.Raised
   description: Guideline|owner keys that got a new issue.

@@ -1,0 +1,41 @@
+commonfields:
+  id: CTTRegistryLookup
+  version: -1
+name: CTTRegistryLookup
+comment: Looks up the CTT registry (the "CTT - Registry" list written by CTTRegistrySync) by tag, email, name, lab octet or a 10.x.y.z address, and returns each matching person with all their tags, lab range, role and active flag. Backs the CTT Assistant agent.
+script: '-'
+type: python
+subtype: python3
+dockerimage: demisto/python3:3.12.15.14069087
+runas: DBotWeakRole
+enabled: true
+tags:
+- CTT
+args:
+- name: query
+  description: A tag (jvanhecke, jva), an email, part of a name, a lab octet (7) or an IP (10.7.1.20). Empty returns everyone.
+outputs:
+- contextPath: CTT.RegistryLookup.owner_name
+  description: Owner name.
+  type: String
+- contextPath: CTT.RegistryLookup.owner_email
+  description: Owner email.
+  type: String
+- contextPath: CTT.RegistryLookup.tags
+  description: All tags of the owner.
+  type: Unknown
+- contextPath: CTT.RegistryLookup.lab_range
+  description: The owner's lab range, 10.x.0.0/16.
+  type: String
+- contextPath: CTT.RegistryLookup.role
+  description: admin, dc or central.
+  type: String
+- contextPath: CTT.RegistryLookup.active
+  description: true or false.
+  type: String
+fromversion: 8.9.0
+marketplaces:
+- marketplacev2
+- platform
+tests:
+- No tests (auto formatted)

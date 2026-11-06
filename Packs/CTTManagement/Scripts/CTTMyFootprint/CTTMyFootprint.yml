@@ -1,0 +1,40 @@
+commonfields:
+  id: CTTMyFootprint
+  version: -1
+name: CTTMyFootprint
+comment: Lists what one DC owns on the tenant (custom playbooks, scripts, jobs, integration instances, correlation rules, lookups) and which of those objects, or open Security cases, break the CTT guidelines. Runs CTTHygieneSweep as a dry run, so it never raises or resolves issues. Backs the CTT Assistant agent.
+script: '-'
+type: python
+subtype: python3
+dockerimage: demisto/python3:3.12.15.14069087
+runas: DBotWeakRole
+enabled: true
+timeout: 600ns
+tags:
+- CTT
+args:
+- name: owner
+  required: true
+  description: The DC's tag (jvanhecke, jva) or email.
+outputs:
+- contextPath: CTT.Footprint.owner
+  description: Owner email.
+  type: String
+- contextPath: CTT.Footprint.tags
+  description: All tags of the owner.
+  type: Unknown
+- contextPath: CTT.Footprint.objects
+  description: Objects owned (kind, name, tag).
+  type: Unknown
+- contextPath: CTT.Footprint.findings
+  description: Guideline findings for the owner (guideline, kind, name, detail).
+  type: Unknown
+dependson:
+  must:
+  - CTTHygieneSweep
+fromversion: 8.9.0
+marketplaces:
+- marketplacev2
+- platform
+tests:
+- No tests (auto formatted)
