@@ -40,7 +40,7 @@ def rows_to_dicts(rows: list[list[Any]]) -> list[dict[str, str]]:
 
 
 def csv_to_rows(text: str) -> list[list[str]]:
-    return [row for row in csv.reader(io.StringIO(text or ""))]
+    return list(csv.reader(io.StringIO(text or "")))
 
 
 def sheet_values(sheet: dict) -> list[list[Any]]:
@@ -213,7 +213,9 @@ def sync_lookup(dataset: str, records: list[dict[str, str]]) -> list[str]:
     rows = existing.get("data", []) if isinstance(existing, dict) else (existing or [])
     removed = tags_to_remove(rows, records)
     for tag in removed:
-        core_api_post("/public_api/v1/xql/lookups/remove_data", {"request_data": {"dataset_name": dataset, "filters": {"tag": tag}}})
+        core_api_post(
+            "/public_api/v1/xql/lookups/remove_data", {"request_data": {"dataset_name": dataset, "filters": {"tag": tag}}}
+        )
     core_api_post(
         "/public_api/v1/xql/lookups/add_data",
         {"request_data": {"dataset_name": dataset, "key_fields": ["tag"], "data": records}},
