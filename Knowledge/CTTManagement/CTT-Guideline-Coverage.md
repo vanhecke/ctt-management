@@ -7,7 +7,7 @@ commit as any change to a rule, a sweep check or a guideline.
 
 - **Yes**: a deployed rule or check raises a health issue.
 - **Partial**: some cases are caught; see Limitations.
-- **Built**: in the CTTManagement pack, not deployed to cttasean yet.
+- **Built**: in the CTTManagement pack and tested on the joris test tenant, not deployed to cttasean yet.
 - **Planned**: designed, not built yet.
 - **No**: not monitored, and no design yet.
 - **Not feasible**: the tenant offers no data to check it.
@@ -37,9 +37,9 @@ higher and opens its own case, both in the Health domain (verified on joris on 2
 | CTT-OOTB-01 | Don't edit built-in content; duplicate it | Active | Built | Rule `CTT - Hygiene - Built-in or untagged content changed` (edit, delete, adopt and detach on objects without a registered tag; CTT admins exempt) | `Built-in or untagged content changed` | Can't tell built-in from untagged custom objects; both are flagged | Deploy |
 | CTT-OOTB-02 | Don't edit built-in AI agents | Active | Built | Same rule as CTT-OOTB-01, for agents and agent actions | `Built-in or untagged content changed` | As above | Deploy |
 | CTT-CEN-01 | Leave centrally managed areas to the CTT admins | Active | Built | Rule `CTT - Hygiene - Centrally managed setting changed` (tenant settings, permissions, SSO, pack installs, managed integration brands, `CTT` objects; non-admins only) | `Centrally managed setting changed` (High) | Managed brands are listed in the rule; CIE and XTI/TIM audit types not identified yet | Deploy; add CIE and TIM types |
-| CTT-CEN-02 | API keys with expiry date and tag | Proposed | Built (disabled) | Rule `CTT - Hygiene - API key created without expiry`, ships disabled | `API key created without expiry` | Enable when the guideline is accepted | Decide on the guideline |
+| CTT-CEN-02 | API keys with expiry date and tag | Proposed | Designed | Rule spec `CTT - Hygiene - API key created without expiry` in the generator, not shipped | `API key created without expiry` | Ship when the guideline is accepted | Decide on the guideline |
 | CTT-LAB-01 | Build your lab in your own IP range | Active | Built | Rule `CTT - Hygiene - Endpoint outside owner's lab range` (daily, `endpoints`; owner from endpoint tag, prevention policy tag or installation package tag) | `Endpoint outside owner's lab range` | Only endpoints with an agent; IPs outside 10.0.0.0/8 are skipped | Deploy |
-| CTT-LAB-02 | Tag your endpoints | Proposed | Built (disabled) | Rule `CTT - Hygiene - Endpoint without owner tag`, ships disabled | `Endpoint without owner tag` | Enable when the guideline is accepted | Decide on the guideline |
+| CTT-LAB-02 | Tag your endpoints | Proposed | Designed | Rule spec `CTT - Hygiene - Endpoint without owner tag` in the generator, not shipped | `Endpoint without owner tag` | Ship when the guideline is accepted | Decide on the guideline |
 | CTT-LAB-03 | Remove what you no longer use | Proposed | No | Candidate: Sweep for endpoints disconnected over 30 days | None | None | Decide on the guideline |
 | CTT-CASE-01 | Close Security Testing cases when done | Active | Built | Sweep: open Security cases unchanged for 7 days, grouped per assignee; the CTT Assistant can close cases on request | `Stale open Security cases` | "Done" is inferred from inactivity | Deploy |
 | CTT-CASE-02 | Assign your test cases to yourself | Proposed | No | Candidate: Sweep for open unassigned Security cases older than 1 day | None | None | Decide on the guideline |
@@ -52,3 +52,4 @@ higher and opens its own case, both in the Health domain (verified on joris on 2
 |---|---|
 | 2026-11-05 | First version; all mechanisms planned |
 | 2026-11-06 | Rules, sweep and agent built in the CTTManagement pack |
+| 2026-11-06 | CTT-CEN-02 and CTT-LAB-02 rules kept out of the pack until accepted (pack installs ignore is_enabled: false); tested end to end on joris (1.0.8) |
