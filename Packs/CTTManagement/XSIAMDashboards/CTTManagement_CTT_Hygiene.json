@@ -1,0 +1,555 @@
+{
+    "dashboards_data": [
+        {
+            "id": "1e802e3e729f5a48b1bd829052d22299",
+            "global_id": "1e802e3e729f5a48b1bd829052d22299",
+            "name": "CTT - Hygiene",
+            "description": "CTT tenant hygiene: guideline issues, who changes what, untagged objects, stale cases, endpoint ownership and the registry.",
+            "status": "ENABLED",
+            "default_dashboard_id": 1,
+            "layout": [
+                {
+                    "id": "row-1",
+                    "data": [
+                        {
+                            "key": "xql_1793900000000",
+                            "data": {
+                                "type": "Custom XQL",
+                                "width": 40,
+                                "height": 400,
+                                "phrase": "dataset = issues\n| filter xdm.issue.name ~= \"^CTT - Hygiene - \"\n| dedup xdm.issue.id by desc _insert_time\n| alter guideline = arrayindex(regextract(xdm.issue.name, \"(CTT-[A-Z]+-[0-9]+)\"), 0)\n| comp count() as issues by guideline\n| sort desc issues\n| view graph type = column subtype = grouped header = \"Hygiene issues by guideline\" xaxis = guideline yaxis = issues",
+                                "time_frame": {
+                                    "relativeTime": 2592000000
+                                },
+                                "viewOptions": {
+                                    "type": "column",
+                                    "commands": [
+                                        {
+                                            "command": {
+                                                "op": "=",
+                                                "name": "subtype",
+                                                "value": "grouped"
+                                            }
+                                        },
+                                        {
+                                            "command": {
+                                                "op": "=",
+                                                "name": "header",
+                                                "value": "\"Hygiene issues by guideline\""
+                                            }
+                                        },
+                                        {
+                                            "command": {
+                                                "op": "=",
+                                                "name": "xaxis",
+                                                "value": "guideline"
+                                            }
+                                        },
+                                        {
+                                            "command": {
+                                                "op": "=",
+                                                "name": "yaxis",
+                                                "value": "issues"
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "key": "xql_1793900000001",
+                            "data": {
+                                "type": "Custom XQL",
+                                "width": 60,
+                                "height": 400,
+                                "phrase": "dataset = issues\n| filter xdm.issue.name ~= \"^CTT - Hygiene - \"\n| dedup xdm.issue.id by desc _insert_time\n| alter guideline = arrayindex(regextract(xdm.issue.name, \"(CTT-[A-Z]+-[0-9]+)\"), 0)\n| filter xdm.issue.status.progress != \"RESOLVED\"\n| fields _time, guideline, xdm.issue.name, xdm.issue.description, xdm.issue.status.progress, xdm.issue.id\n| sort desc _time",
+                                "time_frame": {
+                                    "relativeTime": 2592000000
+                                },
+                                "viewOptions": {
+                                    "type": "table",
+                                    "commands": []
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "row-2",
+                    "data": [
+                        {
+                            "key": "xql_1793900000010",
+                            "data": {
+                                "type": "Custom XQL",
+                                "width": 50,
+                                "height": 400,
+                                "phrase": "dataset = issues\n| filter xdm.issue.name ~= \"^CTT - Hygiene - \"\n| dedup xdm.issue.id by desc _insert_time\n| alter guideline = arrayindex(regextract(xdm.issue.name, \"(CTT-[A-Z]+-[0-9]+)\"), 0)\n| bin _time span = 1d\n| comp count() as issues by _time, guideline\n| view graph type = line header = \"Hygiene issues per day\" xaxis = _time yaxis = issues series = guideline",
+                                "time_frame": {
+                                    "relativeTime": 2592000000
+                                },
+                                "viewOptions": {
+                                    "type": "line",
+                                    "commands": [
+                                        {
+                                            "command": {
+                                                "op": "=",
+                                                "name": "header",
+                                                "value": "\"Hygiene issues per day\""
+                                            }
+                                        },
+                                        {
+                                            "command": {
+                                                "op": "=",
+                                                "name": "xaxis",
+                                                "value": "_time"
+                                            }
+                                        },
+                                        {
+                                            "command": {
+                                                "op": "=",
+                                                "name": "yaxis",
+                                                "value": "issues"
+                                            }
+                                        },
+                                        {
+                                            "command": {
+                                                "op": "=",
+                                                "name": "series",
+                                                "value": "guideline"
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "key": "xql_1793900000011",
+                            "data": {
+                                "type": "Custom XQL",
+                                "width": 50,
+                                "height": 400,
+                                "phrase": "dataset = management_auditing\n| filter management_auditing_result = ENUM.MANAGEMENT_AUDIT_SUCCESS and email contains \"@\"\n| filter subtype ~= \"^(Add|Upload|Copy|Create|New|Edit|Delete|Change|Update|Install)\"\n| comp count() as changes by user_name\n| sort desc changes\n| limit 15\n| view graph type = column subtype = grouped header = \"Changes by person\" xaxis = user_name yaxis = changes",
+                                "time_frame": {
+                                    "relativeTime": 604800000
+                                },
+                                "viewOptions": {
+                                    "type": "column",
+                                    "commands": [
+                                        {
+                                            "command": {
+                                                "op": "=",
+                                                "name": "subtype",
+                                                "value": "grouped"
+                                            }
+                                        },
+                                        {
+                                            "command": {
+                                                "op": "=",
+                                                "name": "header",
+                                                "value": "\"Changes by person\""
+                                            }
+                                        },
+                                        {
+                                            "command": {
+                                                "op": "=",
+                                                "name": "xaxis",
+                                                "value": "user_name"
+                                            }
+                                        },
+                                        {
+                                            "command": {
+                                                "op": "=",
+                                                "name": "yaxis",
+                                                "value": "changes"
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "row-3",
+                    "data": [
+                        {
+                            "key": "xql_1793900000020",
+                            "data": {
+                                "type": "Custom XQL",
+                                "width": 55,
+                                "height": 400,
+                                "phrase": "dataset = management_auditing\n| filter management_auditing_result = ENUM.MANAGEMENT_AUDIT_SUCCESS\n| filter email != null and email not in (\"Palo Alto Networks\", \"N/A\", \"Xpanse Development\")\n| alter actor_email = if(email contains \"@\", lowercase(email), null), actor_name = lowercase(user_name)\n| alter object_kind = coalesce(arrayindex(regextract(subtype, \"^[A-Za-z ]+ - (.+)$\"), 0), replex(to_string(management_auditing_type), \"^(MANAGEMENT_AUDIT_|management_auditing_type_)\", \"\"))\n| alter action = if(subtype ~= \"^(Add|Upload|Copy|Create|New|Save as new|Import)\" or subtype ~= \"^(Create|Upload lookup|Addition)\", \"create\", if(subtype ~= \"(Delete|Remove)\", \"delete\", if(subtype ~= \"(Edit|Change|Update|Modif|Adopt|Detach|Enable|Disable|Rename|Scope Edit)\", \"modify\", \"other\")))\n| alter object_name = coalesce(\n    arrayindex(regextract(description, \"ClonedPlaybookName: (.+?), ID:\"), 0),\n    arrayindex(regextract(description, \"playbookName: (.+?), ID:\"), 0),\n    arrayindex(regextract(description, \"scriptName: (.+?), (?:removed from|ID):\"), 0),\n    arrayindex(regextract(description, \"aiTaskName: (.+?), \"), 0),\n    arrayindex(regextract(description, \"CredentialsName: (.+?), ID:\"), 0),\n    arrayindex(regextract(description, \"ModuleName: ([^,]+)\"), 0),\n    arrayindex(regextract(description, \"ModuleBrand: (.+?), ID:\"), 0),\n    arrayindex(regextract(description, \"Layout (?:created|edited|deleted) - Name: (.+?), ID:\"), 0),\n    arrayindex(regextract(description, \"CaseField (?:created|edited|deleted) - Name: (.+?), Type:\"), 0),\n    arrayindex(regextract(description, \"Name: (.+?), JobID:\"), 0),\n    arrayindex(regextract(description, \"JobID: [^,]+, Name: (.+?), ID:\"), 0),\n    arrayindex(regextract(description, \"^name: (.+?), ID:\"), 0),\n    arrayindex(regextract(description, \"^Name: (.+?), ID:\"), 0),\n    arrayindex(regextract(description, \"dashboard '(.+?)'\"), 0),\n    arrayindex(regextract(description, \"(?:BIOC|Correlations? rule|IOC|Analytics BIOC|Attack Surface Rule) [a-z]+ - name: (.+?),? id: \"), 0),\n    arrayindex(regextract(description, \" profile (.+?) was (?:created|edited|deleted)\"), 0),\n    arrayindex(regextract(description, \"policy rule (.+?) (?:with target|updated|scope updated|was deleted|was created|created|was)\"), 0),\n    arrayindex(regextract(description, \"^Rule (.+?) status changed\"), 0),\n    arrayindex(regextract(description, \"Security Control: [^,]+, (.+)$\"), 0),\n    arrayindex(regextract(description, \"Connector Template '?(.+?)'? (?:created|deleted|modified)\"), 0),\n    arrayindex(regextract(description, \"Endpoint group '(.+?)'\"), 0),\n    arrayindex(regextract(description, \"lookup dataset called (\\S+)\"), 0),\n    arrayindex(regextract(description, \"Dataset (\\S+) of type\"), 0),\n    arrayindex(regextract(description, \"(?:query|macro) '(.+?)'\"), 0),\n    arrayindex(regextract(description, \"report template\\(?s?\\)? '(.+?)'\"), 0),\n    arrayindex(regextract(description, \"Cloud Security Rule '(.+?)'\"), 0),\n    arrayindex(regextract(description, \"installation package '(.+?)'\"), 0),\n    arrayindex(regextract(description, \"script, name: (.+?), description\"), 0),\n    arrayindex(regextract(description, \"^Edit (.+?), script id\"), 0),\n    if(object_kind in (\"Agent\", \"Action\", \"KnowledgeSource\", \"JobCenter\"), arrayindex(regextract(description, \"^(.+?)(?:, ID: .*)?$\"), 0), null)\n  )\n| alter obj_tag = lowercase(arrayindex(regextract(object_name, \"^\\s*([A-Za-z0-9]{2,16})\\s*[-_]\"), 0))\n| filter action = \"create\" and object_name != null and obj_tag = null\n| filter object_kind not in (\"AITask\", \"CaseField\", \"IssueField\", \"Credentials\", \"KnowledgeSource\", \"Investigation\", \"Indicator\", \"Entry\")\n| fields _time, user_name, object_kind, object_name, subtype\n| sort desc _time",
+                                "time_frame": {
+                                    "relativeTime": 604800000
+                                },
+                                "viewOptions": {
+                                    "type": "table",
+                                    "commands": []
+                                }
+                            }
+                        },
+                        {
+                            "key": "xql_1793900000021",
+                            "data": {
+                                "type": "Custom XQL",
+                                "width": 45,
+                                "height": 400,
+                                "phrase": "dataset = cases\n| dedup xdm.case.id by desc _insert_time\n| filter xdm.case.domain = \"SECURITY\" and xdm.case.status_progress != \"RESOLVED\"\n| alter age_days = timestamp_diff(current_time(), _time, \"DAY\")\n| fields xdm.case.id, xdm.case.name, xdm.case.assigned_to, xdm.case.severity, age_days\n| sort desc age_days",
+                                "time_frame": {
+                                    "relativeTime": 7776000000
+                                },
+                                "viewOptions": {
+                                    "type": "table",
+                                    "commands": []
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "row-4",
+                    "data": [
+                        {
+                            "key": "xql_1793900000030",
+                            "data": {
+                                "type": "Custom XQL",
+                                "width": 50,
+                                "height": 400,
+                                "phrase": "dataset = endpoints\n| dedup endpoint_id by desc last_seen\n| alter endpoint_tags = json_extract_scalar_array(tags, \"$.endpoint_tags\")\n| alter policy_tag = lowercase(arrayindex(regextract(assigned_prevention_policy, \"^\\s*([A-Za-z0-9]{2,16})\\s*[-_]\"), 0))\n| join type = left (dataset = ctt_registry | alter policy_tag = ctt_tag, policy_owner = owner_name | fields policy_tag, policy_owner) as p p.policy_tag = policy_tag\n| fields endpoint_name, endpoint_status, ip_address, endpoint_tags, assigned_prevention_policy, policy_owner, installation_package\n| sort asc endpoint_name",
+                                "time_frame": {
+                                    "relativeTime": 604800000
+                                },
+                                "viewOptions": {
+                                    "type": "table",
+                                    "commands": []
+                                }
+                            }
+                        },
+                        {
+                            "key": "xql_1793900000031",
+                            "data": {
+                                "type": "Custom XQL",
+                                "width": 50,
+                                "height": 400,
+                                "phrase": "dataset = management_auditing\n| filter management_auditing_type = ENUM.MANAGEMENT_AUDIT_AUTHENTICATION and subtype in (\"Login\", \"SSO\") and email contains \"@\"\n| alter actor_email = lowercase(email)\n| comp count() as logins, max(_time) as last_login by actor_email, user_name\n| join type = left (dataset = ctt_registry | filter owner_email != \"\" | comp count() as tags by owner_email | alter reg_email = owner_email | fields reg_email, tags) as r r.reg_email = actor_email\n| filter reg_email = null\n| fields actor_email, user_name, logins, last_login\n| sort desc logins",
+                                "time_frame": {
+                                    "relativeTime": 2592000000
+                                },
+                                "viewOptions": {
+                                    "type": "table",
+                                    "commands": []
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "row-5",
+                    "data": [
+                        {
+                            "key": "xql_1793900000040",
+                            "data": {
+                                "type": "Custom XQL",
+                                "width": 100,
+                                "height": 400,
+                                "phrase": "dataset = ctt_registry\n| fields ctt_tag, primary_tag, owner_name, owner_email, role, lab_octet, tag_kind, active\n| sort asc primary_tag, asc tag_kind",
+                                "time_frame": {
+                                    "relativeTime": 86400000
+                                },
+                                "viewOptions": {
+                                    "type": "table",
+                                    "commands": []
+                                }
+                            }
+                        }
+                    ]
+                }
+            ],
+            "metadata": {
+                "params": []
+            }
+        }
+    ],
+    "widgets_data": [
+        {
+            "widget_key": "xql_1793900000000",
+            "title": "Hygiene issues by guideline",
+            "creation_time": 1793900000000,
+            "description": "CTT hygiene issues raised, by guideline ID.",
+            "data": {
+                "phrase": "dataset = issues\n| filter xdm.issue.name ~= \"^CTT - Hygiene - \"\n| dedup xdm.issue.id by desc _insert_time\n| alter guideline = arrayindex(regextract(xdm.issue.name, \"(CTT-[A-Z]+-[0-9]+)\"), 0)\n| comp count() as issues by guideline\n| sort desc issues\n| view graph type = column subtype = grouped header = \"Hygiene issues by guideline\" xaxis = guideline yaxis = issues",
+                "time_frame": {
+                    "relativeTime": 2592000000
+                },
+                "viewOptions": {
+                    "type": "column",
+                    "commands": [
+                        {
+                            "command": {
+                                "op": "=",
+                                "name": "subtype",
+                                "value": "grouped"
+                            }
+                        },
+                        {
+                            "command": {
+                                "op": "=",
+                                "name": "header",
+                                "value": "\"Hygiene issues by guideline\""
+                            }
+                        },
+                        {
+                            "command": {
+                                "op": "=",
+                                "name": "xaxis",
+                                "value": "guideline"
+                            }
+                        },
+                        {
+                            "command": {
+                                "op": "=",
+                                "name": "yaxis",
+                                "value": "issues"
+                            }
+                        }
+                    ]
+                }
+            },
+            "support_time_range": true,
+            "additional_info": {
+                "query_tables": [],
+                "query_uses_library": false
+            }
+        },
+        {
+            "widget_key": "xql_1793900000001",
+            "title": "Open hygiene issues",
+            "creation_time": 1793900000001,
+            "description": "CTT hygiene issues that are not resolved yet.",
+            "data": {
+                "phrase": "dataset = issues\n| filter xdm.issue.name ~= \"^CTT - Hygiene - \"\n| dedup xdm.issue.id by desc _insert_time\n| alter guideline = arrayindex(regextract(xdm.issue.name, \"(CTT-[A-Z]+-[0-9]+)\"), 0)\n| filter xdm.issue.status.progress != \"RESOLVED\"\n| fields _time, guideline, xdm.issue.name, xdm.issue.description, xdm.issue.status.progress, xdm.issue.id\n| sort desc _time",
+                "time_frame": {
+                    "relativeTime": 2592000000
+                },
+                "viewOptions": {
+                    "type": "table",
+                    "commands": []
+                }
+            },
+            "support_time_range": true,
+            "additional_info": {
+                "query_tables": [],
+                "query_uses_library": false
+            }
+        },
+        {
+            "widget_key": "xql_1793900000010",
+            "title": "Hygiene issues per day",
+            "creation_time": 1793900000010,
+            "description": "New CTT hygiene issues per day and guideline.",
+            "data": {
+                "phrase": "dataset = issues\n| filter xdm.issue.name ~= \"^CTT - Hygiene - \"\n| dedup xdm.issue.id by desc _insert_time\n| alter guideline = arrayindex(regextract(xdm.issue.name, \"(CTT-[A-Z]+-[0-9]+)\"), 0)\n| bin _time span = 1d\n| comp count() as issues by _time, guideline\n| view graph type = line header = \"Hygiene issues per day\" xaxis = _time yaxis = issues series = guideline",
+                "time_frame": {
+                    "relativeTime": 2592000000
+                },
+                "viewOptions": {
+                    "type": "line",
+                    "commands": [
+                        {
+                            "command": {
+                                "op": "=",
+                                "name": "header",
+                                "value": "\"Hygiene issues per day\""
+                            }
+                        },
+                        {
+                            "command": {
+                                "op": "=",
+                                "name": "xaxis",
+                                "value": "_time"
+                            }
+                        },
+                        {
+                            "command": {
+                                "op": "=",
+                                "name": "yaxis",
+                                "value": "issues"
+                            }
+                        },
+                        {
+                            "command": {
+                                "op": "=",
+                                "name": "series",
+                                "value": "guideline"
+                            }
+                        }
+                    ]
+                }
+            },
+            "support_time_range": true,
+            "additional_info": {
+                "query_tables": [],
+                "query_uses_library": false
+            }
+        },
+        {
+            "widget_key": "xql_1793900000011",
+            "title": "Changes by person",
+            "creation_time": 1793900000011,
+            "description": "Successful create, edit, delete and install actions per person in the management audit log.",
+            "data": {
+                "phrase": "dataset = management_auditing\n| filter management_auditing_result = ENUM.MANAGEMENT_AUDIT_SUCCESS and email contains \"@\"\n| filter subtype ~= \"^(Add|Upload|Copy|Create|New|Edit|Delete|Change|Update|Install)\"\n| comp count() as changes by user_name\n| sort desc changes\n| limit 15\n| view graph type = column subtype = grouped header = \"Changes by person\" xaxis = user_name yaxis = changes",
+                "time_frame": {
+                    "relativeTime": 604800000
+                },
+                "viewOptions": {
+                    "type": "column",
+                    "commands": [
+                        {
+                            "command": {
+                                "op": "=",
+                                "name": "subtype",
+                                "value": "grouped"
+                            }
+                        },
+                        {
+                            "command": {
+                                "op": "=",
+                                "name": "header",
+                                "value": "\"Changes by person\""
+                            }
+                        },
+                        {
+                            "command": {
+                                "op": "=",
+                                "name": "xaxis",
+                                "value": "user_name"
+                            }
+                        },
+                        {
+                            "command": {
+                                "op": "=",
+                                "name": "yaxis",
+                                "value": "changes"
+                            }
+                        }
+                    ]
+                }
+            },
+            "support_time_range": true,
+            "additional_info": {
+                "query_tables": [],
+                "query_uses_library": false
+            }
+        },
+        {
+            "widget_key": "xql_1793900000020",
+            "title": "Objects created without a tag prefix",
+            "creation_time": 1793900000020,
+            "description": "Objects created in the last 7 days whose name does not start with a tag.",
+            "data": {
+                "phrase": "dataset = management_auditing\n| filter management_auditing_result = ENUM.MANAGEMENT_AUDIT_SUCCESS\n| filter email != null and email not in (\"Palo Alto Networks\", \"N/A\", \"Xpanse Development\")\n| alter actor_email = if(email contains \"@\", lowercase(email), null), actor_name = lowercase(user_name)\n| alter object_kind = coalesce(arrayindex(regextract(subtype, \"^[A-Za-z ]+ - (.+)$\"), 0), replex(to_string(management_auditing_type), \"^(MANAGEMENT_AUDIT_|management_auditing_type_)\", \"\"))\n| alter action = if(subtype ~= \"^(Add|Upload|Copy|Create|New|Save as new|Import)\" or subtype ~= \"^(Create|Upload lookup|Addition)\", \"create\", if(subtype ~= \"(Delete|Remove)\", \"delete\", if(subtype ~= \"(Edit|Change|Update|Modif|Adopt|Detach|Enable|Disable|Rename|Scope Edit)\", \"modify\", \"other\")))\n| alter object_name = coalesce(\n    arrayindex(regextract(description, \"ClonedPlaybookName: (.+?), ID:\"), 0),\n    arrayindex(regextract(description, \"playbookName: (.+?), ID:\"), 0),\n    arrayindex(regextract(description, \"scriptName: (.+?), (?:removed from|ID):\"), 0),\n    arrayindex(regextract(description, \"aiTaskName: (.+?), \"), 0),\n    arrayindex(regextract(description, \"CredentialsName: (.+?), ID:\"), 0),\n    arrayindex(regextract(description, \"ModuleName: ([^,]+)\"), 0),\n    arrayindex(regextract(description, \"ModuleBrand: (.+?), ID:\"), 0),\n    arrayindex(regextract(description, \"Layout (?:created|edited|deleted) - Name: (.+?), ID:\"), 0),\n    arrayindex(regextract(description, \"CaseField (?:created|edited|deleted) - Name: (.+?), Type:\"), 0),\n    arrayindex(regextract(description, \"Name: (.+?), JobID:\"), 0),\n    arrayindex(regextract(description, \"JobID: [^,]+, Name: (.+?), ID:\"), 0),\n    arrayindex(regextract(description, \"^name: (.+?), ID:\"), 0),\n    arrayindex(regextract(description, \"^Name: (.+?), ID:\"), 0),\n    arrayindex(regextract(description, \"dashboard '(.+?)'\"), 0),\n    arrayindex(regextract(description, \"(?:BIOC|Correlations? rule|IOC|Analytics BIOC|Attack Surface Rule) [a-z]+ - name: (.+?),? id: \"), 0),\n    arrayindex(regextract(description, \" profile (.+?) was (?:created|edited|deleted)\"), 0),\n    arrayindex(regextract(description, \"policy rule (.+?) (?:with target|updated|scope updated|was deleted|was created|created|was)\"), 0),\n    arrayindex(regextract(description, \"^Rule (.+?) status changed\"), 0),\n    arrayindex(regextract(description, \"Security Control: [^,]+, (.+)$\"), 0),\n    arrayindex(regextract(description, \"Connector Template '?(.+?)'? (?:created|deleted|modified)\"), 0),\n    arrayindex(regextract(description, \"Endpoint group '(.+?)'\"), 0),\n    arrayindex(regextract(description, \"lookup dataset called (\\S+)\"), 0),\n    arrayindex(regextract(description, \"Dataset (\\S+) of type\"), 0),\n    arrayindex(regextract(description, \"(?:query|macro) '(.+?)'\"), 0),\n    arrayindex(regextract(description, \"report template\\(?s?\\)? '(.+?)'\"), 0),\n    arrayindex(regextract(description, \"Cloud Security Rule '(.+?)'\"), 0),\n    arrayindex(regextract(description, \"installation package '(.+?)'\"), 0),\n    arrayindex(regextract(description, \"script, name: (.+?), description\"), 0),\n    arrayindex(regextract(description, \"^Edit (.+?), script id\"), 0),\n    if(object_kind in (\"Agent\", \"Action\", \"KnowledgeSource\", \"JobCenter\"), arrayindex(regextract(description, \"^(.+?)(?:, ID: .*)?$\"), 0), null)\n  )\n| alter obj_tag = lowercase(arrayindex(regextract(object_name, \"^\\s*([A-Za-z0-9]{2,16})\\s*[-_]\"), 0))\n| filter action = \"create\" and object_name != null and obj_tag = null\n| filter object_kind not in (\"AITask\", \"CaseField\", \"IssueField\", \"Credentials\", \"KnowledgeSource\", \"Investigation\", \"Indicator\", \"Entry\")\n| fields _time, user_name, object_kind, object_name, subtype\n| sort desc _time",
+                "time_frame": {
+                    "relativeTime": 604800000
+                },
+                "viewOptions": {
+                    "type": "table",
+                    "commands": []
+                }
+            },
+            "support_time_range": true,
+            "additional_info": {
+                "query_tables": [],
+                "query_uses_library": false
+            }
+        },
+        {
+            "widget_key": "xql_1793900000021",
+            "title": "Open Security cases by age",
+            "creation_time": 1793900000021,
+            "description": "Open Security-domain cases, oldest first.",
+            "data": {
+                "phrase": "dataset = cases\n| dedup xdm.case.id by desc _insert_time\n| filter xdm.case.domain = \"SECURITY\" and xdm.case.status_progress != \"RESOLVED\"\n| alter age_days = timestamp_diff(current_time(), _time, \"DAY\")\n| fields xdm.case.id, xdm.case.name, xdm.case.assigned_to, xdm.case.severity, age_days\n| sort desc age_days",
+                "time_frame": {
+                    "relativeTime": 7776000000
+                },
+                "viewOptions": {
+                    "type": "table",
+                    "commands": []
+                }
+            },
+            "support_time_range": true,
+            "additional_info": {
+                "query_tables": [],
+                "query_uses_library": false
+            }
+        },
+        {
+            "widget_key": "xql_1793900000030",
+            "title": "Endpoint ownership",
+            "creation_time": 1793900000030,
+            "description": "Endpoints with their tags, prevention policy and the owner found through the policy's tag.",
+            "data": {
+                "phrase": "dataset = endpoints\n| dedup endpoint_id by desc last_seen\n| alter endpoint_tags = json_extract_scalar_array(tags, \"$.endpoint_tags\")\n| alter policy_tag = lowercase(arrayindex(regextract(assigned_prevention_policy, \"^\\s*([A-Za-z0-9]{2,16})\\s*[-_]\"), 0))\n| join type = left (dataset = ctt_registry | alter policy_tag = ctt_tag, policy_owner = owner_name | fields policy_tag, policy_owner) as p p.policy_tag = policy_tag\n| fields endpoint_name, endpoint_status, ip_address, endpoint_tags, assigned_prevention_policy, policy_owner, installation_package\n| sort asc endpoint_name",
+                "time_frame": {
+                    "relativeTime": 604800000
+                },
+                "viewOptions": {
+                    "type": "table",
+                    "commands": []
+                }
+            },
+            "support_time_range": true,
+            "additional_info": {
+                "query_tables": [],
+                "query_uses_library": false
+            }
+        },
+        {
+            "widget_key": "xql_1793900000031",
+            "title": "Active users not in the registry",
+            "creation_time": 1793900000031,
+            "description": "People who signed in during the last 30 days but have no registry row.",
+            "data": {
+                "phrase": "dataset = management_auditing\n| filter management_auditing_type = ENUM.MANAGEMENT_AUDIT_AUTHENTICATION and subtype in (\"Login\", \"SSO\") and email contains \"@\"\n| alter actor_email = lowercase(email)\n| comp count() as logins, max(_time) as last_login by actor_email, user_name\n| join type = left (dataset = ctt_registry | filter owner_email != \"\" | comp count() as tags by owner_email | alter reg_email = owner_email | fields reg_email, tags) as r r.reg_email = actor_email\n| filter reg_email = null\n| fields actor_email, user_name, logins, last_login\n| sort desc logins",
+                "time_frame": {
+                    "relativeTime": 2592000000
+                },
+                "viewOptions": {
+                    "type": "table",
+                    "commands": []
+                }
+            },
+            "support_time_range": true,
+            "additional_info": {
+                "query_tables": [],
+                "query_uses_library": false
+            }
+        },
+        {
+            "widget_key": "xql_1793900000040",
+            "title": "CTT registry",
+            "creation_time": 1793900000040,
+            "description": "The registry synced from the Google Sheet: one row per tag.",
+            "data": {
+                "phrase": "dataset = ctt_registry\n| fields ctt_tag, primary_tag, owner_name, owner_email, role, lab_octet, tag_kind, active\n| sort asc primary_tag, asc tag_kind",
+                "time_frame": {
+                    "relativeTime": 86400000
+                },
+                "viewOptions": {
+                    "type": "table",
+                    "commands": []
+                }
+            },
+            "support_time_range": true,
+            "additional_info": {
+                "query_tables": [],
+                "query_uses_library": false
+            }
+        }
+    ],
+    "fromVersion": "8.9.0",
+    "supportedModules": [
+        "xsiam"
+    ]
+}
