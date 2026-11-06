@@ -92,8 +92,10 @@ def test_topic_is_tenant_activity_only():
     assert topic == (
         "CTT Mon 09 Nov · 1,866 open cases (+41 in 24h) · 19 endpoints connected · 15.3 GB/day ingested · 42 integrations active"
     )
-    assert "hygiene" not in topic and "canvas" not in topic
-    assert len(topic) <= 250 and all(ord(ch) < 0x2000 or ch == "·" for ch in topic)
+    assert "hygiene" not in topic
+    assert "canvas" not in topic
+    assert len(topic) <= 250
+    assert all(ord(ch) < 0x2000 or ch == "·" for ch in topic)
 
 
 def test_canvas_automation_section():

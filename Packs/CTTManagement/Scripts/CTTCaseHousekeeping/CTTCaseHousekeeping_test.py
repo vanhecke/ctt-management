@@ -47,7 +47,8 @@ def test_generated_query():
 
 
 def test_registry_maps():
-    assert TAGS["jva"] == "jva@x.com" and "ctt" not in TAGS
+    assert TAGS["jva"] == "jva@x.com"
+    assert "ctt" not in TAGS
     assert OCTETS == {"20": "jva@x.com", "21": "bob@x.com"}
     assert PEOPLE["jva@x.com"]["slack_id"] == "U1"
 
@@ -93,9 +94,12 @@ def test_build_digest():
         "xdr_url": "https://t/incident-view?caseId=12",
     }
     text = build_digest("Joris", {"assign": [case], "suggest": [case] * 8}, NOW)
-    assert "ASSIGNED TO YOU (1)" in text and "CLOSE IF DONE (8)" in text
-    assert "• #12 Suspicious port scan (2d)" in text and "https://t/incident-view?caseId=12" in text
-    assert "… and 2 more" in text
+    assert "ASSIGNED TO YOU (1)" in text
+    assert "CLOSE IF DONE (8)" in text
+    assert "• #12 Suspicious port scan (2d)" in text
+    assert "https://t/incident-view?caseId=12" in text
+    assert "…
+    assert 2 more" in text
     assert all(len(line) <= 46 or line.startswith("  https://") for line in text.splitlines())
 
 
