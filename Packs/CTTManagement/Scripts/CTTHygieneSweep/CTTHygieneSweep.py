@@ -263,7 +263,16 @@ def collect_open_security_cases(stale_days: int, now_ms: int) -> list[dict]:
     ]
     cases: list[dict] = []
     for start in range(0, 1000, PAGE):
-        body = {"request_data": {"filters": filters, "search_from": start, "search_to": start + PAGE}}
+        # Sorted, so a tenant with more stale cases than the cap gets the same (oldest) cases every
+        # run instead of an arbitrary subset that would replace the issue daily.
+        body = {
+            "request_data": {
+                "filters": filters,
+                "search_from": start,
+                "search_to": start + PAGE,
+                "sort": {"field": "creation_time", "keyword": "asc"},
+            }
+        }
         page = core_post("/public_api/v1/case/search", body).get("DATA") or []
         cases.extend(page)
         if len(page) < PAGE:
