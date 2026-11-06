@@ -28,17 +28,20 @@ admins and are not monitored yet.
 
 ## Your tag
 
-Every DC owns one or more **tags**, listed in the CTT registry (a Google Sheet maintained by the
-CTT admins). The registry also holds your lab range and role.
+Every DC owns tags, listed in the CTT registry: a Google Sheet maintained by the CTT admins and
+synced into the tenant every 6 hours.
 
-- A tag is 2 to 16 letters or digits, with no spaces, hyphens or underscores. Examples:
-  `jvanhecke`, `SF`, `kwarang`.
-- Tags are not case sensitive. `SF` and `sf` are the same tag.
+- Your **primary tag** is your email username, for example `jvanhecke`.
+- You also get a short **alias**, usually three letters, for example `jva`. Both are yours; use
+  whichever you like.
+- Tags are not case sensitive. `JVA` and `jva` are the same tag.
 - `CTT` is reserved for central content owned by the CTT admins.
-- Your lab range is `10.<x>.0.0/16`. The registry stores your `x`.
+- Your **lab range** is `10.<octet>.0.0/16`, where the octet is your number in the registry.
+- The registry also records your Slack member ID and whether you are a CTT admin.
 
-Registry columns: `tag`, `owner_email`, `owner_name`, `role` (`dc`, `admin` or `central`),
-`team`, `lab_octet` (the `x` in your range), `active`.
+The registry sheet has two tabs: `ctt_asean_users` (tag, octet, owner_email, owner_name,
+slack_id, ctt_admin, active) and `ctt_asean_extra_tags` (tag, owner_email, owner_name,
+original_tag). Ask a CTT admin to add or change a row.
 
 ## Guidelines
 
@@ -205,3 +208,4 @@ Before you leave the team, delete your objects or hand them over to another DC, 
 | Date | Change |
 |---|---|
 | 2026-11-05 | First draft: guideline IDs, Active and Proposed guidelines |
+| 2026-11-06 | Your tag: primary tag plus alias, registry sheet layout |
