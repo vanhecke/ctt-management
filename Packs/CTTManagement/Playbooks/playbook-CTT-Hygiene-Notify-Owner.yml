@@ -191,8 +191,6 @@ tasks:
         simple: ${CTT.Triage.guideline_title}
       guideline_text:
         simple: ${CTT.Triage.guideline_text}
-      issue_url:
-        simple: ${CTT.Triage.issue_url}
     continueonerror: true
     nexttasks:
       '#none#':
@@ -229,6 +227,10 @@ tasks:
         simple: ${CTT.Triage.fallback_message}
       issue_url:
         simple: ${CTT.Triage.issue_url}
+      issue_id:
+        simple: ${CTT.Triage.issue_id}
+      guideline_id:
+        simple: ${CTT.Triage.guideline_id}
     nexttasks:
       '#none#':
       - '7'

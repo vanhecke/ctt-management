@@ -12,6 +12,7 @@ def build_payload(
     slack_channel_id: str = "",
     default_user_id: str = "",
     default_channel_id: str = "",
+    url: str = "",
 ) -> dict:
     """The Slack workflow types its inputs and rejects an empty user or channel ID
     (invalid_workflow_input), even for actions that ignore them. Unused IDs are filled with the
@@ -26,7 +27,10 @@ def build_payload(
     channel = slack_channel_id or default_channel_id
     if not user or not channel:
         raise DemistoException("Set the instance's channel ID and placeholder user ID: the workflow needs both on every call.")
-    return {"action": action, "slack_user_id": user, "slack_channel_id": channel, "content": content}
+    payload = {"action": action, "slack_user_id": user, "slack_channel_id": channel, "content": content}
+    if url:
+        payload["url"] = url
+    return payload
 
 
 def validate_url(url: str) -> str:
@@ -44,7 +48,9 @@ class Client(BaseClient):
             return {"ok": True, "raw": res.text[:200]}
 
 
-def send_command(client: Client, args: dict, default_user_id: str, default_channel_id: str) -> CommandResults:
+def send_command(
+    client: Client, args: dict, default_user_id: str, default_channel_id: str, send_url: bool = False
+) -> CommandResults:
     payload = build_payload(
         args.get("action", ""),
         args.get("content", ""),
@@ -52,6 +58,7 @@ def send_command(client: Client, args: dict, default_user_id: str, default_chann
         args.get("slack_channel_id", ""),
         default_user_id,
         default_channel_id,
+        args.get("url", "") if send_url else "",
     )
     reply = client.send(payload)
     if isinstance(reply, dict) and reply.get("ok") is False:
@@ -76,7 +83,13 @@ def main():  # pragma: no cover
             validate_url(url)
             client = Client(base_url=url, verify=not params.get("insecure"), proxy=params.get("proxy"))
             return_results(
-                send_command(client, demisto.args(), params.get("placeholder_user_id", ""), params.get("channel_id", ""))
+                send_command(
+                    client,
+                    demisto.args(),
+                    params.get("placeholder_user_id", ""),
+                    params.get("channel_id", ""),
+                    argToBoolean(params.get("send_url_key", False)),
+                )
             )
         else:
             raise NotImplementedError(f"Command {command} is not implemented.")

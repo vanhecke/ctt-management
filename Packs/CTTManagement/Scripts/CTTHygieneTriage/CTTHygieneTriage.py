@@ -54,12 +54,13 @@ def decide(
     return True, True, "assigned and notified"
 
 
-def fallback_message(first_name: str, title: str, details: str, gid: str, gtitle: str, url: str) -> str:
+def fallback_message(first_name: str, title: str, details: str, gid: str, gtitle: str, url: str = "") -> str:
+    """Template body in the same shape as the AI message; CTTHygieneSendDM adds header and link."""
     return (
-        f"Hi {first_name}, the CTT tenant flagged something of yours: {title}.\n"
-        f"{details}\n"
-        f"• Guideline {gid}: {gtitle}.\n"
-        f"Please fix it when you can, or reply in the CTT channel if it was intended.\n{url}"
+        f"Hi {first_name},\n\n"
+        f"The CTT monitoring found: {title}. {details}\n\n"
+        f"Fix:\n• Follow guideline {gid}: {gtitle}.\n\n"
+        "If this was intended, reply in the CTT channel."
     )
 
 

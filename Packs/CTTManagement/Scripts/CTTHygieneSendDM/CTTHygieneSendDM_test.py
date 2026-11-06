@@ -1,10 +1,29 @@
-from CTTHygieneSendDM import bump, pick_message
+from CTTHygieneSendDM import WIDTH, build_dm, bump, header, wrap_body
 
 
-def test_pick_message_prefers_ai_text_and_adds_link():
-    assert pick_message("Hi Bob, fix it.", "template", "https://t/1") == "Hi Bob, fix it.\nhttps://t/1"
-    assert pick_message("Hi Bob.\nhttps://t/1", "template", "https://t/1") == "Hi Bob.\nhttps://t/1"
-    assert pick_message("  ", "Template text https://t/1", "https://t/1") == "Template text https://t/1"
+def test_header_is_a_closed_box():
+    lines = header("CTT HYGIENE", "CTT-TAG-01").splitlines()
+    assert len(lines) == 3
+    assert all(len(line) == WIDTH for line in lines)
+    assert lines[1].startswith("│  CTT HYGIENE")
+    assert lines[1].endswith("CTT-TAG-01  │")
+
+
+def test_wrap_body_keeps_bullets_and_blank_lines():
+    text = "Hi Bob,\n\nFix:\n- " + "rename the playbook to start with your tag " * 2
+    lines = wrap_body(text).splitlines()
+    assert lines[1] == ""
+    assert lines[3].startswith("• rename")
+    assert lines[4].startswith("  ")
+    assert all(len(line) <= WIDTH for line in lines)
+
+
+def test_build_dm_moves_link_to_footer():
+    dm = build_dm("CTT-TAG-01", "Hi Bob, see https://t/1 for details.", "60900", "https://t/1")
+    lines = dm.splitlines()
+    assert lines[-1] == "https://t/1"
+    assert lines[-2] == "Issue #60900 · assigned to you"
+    assert dm.count("https://t/1") == 1
 
 
 def test_bump_counts_today_and_drops_old_days():

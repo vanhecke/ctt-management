@@ -3,6 +3,7 @@ from CommonServerPython import *  # noqa: F401
 
 import json
 from typing import Any
+from urllib.parse import quote
 
 JOBS_LIST = "CTT - Jobs"
 COMPARED = ("playbookId", "humanCron", "timezone", "scheduled", "recurrent", "details", "tags")
@@ -61,7 +62,7 @@ def main():  # pragma: no cover
         for job in obsolete_jobs(wanted, existing):
             removed = remove_obsolete and not dry_run
             if removed:
-                res = demisto.executeCommand("core-api-delete", {"uri": f"/jobs/{job['id']}"})
+                res = demisto.executeCommand("core-api-delete", {"uri": f"/jobs/{quote(str(job['id']), safe='')}"})
                 if is_error(res):
                     raise DemistoException(f"Cannot delete job {job['name']}: {get_error(res)}")
             rows.append({"Job": job["name"], "Action": "deleted" if removed else "obsolete", "Changed": ""})

@@ -6,23 +6,26 @@ comment: Prompt-backed (isllm) step of the CTT - Hygiene - Notify Owner playbook
 type: python
 isllm: true
 userprompt: |-
-  Write a Slack direct message to ${first_name} about something the monitoring of the shared Cortex Team Tenant (CTT) found.
+  Write the body of a Slack direct message to ${first_name} about something the monitoring of the shared Cortex Team Tenant (CTT) found. A header with the guideline ID and a footer with the issue link are added around your text, so leave both out.
 
   What was found: ${issue_title}
   Details: ${issue_details}
   Guideline ${guideline_id}: ${guideline_title}
   What the guideline says: ${guideline_text}
-  Issue link: ${issue_url}
 
-  How to write it:
-  - Start with "Hi ${first_name}," and nothing before it.
-  - In one or two sentences, say what was found. Quote object names exactly as given, in double quotes.
-  - Then give the fix as one or two lines starting with "• ". Mention the guideline ID once.
-  - Add one short sentence that they can reply in the CTT channel if this was intended.
-  - Friendly and matter-of-fact: everyone shares this tenant and slips happen. No blame, no exclamation marks, at most one emoji.
-  - Plain text only: Slack shows this message without any formatting, so no asterisks, underscores, backticks, headings, tables or Markdown links. Use short lines and the bullets.
-  - End with the issue link on its own line, exactly as given.
-  - At most 90 words. Output only the message.
+  Write exactly this shape, plain text only:
+
+  Hi ${first_name},
+
+  <one or two sentences on what was found; quote object names exactly as given, in double quotes>
+
+  Fix:
+  • <the concrete fix>
+  • <a second step only if it really helps>
+
+  If this was intended, reply in the CTT channel.
+
+  Rules: friendly and matter-of-fact, no blame, no exclamation marks, no emoji, no links, no Markdown (asterisks, underscores, backticks, headings). At most 70 words. Output only the message.
 promptConfig:
   modelTier: Flash
   systemInstruction: >-
@@ -51,9 +54,6 @@ args:
 - name: guideline_text
   description: The guideline's full text.
   required: false
-- name: issue_url
-  description: Link to the issue.
-  required: true
 outputs:
 - contextPath: CTT.HygieneMessage
   description: The Slack message for the owner.

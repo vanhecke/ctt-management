@@ -44,16 +44,11 @@ def test_decide():
     assert decide("j@x.com", REGISTRY[1], "allowlist", 0, 3, ["J@x.com"])[:2] == (True, True)
 
 
-def test_fallback_message_has_link_and_guideline():
+def test_fallback_message_shape():
     msg = fallback_message(
-        "Bob",
-        "Object created without owner tag",
-        "Bob created Playbook 'X'.",
-        "CTT-TAG-01",
-        "Prefix object names",
-        "https://t/x/1",
+        "Bob", "Object created without owner tag", "Bob created Playbook 'X'.", "CTT-TAG-01", "Prefix object names"
     )
     assert msg.startswith("Hi Bob,")
     assert "*" not in msg
-    assert "CTT-TAG-01" in msg
-    assert msg.endswith("https://t/x/1")
+    assert "Fix:\n• Follow guideline CTT-TAG-01: Prefix object names." in msg
+    assert "https://" not in msg

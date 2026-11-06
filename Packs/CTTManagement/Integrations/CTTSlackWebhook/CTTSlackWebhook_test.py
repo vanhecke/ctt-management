@@ -33,3 +33,8 @@ def test_validate_url():
     assert validate_url("https://hooks.slack.com/triggers/X/1/abc") == "ok"
     with pytest.raises(DemistoException):
         validate_url("https://example.com/hook")
+
+
+def test_build_payload_url_key_only_when_given():
+    assert "url" not in build_payload("msg_person", "hi", "U1", default_channel_id="C0")
+    assert build_payload("msg_person", "hi", "U1", default_channel_id="C0", url="https://t/1")["url"] == "https://t/1"
