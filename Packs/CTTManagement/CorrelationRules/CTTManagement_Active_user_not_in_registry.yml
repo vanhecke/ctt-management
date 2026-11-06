@@ -1,0 +1,42 @@
+global_rule_id: 67c8569c-15e4-5cfc-9e12-c452ebe1afb2
+name: CTT - Hygiene - Active user not in registry
+description: A user signed in to the tenant but has no row in the CTT registry, so nothing they create can be traced to a tag (CTT-GEN-01).
+fromversion: 8.9.0
+is_enabled: true
+dataset: alerts
+execution_mode: SCHEDULED
+crontab: 0 1 * * *
+search_window: 24 hours
+timezone: UTC
+xql_query: |
+  dataset = management_auditing
+  | filter management_auditing_type = ENUM.MANAGEMENT_AUDIT_AUTHENTICATION and subtype in ("Login", "SSO") and management_auditing_result = ENUM.MANAGEMENT_AUDIT_SUCCESS
+  | filter email contains "@" and email !~= "@crtxtool\.invalid$"
+  | alter actor_email = lowercase(email), actor_name = lowercase(user_name)
+  | comp count() as logins, max(_time) as last_login by actor_email, actor_name
+  | join type = left (dataset = ctt_registry | filter owner_email != "" | alter is_adm = if(role = "admin", 1, 0) | comp max(is_adm) as reg_actor_admin by owner_email | alter reg_actor_email = owner_email | fields reg_actor_email, reg_actor_admin) as ra ra.reg_actor_email = actor_email
+  | join type = left (dataset = ctt_registry | filter owner_email != "" | alter is_adm = if(role = "admin", 1, 0), reg_name_key = lowercase(owner_name) | comp max(is_adm) as reg_name_admin, max(owner_email) as reg_name_email by reg_name_key | fields reg_name_key, reg_name_admin, reg_name_email) as rn rn.reg_name_key = actor_name
+  | alter actor = coalesce(reg_actor_email, reg_name_email, actor_email, actor_name), actor_is_admin = coalesce(reg_actor_admin, reg_name_admin, 0), actor_registered = if(coalesce(reg_actor_email, reg_name_email) != null, "yes", "no")
+  | filter actor_registered = "no"
+  | alter guideline_id = "CTT-GEN-01", title = "Active user not in registry", finding = concat(to_string(logins), " sign-in(s) by a user without a registry row")
+  | fields actor, actor_email, actor_name, logins, last_login, finding, guideline_id, title
+action: ALERTS
+alert_domain: DOMAIN_HEALTH
+alert_type: Unclassified
+alert_category: OTHER
+alert_name: CTT - Hygiene - $guideline_id - $title
+alert_description: $actor_email signed in $logins time(s) but is not in the CTT registry. Add them to the registry sheet with a tag and lab octet (guideline $guideline_id).
+alert_fields:
+  actor_effective_username: actor_email
+severity: SEV_030_MEDIUM
+user_defined_severity: null
+user_defined_category: null
+mapping_strategy: CUSTOM
+mitre_defs: {}
+suppression_enabled: true
+suppression_duration: 1 days
+suppression_fields:
+- actor_email
+investigation_query_link: dataset = management_auditing | filter email = "$actor_email" | sort desc _time
+drilldown_query_timeframe: ALERT
+lookup_mapping: []

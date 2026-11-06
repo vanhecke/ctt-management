@@ -8,7 +8,7 @@ import re
 from typing import Any
 
 CONFIG_LIST = "CTT - Config"
-LOOKUP_FIELDS = ["tag", "primary_tag", "owner_email", "owner_name", "slack_id", "role", "lab_octet", "active", "tag_kind"]
+LOOKUP_FIELDS = ["ctt_tag", "primary_tag", "owner_email", "owner_name", "slack_id", "role", "lab_octet", "active", "tag_kind"]
 TAG_RE = re.compile(r"^[a-z0-9]{2,16}$")
 TRUE_VALUES = {"yes", "y", "true", "1", "x"}
 
@@ -136,9 +136,15 @@ def build_registry(
     return sorted(records.values(), key=lambda r: r["tag"]), errors
 
 
+def to_lookup_row(record: dict[str, str]) -> dict[str, str]:
+    """The lookup column is ctt_tag: `tag` is an XQL stage name and breaks queries that join on it."""
+    row = {k: v for k, v in record.items() if k != "tag"}
+    return {"ctt_tag": record["tag"], **row}
+
+
 def tags_to_remove(existing: list[dict[str, Any]], records: list[dict[str, str]]) -> list[str]:
     keep = {r["tag"] for r in records}
-    return sorted({str(row.get("tag", "")) for row in existing if row.get("tag") and row.get("tag") not in keep})
+    return sorted({str(row.get("ctt_tag", "")) for row in existing if row.get("ctt_tag") and row.get("ctt_tag") not in keep})
 
 
 # ---------- tenant I/O ----------
@@ -214,11 +220,11 @@ def sync_lookup(dataset: str, records: list[dict[str, str]]) -> list[str]:
     removed = tags_to_remove(rows, records)
     for tag in removed:
         core_api_post(
-            "/public_api/v1/xql/lookups/remove_data", {"request_data": {"dataset_name": dataset, "filters": {"tag": tag}}}
+            "/public_api/v1/xql/lookups/remove_data", {"request_data": {"dataset_name": dataset, "filters": {"ctt_tag": tag}}}
         )
     core_api_post(
         "/public_api/v1/xql/lookups/add_data",
-        {"request_data": {"dataset_name": dataset, "key_fields": ["tag"], "data": records}},
+        {"request_data": {"dataset_name": dataset, "key_fields": ["ctt_tag"], "data": [to_lookup_row(r) for r in records]}},
     )
     return removed
 

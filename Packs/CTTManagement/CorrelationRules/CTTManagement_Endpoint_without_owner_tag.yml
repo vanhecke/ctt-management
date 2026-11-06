@@ -1,0 +1,50 @@
+global_rule_id: 95dae157-3139-58c7-8491-9d704682fd14
+name: CTT - Hygiene - Endpoint without owner tag
+description: An endpoint carries no registered tag as an endpoint or server tag (CTT-LAB-02, proposed guideline; ships disabled).
+fromversion: 8.9.0
+is_enabled: false
+dataset: alerts
+execution_mode: SCHEDULED
+crontab: 0 2 * * *
+search_window: 7 days
+timezone: UTC
+xql_query: |
+  dataset = endpoints
+  | dedup endpoint_id by desc last_seen
+  | alter etags = arrayconcat(json_extract_scalar_array(tags, "$.endpoint_tags"), json_extract_scalar_array(tags, "$.server_tags"))
+  | alter etags = if(etags = null or array_length(etags) = 0, arraycreate("-"), etags)
+  | alter policy_tag = lowercase(arrayindex(regextract(assigned_prevention_policy, "^\s*([A-Za-z0-9]{2,16})\s*[-_]"), 0)), package_tag = lowercase(arrayindex(regextract(installation_package, "^\s*([A-Za-z0-9]{2,16})\s*[-_]"), 0))
+  | alter ip10 = arrayindex(arrayfilter(ip_address, "@element" ~= "^10\."), 0)
+  | alter ip_octet = arrayindex(regextract(ip10, "^10\.(\d+)\."), 0)
+  | arrayexpand etags
+  | alter etag = lowercase(etags)
+  | join type = left (dataset = ctt_registry | filter role != "central" | alter etag = ctt_tag, etag_owner = owner_email | fields etag, etag_owner) as te te.etag = etag
+  | comp max(etag_owner) as tag_owner by endpoint_id, endpoint_name, ip10, ip_octet, policy_tag, package_tag, assigned_prevention_policy, installation_package
+  | join type = left (dataset = ctt_registry | filter role != "central" | alter policy_tag = ctt_tag, policy_owner = owner_email | fields policy_tag, policy_owner) as tp tp.policy_tag = policy_tag
+  | join type = left (dataset = ctt_registry | filter role != "central" | alter package_tag = ctt_tag, package_owner = owner_email | fields package_tag, package_owner) as tk tk.package_tag = package_tag
+  | join type = left (dataset = ctt_registry | filter lab_octet != "" | comp max(owner_email) as range_owner by lab_octet | alter ip_octet = lab_octet | fields ip_octet, range_owner) as tr tr.ip_octet = ip_octet
+  | alter owner = coalesce(tag_owner, policy_owner, package_owner)
+  | filter tag_owner = null
+  | alter guideline_id = "CTT-LAB-02", title = "Endpoint without owner tag", finding = if(owner != null, concat("no endpoint tag; likely owner ", owner), "no endpoint tag and no owner found")
+  | fields endpoint_id, endpoint_name, ip10, owner, tag_owner, range_owner, assigned_prevention_policy, installation_package, finding, guideline_id, title
+action: ALERTS
+alert_domain: DOMAIN_HEALTH
+alert_type: Unclassified
+alert_category: OTHER
+alert_name: CTT - Hygiene - $guideline_id - $title
+alert_description: Endpoint $endpoint_name has no registered owner tag ($finding). Add your tag as an endpoint tag (guideline $guideline_id).
+alert_fields:
+  agent_hostname: endpoint_name
+  actor_effective_username: owner
+severity: SEV_030_MEDIUM
+user_defined_severity: null
+user_defined_category: null
+mapping_strategy: CUSTOM
+mitre_defs: {}
+suppression_enabled: true
+suppression_duration: 1 days
+suppression_fields:
+- endpoint_id
+investigation_query_link: dataset = endpoints | filter endpoint_name = "$endpoint_name" | dedup endpoint_id by desc last_seen
+drilldown_query_timeframe: ALERT
+lookup_mapping: []

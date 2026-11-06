@@ -1,4 +1,4 @@
-from CTTRegistrySync import build_registry, csv_to_rows, rows_to_dicts, sheet_values, tags_to_remove
+from CTTRegistrySync import build_registry, csv_to_rows, rows_to_dicts, sheet_values, tags_to_remove, to_lookup_row
 
 USERS = [
     ["tag", "octet", "owner_email", "owner_name", "slack_id", "ctt_admin", "active"],
@@ -78,5 +78,10 @@ def test_inactive_user():
 
 
 def test_tags_to_remove():
-    existing = [{"tag": "alice"}, {"tag": "old"}, {"tag": ""}]
+    existing = [{"ctt_tag": "alice"}, {"ctt_tag": "old"}, {"ctt_tag": ""}]
     assert tags_to_remove(existing, [{"tag": "alice"}]) == ["old"]
+
+
+def test_to_lookup_row_renames_tag():
+    row = to_lookup_row({"tag": "alice", "owner_email": "a@x.com"})
+    assert row == {"ctt_tag": "alice", "owner_email": "a@x.com"}
