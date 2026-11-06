@@ -25,6 +25,13 @@ def find_owner(issue: dict) -> str:
     return ""
 
 
+def owner_tags(registry: list[dict], owner: str) -> str:
+    """The owner's tags, primary first, for the message's rename advice."""
+    rows = [r for r in registry if owner and r.get("owner_email") == owner]
+    rows.sort(key=lambda r: (r.get("tag_kind") != "primary", r.get("tag", "")))
+    return ", ".join(r["tag"] for r in rows if r.get("tag"))
+
+
 def strip_marker(text: str) -> str:
     return OWNER_RE.sub("", text or "").strip()
 
@@ -123,6 +130,7 @@ def main():  # pragma: no cover
             "owner_name": entry.get("owner_name", ""),
             "first_name": first_name,
             "slack_id": entry.get("slack_id", ""),
+            "owner_tags": owner_tags(registry, owner),
             "assign": "true" if assign else "false",
             "notify": "true" if notify else "false",
             "reason": reason,

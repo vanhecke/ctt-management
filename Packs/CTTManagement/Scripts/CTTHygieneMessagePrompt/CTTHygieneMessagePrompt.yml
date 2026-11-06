@@ -12,6 +12,7 @@ userprompt: |-
   Details: ${issue_details}
   Guideline ${guideline_id}: ${guideline_title}
   What the guideline says: ${guideline_text}
+  ${first_name}'s tags: ${owner_tags}
 
   Write exactly this shape, plain text only:
 
@@ -20,7 +21,7 @@ userprompt: |-
   <one or two sentences on what was found; quote object names exactly as given, in double quotes>
 
   Fix:
-  • <the concrete fix>
+  • <the concrete fix; for a rename, give the new name with their first tag, for example "<tag> - <current name>">
   • <a second step only if it really helps>
 
   If this was intended, reply in the CTT channel.
@@ -33,7 +34,9 @@ promptConfig:
     tenant used by a team of Domain Consultants. You use only the facts you are given: never invent
     object names, guidelines, deadlines or consequences, and never threaten. If the details are thin,
     keep the message general rather than guessing.
-  maxOutputTokens: 1024
+  # Flash reasons before it answers and the reasoning counts against this limit; 1024 cut the
+  # message off mid-sentence.
+  maxOutputTokens: 8192
   webSearch: false
 args:
 - name: first_name
@@ -44,6 +47,9 @@ args:
   required: true
 - name: issue_details
   description: The issue description.
+  required: false
+- name: owner_tags
+  description: The owner's tags, primary first.
   required: false
 - name: guideline_id
   description: Guideline ID, for example CTT-TAG-01.

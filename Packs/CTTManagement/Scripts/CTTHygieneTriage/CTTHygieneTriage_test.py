@@ -1,4 +1,4 @@
-from CTTHygieneTriage import decide, fallback_message, find_owner, owner_entry, strip_marker
+from CTTHygieneTriage import decide, fallback_message, find_owner, owner_entry, owner_tags, strip_marker
 
 REGISTRY = [
     {"tag": "jva", "owner_email": "j@x.com", "owner_name": "Joris V", "slack_id": "U1", "role": "admin", "tag_kind": "extra"},
@@ -52,3 +52,8 @@ def test_fallback_message_shape():
     assert "*" not in msg
     assert "Fix:\n• Follow guideline CTT-TAG-01: Prefix object names." in msg
     assert "https://" not in msg
+
+
+def test_owner_tags_primary_first():
+    assert owner_tags(REGISTRY, "j@x.com") == "jvanhecke, jva"
+    assert owner_tags(REGISTRY, "") == ""

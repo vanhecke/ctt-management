@@ -45,6 +45,9 @@ outputs:
 - contextPath: CTT.Triage.slack_id
   description: Owner Slack member ID.
   type: String
+- contextPath: CTT.Triage.owner_tags
+  description: The owner's tags, primary first.
+  type: String
 - contextPath: CTT.Triage.assign
   description: true when the issue can be assigned to a person.
   type: String

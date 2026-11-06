@@ -68,7 +68,7 @@ def playbook() -> dict:
     t["4"]["nexttasks"] = {"#default#": ["7"], "yes": ["5"]}
     t["5"] = base("5", "aiTask", "Write the Slack message", "CTTHygieneMessagePrompt writes a short DM with the fix and the issue link.", 880, x=50,
                   task_extra={"aiTaskId": "CTTHygieneMessagePrompt"})
-    t["5"]["scriptarguments"] = {k: arg(k) for k in ("first_name", "issue_title", "issue_details", "guideline_id", "guideline_title", "guideline_text")}
+    t["5"]["scriptarguments"] = {k: arg(k) for k in ("first_name", "owner_tags", "issue_title", "issue_details", "guideline_id", "guideline_title", "guideline_text")}
     t["5"]["continueonerror"] = True
     t["5"]["nexttasks"] = {"#none#": ["6"]}
     t["6"] = base("6", "regular", "Send the Slack DM", "Sends the message through the CTT Slack Webhook (msg_person).", 1050, x=50,

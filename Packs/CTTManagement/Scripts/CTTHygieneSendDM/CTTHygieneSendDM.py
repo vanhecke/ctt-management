@@ -49,6 +49,12 @@ def build_dm(guideline_id: str, body: str, issue_id: str, url: str) -> str:
     return "\n".join(parts)
 
 
+def usable_ai_message(message: str) -> bool:
+    """False for an empty or cut-off AI answer (its last line does not end a sentence)."""
+    lines = [line.strip() for line in (message or "").strip().splitlines() if line.strip()]
+    return bool(lines) and lines[-1][-1] in ".?!)\"'"
+
+
 def bump(state: dict, day: str, owner: str) -> dict:
     """Count today's DMs per owner; older days are dropped."""
     today = dict(state.get(day, {}))
@@ -63,7 +69,8 @@ def main():  # pragma: no cover
         owner = (args.get("owner_email") or "").lower()
         if not slack_id:
             raise DemistoException("No Slack ID to send to.")
-        body = (args.get("message") or "").strip() or (args.get("fallback_message") or "").strip()
+        message = args.get("message") or ""
+        body = message.strip() if usable_ai_message(message) else (args.get("fallback_message") or "").strip()
         url = args.get("issue_url", "")
         content = build_dm(args.get("guideline_id", ""), body, args.get("issue_id", ""), url)
         res = demisto.executeCommand(

@@ -1,4 +1,4 @@
-from CTTHygieneSendDM import WIDTH, build_dm, bump, header, wrap_body
+from CTTHygieneSendDM import WIDTH, build_dm, bump, header, usable_ai_message, wrap_body
 
 
 def test_header_is_a_closed_box():
@@ -30,3 +30,9 @@ def test_bump_counts_today_and_drops_old_days():
     state = {"2026-11-05": {"b@x.com": 3}, "2026-11-06": {"b@x.com": 1}}
     assert bump(state, "2026-11-06", "b@x.com") == {"2026-11-06": {"b@x.com": 2}}
     assert bump(state, "2026-11-07", "j@x.com") == {"2026-11-07": {"j@x.com": 1}}
+
+
+def test_usable_ai_message():
+    assert usable_ai_message("Hi Bob,\n\nFix:\n• Rename it.\n\nIf this was intended, reply in the CTT channel.")
+    assert not usable_ai_message("Hi Bob,\n\nFix:\n• Rename the playbook to")
+    assert not usable_ai_message("")
