@@ -136,9 +136,32 @@ def job_json(job: dict) -> dict:
     }
 
 
+def jobs_list(jobs: list[dict]) -> dict:
+    """The same job definitions as a list item: pack uploads to XSIAM 8.15 skip Jobs/, so
+    CTTEnsureJobs creates the jobs from this list instead."""
+    return {
+        "id": "CTT - Jobs",
+        "name": "CTT - Jobs",
+        "type": "json",
+        "description": "Job definitions for CTTEnsureJobs, which creates or updates the CTT jobs. Generated from tools/jobs/gen_jobs.py in git.",
+        "data": json.dumps(jobs, indent=2),
+        "version": -1,
+        "fromVersion": "8.9.0",
+        "itemVersion": "",
+        "locked": False,
+        "nameLocked": False,
+        "packID": "CTTManagement",
+        "system": False,
+        "allRead": True,
+        "allReadWrite": False,
+        "marketplaces": ["marketplacev2", "platform"],
+    }
+
+
 def main() -> None:
     (PACK / "Playbooks").mkdir(exist_ok=True)
     (PACK / "Jobs").mkdir(exist_ok=True)
+    (PACK / "Lists" / "list-CTT_-_Jobs.json").write_text(json.dumps(jobs_list([job_json(j) for j in JOBS]), indent=4) + "\n")
     for job in JOBS:
         stem = re.sub(r"[^A-Za-z0-9]+", "-", job["name"])
         pb = PACK / "Playbooks" / f"playbook-{stem}.yml"

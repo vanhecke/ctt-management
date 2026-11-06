@@ -1,0 +1,1 @@
+Creates or updates the CTT jobs (`CTT - Registry Sync`, `CTT - Hygiene - Daily Sweep`, `CTT - Weekly Stats`) from the `CTT - Jobs` list. Uploads of a pack to XSIAM 8.15 skip the pack's Jobs folder, so run `!CTTEnsureJobs` once after installing or upgrading the pack. An existing job keeps its id and start date; only its definition is updated.

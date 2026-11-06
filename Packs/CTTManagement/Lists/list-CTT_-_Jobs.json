@@ -1,0 +1,20 @@
+{
+    "id": "CTT - Jobs",
+    "name": "CTT - Jobs",
+    "type": "json",
+    "description": "Job definitions for CTTEnsureJobs, which creates or updates the CTT jobs. Generated from tools/jobs/gen_jobs.py in git.",
+    "data": "[\n  {\n    \"id\": \"CTT - Registry Sync\",\n    \"name\": \"CTT - Registry Sync\",\n    \"details\": \"Syncs the CTT registry (tags, lab octets, Slack IDs, admins) from the Google Sheet into the ctt_registry lookup dataset and the 'CTT - Registry' list. Run by the job of the same name every 6 hours.\",\n    \"playbookId\": \"CTT - Registry Sync\",\n    \"scheduled\": true,\n    \"recurrent\": true,\n    \"cronView\": false,\n    \"humanCron\": {\n      \"timePeriodType\": \"hours\",\n      \"timePeriod\": 6\n    },\n    \"startDate\": \"2026-11-06T00:00:00Z\",\n    \"type\": \"##default##\",\n    \"timezone\": \"Asia/Singapore\",\n    \"timezoneOffset\": -480,\n    \"shouldTriggerNew\": true,\n    \"closePrevRun\": true,\n    \"tags\": [\n      \"CTT\"\n    ],\n    \"isFeed\": false,\n    \"selectedFeeds\": [],\n    \"isAllFeeds\": false,\n    \"fromVersion\": \"8.9.0\",\n    \"supportedModules\": [\n      \"xsiam\",\n      \"agentix\"\n    ]\n  },\n  {\n    \"id\": \"CTT - Hygiene - Daily Sweep\",\n    \"name\": \"CTT - Hygiene - Daily Sweep\",\n    \"details\": \"Daily CTT hygiene sweep: checks custom objects and open Security cases against the CTT guidelines and raises one health issue per guideline and owner. Run by the job of the same name every day at 08:30 Singapore time.\",\n    \"playbookId\": \"CTT - Hygiene - Daily Sweep\",\n    \"scheduled\": true,\n    \"recurrent\": true,\n    \"cronView\": false,\n    \"humanCron\": {\n      \"days\": [\n        \"MON\",\n        \"TUE\",\n        \"WED\",\n        \"THU\",\n        \"FRI\",\n        \"SAT\",\n        \"SUN\"\n      ],\n      \"atTimeHour\": \"08\",\n      \"atTimeMinute\": \"30\",\n      \"timePeriodType\": \"weeks\",\n      \"timePeriod\": 1\n    },\n    \"startDate\": \"2026-11-06T00:00:00Z\",\n    \"type\": \"##default##\",\n    \"timezone\": \"Asia/Singapore\",\n    \"timezoneOffset\": -480,\n    \"shouldTriggerNew\": true,\n    \"closePrevRun\": true,\n    \"tags\": [\n      \"CTT\"\n    ],\n    \"isFeed\": false,\n    \"selectedFeeds\": [],\n    \"isAllFeeds\": false,\n    \"fromVersion\": \"8.9.0\",\n    \"supportedModules\": [\n      \"xsiam\",\n      \"agentix\"\n    ]\n  },\n  {\n    \"id\": \"CTT - Weekly Stats\",\n    \"name\": \"CTT - Weekly Stats\",\n    \"details\": \"Posts weekly tenant statistics to the team Slack channel. Run by the job of the same name every Monday at 09:00 Singapore time.\",\n    \"playbookId\": \"CTT - Weekly Stats\",\n    \"scheduled\": true,\n    \"recurrent\": true,\n    \"cronView\": false,\n    \"humanCron\": {\n      \"days\": [\n        \"MON\"\n      ],\n      \"atTimeHour\": \"09\",\n      \"atTimeMinute\": \"00\",\n      \"timePeriodType\": \"weeks\",\n      \"timePeriod\": 1\n    },\n    \"startDate\": \"2026-11-06T00:00:00Z\",\n    \"type\": \"##default##\",\n    \"timezone\": \"Asia/Singapore\",\n    \"timezoneOffset\": -480,\n    \"shouldTriggerNew\": true,\n    \"closePrevRun\": true,\n    \"tags\": [\n      \"CTT\"\n    ],\n    \"isFeed\": false,\n    \"selectedFeeds\": [],\n    \"isAllFeeds\": false,\n    \"fromVersion\": \"8.9.0\",\n    \"supportedModules\": [\n      \"xsiam\",\n      \"agentix\"\n    ]\n  }\n]",
+    "version": -1,
+    "fromVersion": "8.9.0",
+    "itemVersion": "",
+    "locked": false,
+    "nameLocked": false,
+    "packID": "CTTManagement",
+    "system": false,
+    "allRead": true,
+    "allReadWrite": false,
+    "marketplaces": [
+        "marketplacev2",
+        "platform"
+    ]
+}

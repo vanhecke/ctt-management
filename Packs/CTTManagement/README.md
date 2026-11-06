@@ -24,6 +24,8 @@ Monitoring only raises health issues. Nothing in the pack changes or deletes the
 | Job + playbook | CTT - Weekly Stats | Monday 09:00 SGT: tenant statistics to Slack |
 | Script | CTTRegistrySync, CTTHygieneSweep, CTTWeeklyStats | Backing scripts for the jobs |
 | Script | CTTRegistryLookup, CTTMyFootprint | Backing scripts for the agent |
+| Script | CTTEnsureJobs | Creates or updates the three jobs from the `CTT - Jobs` list (run once after install) |
+| List | CTT - Jobs | The job definitions CTTEnsureJobs applies |
 | List | CTT - Config | Pack settings (registry sheet, Slack channel, sweep options) |
 | List | CTT - Registry Source | CSV fallback registry, used when the sheet can't be read |
 | Dashboard | CTT - Hygiene | Issues by guideline, who changes what, untagged objects, stale cases, endpoint ownership, registry |
@@ -44,10 +46,12 @@ domain.
 
 ## After installing
 
-1. Run the `CTT - Registry Sync` job once. It creates the `ctt_registry` lookup that the
+1. Run `!CTTEnsureJobs` in the playground. Pack uploads to XSIAM 8.15 skip the Jobs folder, so
+   this creates the three jobs from the `CTT - Jobs` list.
+2. Run `!CTTRegistrySync` once. It creates the `ctt_registry` lookup that the
    correlation rules join on. The rules raise nothing until it exists.
-2. Check the `CTT - Hygiene` dashboard's registry widget.
-3. Run `CTTHygieneSweep` with `dry_run=true` once to preview what the first real sweep will raise.
+3. Check the `CTT - Hygiene` dashboard's registry widget.
+4. Run `CTTHygieneSweep` with `dry_run=true` once to preview what the first real sweep will raise.
 
 ## Source
 
