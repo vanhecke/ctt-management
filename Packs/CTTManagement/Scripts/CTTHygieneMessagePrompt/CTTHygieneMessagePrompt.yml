@@ -1,0 +1,65 @@
+commonfields:
+  id: CTTHygieneMessagePrompt
+  version: -1
+name: CTTHygieneMessagePrompt
+comment: Prompt-backed (isllm) step of the CTT - Hygiene - Notify Owner playbook. Writes the short, friendly Slack DM that tells a DC what the CTT monitoring found, which guideline it concerns and how to fix it, ending with the issue link.
+type: python
+isllm: true
+userprompt: |-
+  Write a Slack direct message to ${first_name} about something the monitoring of the shared Cortex Team Tenant (CTT) found.
+
+  What was found: ${issue_title}
+  Details: ${issue_details}
+  Guideline ${guideline_id}: ${guideline_title}
+  What the guideline says: ${guideline_text}
+  Issue link: ${issue_url}
+
+  How to write it:
+  - Start with "Hi ${first_name}," and nothing before it.
+  - In one or two sentences, say what was found. Quote object names exactly as given, in double quotes.
+  - Then give the fix as one or two lines starting with "• ". Mention the guideline ID once.
+  - Add one short sentence that they can reply in the CTT channel if this was intended.
+  - Friendly and matter-of-fact: everyone shares this tenant and slips happen. No blame, no exclamation marks, at most one emoji.
+  - Plain text only: Slack shows this message without any formatting, so no asterisks, underscores, backticks, headings, tables or Markdown links. Use short lines and the bullets.
+  - End with the issue link on its own line, exactly as given.
+  - At most 90 words. Output only the message.
+promptConfig:
+  modelTier: Flash
+  systemInstruction: >-
+    You write brief, friendly Slack messages on behalf of the CTT admins of a shared Cortex XSIAM
+    tenant used by a team of Domain Consultants. You use only the facts you are given: never invent
+    object names, guidelines, deadlines or consequences, and never threaten. If the details are thin,
+    keep the message general rather than guessing.
+  maxOutputTokens: 1024
+  webSearch: false
+args:
+- name: first_name
+  description: The owner's first name.
+  required: true
+- name: issue_title
+  description: What was found.
+  required: true
+- name: issue_details
+  description: The issue description.
+  required: false
+- name: guideline_id
+  description: Guideline ID, for example CTT-TAG-01.
+  required: true
+- name: guideline_title
+  description: The guideline's one-line rule.
+  required: false
+- name: guideline_text
+  description: The guideline's full text.
+  required: false
+- name: issue_url
+  description: Link to the issue.
+  required: true
+outputs:
+- contextPath: CTT.HygieneMessage
+  description: The Slack message for the owner.
+  type: String
+fromversion: 8.15.0
+tags:
+- CTT
+marketplaces:
+- platform

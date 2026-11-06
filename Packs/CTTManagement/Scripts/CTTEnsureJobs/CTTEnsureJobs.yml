@@ -19,12 +19,19 @@ args:
   - "false"
   defaultValue: "false"
   description: Show what would be created or updated without changing anything.
+- name: remove_obsolete
+  auto: PREDEFINED
+  predefined:
+  - "true"
+  - "false"
+  defaultValue: "false"
+  description: Also delete jobs named "CTT - ..." that the list no longer defines (for example CTT - Weekly Stats after 1.1.0). Without it they are only reported as obsolete.
 outputs:
 - contextPath: CTT.Jobs.Job
   description: Job name.
   type: String
 - contextPath: CTT.Jobs.Action
-  description: create, update or ok.
+  description: create, update, ok, obsolete or deleted.
   type: String
 - contextPath: CTT.Jobs.Changed
   description: Fields that differed on the tenant.
@@ -32,6 +39,7 @@ outputs:
 dependson:
   must:
   - core-api-post
+  - core-api-delete
 fromversion: 8.9.0
 marketplaces:
 - marketplacev2

@@ -25,7 +25,7 @@ alert_domain: DOMAIN_HEALTH
 alert_type: Unclassified
 alert_category: OTHER
 alert_name: CTT - Hygiene - $guideline_id - $title
-alert_description: $actor_email signed in $logins time(s) but is not in the CTT registry. Add them to the registry sheet with a tag and lab octet (guideline $guideline_id).
+alert_description: '$actor_email signed in $logins time(s) but is not in the CTT registry. Add them to the registry sheet with a tag and lab octet (guideline $guideline_id). [owner: $actor_email]'
 alert_fields:
   actor_effective_username: actor_email
 severity: SEV_030_MEDIUM

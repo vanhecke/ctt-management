@@ -1,0 +1,259 @@
+id: CTT - Hygiene - Notify Owner
+version: -1
+name: CTT - Hygiene - Notify Owner
+description: 'Runs on every CTT hygiene health issue: assigns it to the person responsible (from the issue''s owner marker and the CTT registry) and sends them a short AI-written Slack DM with the fix and the issue link. DMs follow notify.mode in ''CTT - Config''.'
+fromversion: 8.15.0
+marketplaces:
+- marketplacev2
+- platform
+tags:
+- CTT
+starttaskid: '0'
+tasks:
+  '0':
+    id: '0'
+    taskid: 42ee1b59-b6b4-59fc-b29d-a3ce12efd3c0
+    type: start
+    task:
+      id: 42ee1b59-b6b4-59fc-b29d-a3ce12efd3c0
+      version: -1
+      name: ''
+      description: ''
+      type: start
+      iscommand: false
+      brand: ''
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 450, "y": 50}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    nexttasks:
+      '#none#':
+      - '1'
+  '1':
+    id: '1'
+    taskid: 36f1a4d8-b559-5ab5-8174-33f8598786d6
+    type: regular
+    task:
+      id: 36f1a4d8-b559-5ab5-8174-33f8598786d6
+      version: -1
+      name: Triage the hygiene issue
+      description: Finds the owner, their Slack ID and the guideline, and decides whether to assign and notify.
+      type: regular
+      iscommand: false
+      brand: ''
+      scriptName: CTTHygieneTriage
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 450, "y": 200}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    nexttasks:
+      '#none#':
+      - '2'
+  '2':
+    id: '2'
+    taskid: 2f64e302-792f-5f6b-9ecd-92ca36c84d11
+    type: condition
+    task:
+      id: 2f64e302-792f-5f6b-9ecd-92ca36c84d11
+      version: -1
+      name: Can the issue be assigned to a person?
+      description: ''
+      type: condition
+      iscommand: false
+      brand: ''
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 450, "y": 370}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    conditions:
+    - label: 'yes'
+      condition:
+      - - operator: isEqualString
+          left:
+            value:
+              simple: CTT.Triage.assign
+            iscontext: true
+          right:
+            value:
+              simple: 'true'
+    nexttasks:
+      '#default#':
+      - '7'
+      'yes':
+      - '3'
+  '3':
+    id: '3'
+    taskid: 7d52e7e1-0c27-5593-9320-e66ddbbb5c51
+    type: regular
+    task:
+      id: 7d52e7e1-0c27-5593-9320-e66ddbbb5c51
+      version: -1
+      name: Assign the issue to its owner
+      description: Sets the issue assignee to the owner's email.
+      type: regular
+      iscommand: true
+      brand: Cortex Core - Platform
+      script: Cortex Core - Platform|||core-update-issue
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 250, "y": 540}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    scriptarguments:
+      id:
+        simple: ${CTT.Triage.issue_id}
+      assigned_user_mail:
+        simple: ${CTT.Triage.owner_email}
+    continueonerror: true
+    nexttasks:
+      '#none#':
+      - '4'
+  '4':
+    id: '4'
+    taskid: aac97799-4178-5d70-847d-f1d923bdd1a1
+    type: condition
+    task:
+      id: aac97799-4178-5d70-847d-f1d923bdd1a1
+      version: -1
+      name: Should the owner get a Slack DM?
+      description: ''
+      type: condition
+      iscommand: false
+      brand: ''
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 250, "y": 710}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    conditions:
+    - label: 'yes'
+      condition:
+      - - operator: isEqualString
+          left:
+            value:
+              simple: CTT.Triage.notify
+            iscontext: true
+          right:
+            value:
+              simple: 'true'
+    nexttasks:
+      '#default#':
+      - '7'
+      'yes':
+      - '5'
+  '5':
+    id: '5'
+    taskid: f87aefbb-5af9-55ca-8f77-695a73d5177f
+    type: aiTask
+    task:
+      id: f87aefbb-5af9-55ca-8f77-695a73d5177f
+      version: -1
+      name: Write the Slack message
+      description: CTTHygieneMessagePrompt writes a short DM with the fix and the issue link.
+      type: aiTask
+      aiTaskId: CTTHygieneMessagePrompt
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 50, "y": 880}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    scriptarguments:
+      first_name:
+        simple: ${CTT.Triage.first_name}
+      issue_title:
+        simple: ${CTT.Triage.issue_title}
+      issue_details:
+        simple: ${CTT.Triage.issue_details}
+      guideline_id:
+        simple: ${CTT.Triage.guideline_id}
+      guideline_title:
+        simple: ${CTT.Triage.guideline_title}
+      guideline_text:
+        simple: ${CTT.Triage.guideline_text}
+      issue_url:
+        simple: ${CTT.Triage.issue_url}
+    continueonerror: true
+    nexttasks:
+      '#none#':
+      - '6'
+  '6':
+    id: '6'
+    taskid: dd15823d-035f-591f-8483-7f44d831cb39
+    type: regular
+    task:
+      id: dd15823d-035f-591f-8483-7f44d831cb39
+      version: -1
+      name: Send the Slack DM
+      description: Sends the message through the CTT Slack Webhook (msg_person).
+      type: regular
+      iscommand: false
+      brand: ''
+      scriptName: CTTHygieneSendDM
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 50, "y": 1050}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    scriptarguments:
+      slack_user_id:
+        simple: ${CTT.Triage.slack_id}
+      owner_email:
+        simple: ${CTT.Triage.owner_email}
+      message:
+        simple: ${CTT.HygieneMessage}
+      fallback_message:
+        simple: ${CTT.Triage.fallback_message}
+      issue_url:
+        simple: ${CTT.Triage.issue_url}
+    nexttasks:
+      '#none#':
+      - '7'
+  '7':
+    id: '7'
+    taskid: 769da36d-dc89-5ae4-b197-784b5c726f57
+    type: title
+    task:
+      id: 769da36d-dc89-5ae4-b197-784b5c726f57
+      version: -1
+      name: Done
+      description: ''
+      type: title
+      iscommand: false
+      brand: ''
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 450, "y": 1220}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+view: '{"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 1235, "width": 780, "x": 50, "y": 50}}}'
+inputs: []
+outputs: []
+tests:
+- No tests (auto formatted)

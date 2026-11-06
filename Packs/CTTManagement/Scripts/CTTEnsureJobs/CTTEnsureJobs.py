@@ -13,6 +13,12 @@ def job_changes(wanted: dict, current: dict) -> list[str]:
     return [k for k in COMPARED if wanted.get(k) != current.get(k)]
 
 
+def obsolete_jobs(wanted: list[dict], existing: list[dict]) -> list[dict]:
+    """CTT jobs on the tenant that the list no longer defines (for example after a rename)."""
+    names = {j["name"] for j in wanted}
+    return [j for j in existing if str(j.get("name", "")).startswith("CTT - ") and j.get("name") not in names]
+
+
 def plan_jobs(wanted: list[dict], existing: list[dict]) -> list[tuple[str, dict, dict | None, list[str]]]:
     """Returns (action, definition, current job or None, changed fields) per definition."""
     by_name = {j.get("name"): j for j in existing}
@@ -38,6 +44,7 @@ def core_post(uri: str, body: dict) -> Any:
 def main():  # pragma: no cover
     try:
         dry_run = argToBoolean(demisto.args().get("dry_run", "false"))
+        remove_obsolete = argToBoolean(demisto.args().get("remove_obsolete", "false"))
         res = demisto.executeCommand("getList", {"listName": JOBS_LIST})
         if is_error(res):
             raise DemistoException(f"Cannot read '{JOBS_LIST}': {get_error(res)}")
@@ -51,6 +58,13 @@ def main():  # pragma: no cover
                     body.update(id=current["id"], version=current.get("version"), startDate=current.get("startDate"))
                 core_post("/jobs", body)
             rows.append({"Job": job["name"], "Action": action, "Changed": ", ".join(changed)})
+        for job in obsolete_jobs(wanted, existing):
+            removed = remove_obsolete and not dry_run
+            if removed:
+                res = demisto.executeCommand("core-api-delete", {"uri": f"/jobs/{job['id']}"})
+                if is_error(res):
+                    raise DemistoException(f"Cannot delete job {job['name']}: {get_error(res)}")
+            rows.append({"Job": job["name"], "Action": "deleted" if removed else "obsolete", "Changed": ""})
         title = f"CTT jobs{' (dry run)' if dry_run else ''}"
         return_results(CommandResults(readable_output=tableToMarkdown(title, rows), outputs_prefix="CTT.Jobs", outputs=rows))
     except Exception as e:

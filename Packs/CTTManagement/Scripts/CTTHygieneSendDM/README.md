@@ -1,0 +1,1 @@
+Sends the CTT hygiene DM through the `CTT Slack Webhook` integration (`msg_person`). It uses the AI-written message from `CTTHygieneMessagePrompt`, or the template from `CTTHygieneTriage` when that is empty, always ends with the issue link, and counts DMs per owner per day in the `CTT - Notify State` list.

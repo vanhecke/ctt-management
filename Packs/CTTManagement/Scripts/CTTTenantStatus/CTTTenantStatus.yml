@@ -1,0 +1,48 @@
+commonfields:
+  id: CTTTenantStatus
+  version: -1
+name: CTTTenantStatus
+comment: Collects tenant statistics (open CTT hygiene issues by guideline and owner, cases, issues, playbook runs, top scripts, sign-ins, most active builders, data ingested, XQL compute, endpoints, AI agent use) and publishes them to the CTT Slack channel through the CTT Slack Webhook integration - the 'Tenant Status' canvas (canvas_update) and a one-line channel topic (channel_update_topic).
+script: '-'
+type: python
+subtype: python3
+dockerimage: demisto/python3:3.12.15.14069087
+runas: DBotWeakRole
+enabled: true
+timeout: 900ns
+tags:
+- CTT
+args:
+- name: period_days
+  description: Days of activity to report. Defaults to status.period_days in "CTT - Config" (7).
+- name: send
+  auto: PREDEFINED
+  predefined:
+  - "true"
+  - "false"
+  defaultValue: "true"
+  description: Set to false to only show the canvas and topic in the War Room.
+outputs:
+- contextPath: CTT.TenantStatus.canvas
+  description: The canvas markdown.
+  type: String
+- contextPath: CTT.TenantStatus.topic
+  description: The channel topic.
+  type: String
+- contextPath: CTT.TenantStatus.sent
+  description: What was updated in Slack (canvas, topic).
+  type: Unknown
+- contextPath: CTT.TenantStatus.errors
+  description: Parts that could not be collected or sent.
+  type: Unknown
+dependson:
+  must:
+  - core-api-post
+  should:
+  - ctt-slack-webhook-send
+fromversion: 8.9.0
+marketplaces:
+- marketplacev2
+- platform
+tests:
+- No tests (auto formatted)

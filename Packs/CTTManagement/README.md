@@ -5,7 +5,7 @@ that a team of Domain Consultants shares for demos, tests and labs. The pack mon
 guidelines (`Knowledge/CTTManagement/CTT-Guidelines.md` in the repo), posts weekly statistics
 to the team's Slack channel, and adds the CTT Assistant agent.
 
-Monitoring only raises health issues. Nothing in the pack changes or deletes the objects it checks.
+Monitoring raises health issues, assigns each to the person responsible and sends them a Slack DM through a Slack workflow webhook. Nothing in the pack changes or deletes the objects it checks.
 
 ## Content
 
@@ -21,11 +21,15 @@ Monitoring only raises health issues. Nothing in the pack changes or deletes the
 | (not shipped) | CTT - Hygiene - API key created without expiry | Spec in tools/, ships once CTT-CEN-02 is accepted |
 | Job + playbook | CTT - Registry Sync | Every 6 hours: Google Sheet registry to the `ctt_registry` lookup and the `CTT - Registry` list |
 | Job + playbook | CTT - Hygiene - Daily Sweep | 08:30 SGT: inventory and stale-case checks, one issue per guideline and owner |
-| Job + playbook | CTT - Weekly Stats | Monday 09:00 SGT: tenant statistics to Slack |
-| Script | CTTRegistrySync, CTTHygieneSweep, CTTWeeklyStats | Backing scripts for the jobs |
+| Job + playbook | CTT - Tenant Status | Daily 09:00 SGT: replaces the Tenant Status canvas and sets the CTT channel topic |
+| Trigger + playbook | CTT - Hygiene - Notify Owner | On every CTT hygiene issue: assign it to its owner, AI-written Slack DM (CTT-* guidelines) |
+| Script | CTTRegistrySync, CTTHygieneSweep, CTTTenantStatus | Backing scripts for the jobs |
+| Script | CTTHygieneTriage, CTTHygieneMessagePrompt (AI prompt), CTTHygieneSendDM | Backing scripts for the notify playbook |
+| Integration | CTT Slack Webhook | One-way Slack workflow webhook: DM, channel message, channel topic, Tenant Status canvas |
 | Script | CTTRegistryLookup, CTTMyFootprint | Backing scripts for the agent |
 | Script | CTTEnsureJobs | Creates or updates the three jobs from the `CTT - Jobs` list (run once after install) |
 | List | CTT - Jobs | The job definitions CTTEnsureJobs applies |
+| List | CTT - Guidelines Index | Every guideline by ID, generated from CTT-Guidelines.md; quoted in the DMs |
 | List | CTT - Config | Pack settings (registry sheet, Slack channel, sweep options) |
 | List | CTT - Registry Source | CSV fallback registry, used when the sheet can't be read |
 | Dashboard | CTT - Hygiene | Issues by guideline, who changes what, untagged objects, stale cases, endpoint ownership, registry |
@@ -40,18 +44,20 @@ domain.
 - A Core REST API instance (used by all scripts).
 - A GoogleSheets instance that can read the registry sheet (otherwise the sync falls back to the
   `CTT - Registry Source` list).
-- A SlackV3 instance for the weekly stats post, with `stats.slack_channel` set in `CTT - Config`.
+- A `CTT Slack Webhook` instance: the Slack workflow trigger URL, the CTT channel ID and a placeholder member ID.
+- `notify.mode` in `CTT - Config`: `allowlist` (default, DMs only to `notify.allowlist`), `admins_only`, `all` or `off`.
 - XSIAM 4.0 for the agent's knowledge documents. On 8.15 the agent installs, but its knowledge is
   empty.
 
 ## After installing
 
-1. Run `!CTTEnsureJobs` in the playground. Pack uploads to XSIAM 8.15 skip the Jobs folder, so
+1. Configure the `CTT Slack Webhook` instance.
+2. Run `!CTTEnsureJobs remove_obsolete=true` in the playground. Pack uploads to XSIAM 8.15 skip the Jobs folder, so
    this creates the three jobs from the `CTT - Jobs` list.
-2. Run `!CTTRegistrySync` once. It creates the `ctt_registry` lookup that the
+3. Run `!CTTRegistrySync` once. It creates the `ctt_registry` lookup that the
    correlation rules join on. The rules raise nothing until it exists.
-3. Check the `CTT - Hygiene` dashboard's registry widget.
-4. Run `CTTHygieneSweep` with `dry_run=true` once to preview what the first real sweep will raise.
+4. Check the `CTT - Hygiene` dashboard's registry widget.
+5. Run `CTTHygieneSweep` with `dry_run=true` once to preview what the first real sweep will raise.
 
 ## Source
 
@@ -62,6 +68,11 @@ JSON.
 ## Version History (Managed by GoCortex Spellbook)
 
 <!-- spellbook:version-history:start -->
+### 1.1.0
+
+- Hygiene issues are assigned to their owner and the owner gets an AI-written Slack DM (CTT - Hygiene - Notify Owner, CTT Slack Webhook).
+- CTT - Tenant Status replaces CTT - Weekly Stats: daily Tenant Status canvas and channel topic.
+
 ### 1.0.0
 
 - Initial release: guideline monitoring rules, registry sync, daily sweep, weekly stats, CTT - Hygiene dashboard, CTT Assistant agent.

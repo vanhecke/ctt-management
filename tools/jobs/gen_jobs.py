@@ -35,15 +35,15 @@ JOBS = [
         "cron": {"days": ALL_DAYS, "atTimeHour": "08", "atTimeMinute": "30", "timePeriodType": "weeks", "timePeriod": 1},
     },
     {
-        "name": "CTT - Weekly Stats",
-        "script": "CTTWeeklyStats",
-        "description": "Posts weekly tenant statistics to the team Slack channel. Run by the job of the same name every Monday at 09:00 Singapore time.",
-        "task": "Post the weekly tenant statistics",
+        "name": "CTT - Tenant Status",
+        "script": "CTTTenantStatus",
+        "description": "Publishes tenant statistics and hygiene to the CTT Slack channel: replaces the Tenant Status canvas and sets the channel topic. Run by the job of the same name every day at 09:00 Singapore time.",
+        "task": "Publish the tenant status to Slack",
         "inputs": {
-            "period_days": ("7", "Days to report on."),
-            "send": ("true", "false only shows the summary in the War Room."),
+            "period_days": ("7", "Days of activity to report."),
+            "send": ("true", "false only shows the canvas and topic in the War Room."),
         },
-        "cron": {"days": ["MON"], "atTimeHour": "09", "atTimeMinute": "00", "timePeriodType": "weeks", "timePeriod": 1},
+        "cron": {"days": ALL_DAYS, "atTimeHour": "09", "atTimeMinute": "00", "timePeriodType": "weeks", "timePeriod": 1},
     },
 ]
 

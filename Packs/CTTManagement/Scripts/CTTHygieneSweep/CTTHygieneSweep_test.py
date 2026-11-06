@@ -102,6 +102,7 @@ def test_issue_body():
     assert issue["issue_domain"] == "Health"
     assert issue["severity"] == "MEDIUM"
     assert "and 10 more" in issue["description"]
+    assert issue["description"].endswith("[owner: u@x.com]")
 
 
 def test_inventory_entry():

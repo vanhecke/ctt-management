@@ -64,7 +64,7 @@ alert_domain: DOMAIN_HEALTH
 alert_type: Unclassified
 alert_category: OTHER
 alert_name: CTT - Hygiene - $guideline_id - $title
-alert_description: $actor ran '$subtype' on $object_kind '$object_name' ($finding). Duplicate built-in content and change the copy under your own tag (guideline $guideline_id).
+alert_description: '$actor ran ''$subtype'' on $object_kind ''$object_name'' ($finding). Duplicate built-in content and change the copy under your own tag (guideline $guideline_id). [owner: $actor]'
 alert_fields:
   actor_effective_username: actor
 severity: SEV_030_MEDIUM

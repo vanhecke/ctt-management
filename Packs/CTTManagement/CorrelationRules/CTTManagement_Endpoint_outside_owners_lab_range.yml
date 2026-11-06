@@ -33,7 +33,7 @@ alert_domain: DOMAIN_HEALTH
 alert_type: Unclassified
 alert_category: OTHER
 alert_name: CTT - Hygiene - $guideline_id - $title
-alert_description: 'Endpoint $endpoint_name: $finding. Move it into your own 10.x.0.0/16 range (guideline $guideline_id).'
+alert_description: 'Endpoint $endpoint_name: $finding. Move it into your own 10.x.0.0/16 range (guideline $guideline_id). [owner: $owner]'
 alert_fields:
   agent_hostname: endpoint_name
   actor_effective_username: owner

@@ -1,14 +1,20 @@
 {
-    "id": "CTT - Weekly Stats",
-    "name": "CTT - Weekly Stats",
-    "details": "Posts weekly tenant statistics to the team Slack channel. Run by the job of the same name every Monday at 09:00 Singapore time.",
-    "playbookId": "CTT - Weekly Stats",
+    "id": "CTT - Tenant Status",
+    "name": "CTT - Tenant Status",
+    "details": "Publishes tenant statistics and hygiene to the CTT Slack channel: replaces the Tenant Status canvas and sets the channel topic. Run by the job of the same name every day at 09:00 Singapore time.",
+    "playbookId": "CTT - Tenant Status",
     "scheduled": true,
     "recurrent": true,
     "cronView": false,
     "humanCron": {
         "days": [
-            "MON"
+            "MON",
+            "TUE",
+            "WED",
+            "THU",
+            "FRI",
+            "SAT",
+            "SUN"
         ],
         "atTimeHour": "09",
         "atTimeMinute": "00",

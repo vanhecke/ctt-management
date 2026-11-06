@@ -1,0 +1,85 @@
+commonfields:
+  id: CTT Slack Webhook
+  version: -1
+name: CTT Slack Webhook
+display: CTT Slack Webhook
+category: Messaging and Conferencing
+provider: CTT admins
+description: >-
+  One-way messages from the tenant to the CTT Slack channel through a Slack workflow webhook (a
+  workflow trigger URL). Supports the workflow's four actions - DM a person, post to a channel,
+  update the CTT channel topic, and replace the 'Tenant Status' canvas.
+sectionorder:
+- Connect
+configuration:
+- display: Slack workflow webhook URL
+  name: url
+  type: 9
+  hiddenusername: true
+  displaypassword: Slack workflow webhook URL
+  required: true
+  section: Connect
+  additionalinfo: The workflow trigger URL (https://hooks.slack.com/triggers/...). Stored encrypted; keep it out of git.
+- display: CTT channel ID
+  name: channel_id
+  type: 0
+  required: true
+  section: Connect
+  additionalinfo: The CTT Slack channel ID (for example C0CCNGKQX1D). Sent with every call; msg_channel uses it when no slack_channel_id is given.
+- display: Placeholder user ID
+  name: placeholder_user_id
+  type: 0
+  required: true
+  section: Connect
+  additionalinfo: Any valid Slack member ID. The workflow rejects calls without a user ID, so actions that need none (topic, canvas, channel message) send this one. It is never messaged.
+- display: Trust any certificate (not secure)
+  name: insecure
+  type: 8
+  required: false
+  advanced: true
+  section: Connect
+- display: Use system proxy settings
+  name: proxy
+  type: 8
+  required: false
+  advanced: true
+  section: Connect
+script:
+  commands:
+  - name: ctt-slack-webhook-send
+    description: Sends one workflow action to Slack.
+    arguments:
+    - name: action
+      required: true
+      auto: PREDEFINED
+      predefined:
+      - msg_person
+      - msg_channel
+      - channel_update_topic
+      - canvas_update
+      description: msg_person (DM slack_user_id), msg_channel (post to slack_channel_id), channel_update_topic (set the CTT channel topic to content), canvas_update (replace the 'Tenant Status' canvas with content).
+    - name: content
+      required: true
+      description: The message, topic or canvas content. Slack formatting for messages, markdown for the canvas.
+    - name: slack_user_id
+      description: Slack member ID for msg_person, for example U03JTG6TL2V.
+    - name: slack_channel_id
+      description: Slack channel ID for msg_channel.
+    outputs:
+    - contextPath: CTTSlackWebhook.Sent.action
+      description: The action sent.
+      type: String
+    - contextPath: CTTSlackWebhook.Sent.target
+      description: The user or channel it went to.
+      type: String
+  dockerimage: demisto/python3:3.12.15.14069087
+  runonce: false
+  script: '-'
+  subtype: python3
+  type: python
+fromversion: 8.9.0
+marketplaces:
+- marketplacev2
+- platform
+tests:
+- No tests (auto formatted)

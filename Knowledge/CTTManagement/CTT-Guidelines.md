@@ -175,10 +175,15 @@ Before you leave the team, delete your objects or hand them over to another DC, 
 - When a guideline is broken, it raises a **health issue** named
   `CTT - Hygiene - <guideline ID> - <what happened>`. Each one appears in the Issues table and
   opens its own case, both in the **Health** domain, apart from the Security cases you demo with.
-- Each issue names the guideline, the object and the person who made the change.
-- Nothing is changed or deleted automatically, and nobody is messaged yet. A future CTT agent will
-  follow up on these issues and talk to the owner on Slack.
-- The `CTT - Hygiene` dashboard shows open issues by guideline and by DC.
+- The issue is **assigned to you** when it is about something you did or own, and you get a short
+  **Slack DM** from the CTT workflow explaining what was found, the guideline, how to fix it, and a
+  link to the issue. At most three DMs per person per day.
+- Nothing on the tenant is changed or deleted automatically. You fix the object; the daily sweep
+  closes its own issues once things are fixed.
+- If something was intended (a test, a demo), reply in the team channel and a CTT admin resolves
+  the issue.
+- The **Tenant Status** canvas and the topic of the team channel show the tenant's health every
+  morning, and the `CTT - Hygiene` dashboard has the details.
 - `CTT-Guideline-Coverage.md` lists which guidelines are monitored and how.
 
 ## Getting help
@@ -209,3 +214,4 @@ Before you leave the team, delete your objects or hand them over to another DC, 
 |---|---|
 | 2026-11-05 | First draft: guideline IDs, Active and Proposed guidelines |
 | 2026-11-06 | Your tag: primary tag plus alias, registry sheet layout |
+| 2026-11-06 | How monitoring works: issues are assigned to their owner, Slack DM, Tenant Status canvas |

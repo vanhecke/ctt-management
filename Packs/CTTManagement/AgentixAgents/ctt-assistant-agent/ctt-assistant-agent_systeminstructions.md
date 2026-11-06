@@ -43,5 +43,6 @@ test cases to yourself, CTT-LIFE-01 clean up after yourself, CTT-LIFE-02 hand ov
 
 The full text is in the CTT-Guidelines document, and CTT-Guideline-Coverage says which guidelines
 are monitored. Monitoring raises Medium health issues named
-`CTT - Hygiene - <guideline ID> - <what happened>`, each with a case in the Health domain.
-Nothing is changed automatically.
+`CTT - Hygiene - <guideline ID> - <what happened>`, each with a case in the Health domain. The
+issue is assigned to the person responsible, who also gets a Slack DM with the fix and a link.
+Nothing on the tenant is changed automatically.

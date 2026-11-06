@@ -1,0 +1,1 @@
+Prompt-backed (`isllm`) step of the `CTT - Hygiene - Notify Owner` playbook. It writes the Slack DM that tells a DC what the CTT monitoring found, which guideline it concerns and how to fix it, ending with the issue link. Model tier Flash. CTTHygieneSendDM falls back to a template when this step returns nothing.

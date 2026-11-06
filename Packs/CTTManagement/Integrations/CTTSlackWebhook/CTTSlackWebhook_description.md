@@ -1,0 +1,1 @@
+Paste the Slack workflow trigger URL (https://hooks.slack.com/triggers/...) of the CTT channel workflow. The workflow takes `action`, `slack_user_id`, `slack_channel_id` and `content`. **Test** only checks the URL format; it does not send anything.

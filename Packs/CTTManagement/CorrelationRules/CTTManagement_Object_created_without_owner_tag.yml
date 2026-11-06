@@ -65,7 +65,7 @@ alert_domain: DOMAIN_HEALTH
 alert_type: Unclassified
 alert_category: OTHER
 alert_name: CTT - Hygiene - $guideline_id - $title
-alert_description: '$actor created $object_kind ''$object_name'': $finding. Rename it to start with your own tag (guideline $guideline_id).'
+alert_description: '$actor created $object_kind ''$object_name'': $finding. Rename it to start with your own tag (guideline $guideline_id). [owner: $actor]'
 alert_fields:
   actor_effective_username: actor
 severity: SEV_030_MEDIUM

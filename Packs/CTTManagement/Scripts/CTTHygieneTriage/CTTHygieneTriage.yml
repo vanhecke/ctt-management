@@ -1,0 +1,65 @@
+commonfields:
+  id: CTTHygieneTriage
+  version: -1
+name: CTTHygieneTriage
+comment: Triage step of the CTT - Hygiene - Notify Owner playbook. Reads the current hygiene issue, finds its owner (the [owner - ...] marker in the description), looks the owner up in the CTT registry for name, role and Slack ID, quotes the guideline from the "CTT - Guidelines Index" list, and decides whether to assign the issue and whether to DM the owner (notify.mode and the daily DM limit in "CTT - Config").
+script: '-'
+type: python
+subtype: python3
+dockerimage: demisto/python3:3.12.15.14069087
+runas: DBotWeakRole
+enabled: true
+tags:
+- CTT
+outputs:
+- contextPath: CTT.Triage.issue_id
+  description: Issue ID.
+  type: String
+- contextPath: CTT.Triage.issue_title
+  description: What was found (the issue name without the guideline prefix).
+  type: String
+- contextPath: CTT.Triage.issue_details
+  description: The issue description without the owner marker.
+  type: String
+- contextPath: CTT.Triage.issue_url
+  description: Link to the issue.
+  type: String
+- contextPath: CTT.Triage.guideline_id
+  description: Guideline ID, for example CTT-TAG-01.
+  type: String
+- contextPath: CTT.Triage.guideline_title
+  description: The guideline's one-line rule.
+  type: String
+- contextPath: CTT.Triage.guideline_text
+  description: The guideline's full text.
+  type: String
+- contextPath: CTT.Triage.owner_email
+  description: The owner the issue is assigned to.
+  type: String
+- contextPath: CTT.Triage.owner_name
+  description: Owner name from the registry.
+  type: String
+- contextPath: CTT.Triage.first_name
+  description: Owner first name, for the greeting.
+  type: String
+- contextPath: CTT.Triage.slack_id
+  description: Owner Slack member ID.
+  type: String
+- contextPath: CTT.Triage.assign
+  description: true when the issue can be assigned to a person.
+  type: String
+- contextPath: CTT.Triage.notify
+  description: true when the owner should get a Slack DM.
+  type: String
+- contextPath: CTT.Triage.reason
+  description: Why the issue was or was not assigned and notified.
+  type: String
+- contextPath: CTT.Triage.fallback_message
+  description: Template DM, used when the AI-written message is missing.
+  type: String
+fromversion: 8.9.0
+marketplaces:
+- marketplacev2
+- platform
+tests:
+- No tests (auto formatted)

@@ -135,7 +135,7 @@ def issue_body(group: dict, now_ms: int, max_items: int = 60) -> dict:
             "issue": {
                 "name": f"{ISSUE_PREFIX} - {gid} - {TITLES[gid]} ({group['owner']})",
                 "description": f"Daily sweep found {len(items)} item(s) for owner {group['owner']} "
-                f"that break guideline {gid}. See CTT-Guidelines.\n{lines}{more}",
+                f"that break guideline {gid}. See CTT-Guidelines.\n{lines}{more}\n[owner: {group['owner']}]",
                 "observation_time": now_ms,
                 "issue_domain": "Health",
                 "category": "CTT Hygiene",

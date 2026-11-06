@@ -1,0 +1,39 @@
+commonfields:
+  id: CTTHygieneSendDM
+  version: -1
+name: CTTHygieneSendDM
+comment: Sends the CTT hygiene DM to an owner through the CTT Slack Webhook integration (action msg_person). Uses the AI-written message, or the triage template when that is empty, always ends with the issue link, and counts DMs per owner per day in the "CTT - Notify State" list for the daily limit.
+script: '-'
+type: python
+subtype: python3
+dockerimage: demisto/python3:3.12.15.14069087
+runas: DBotWeakRole
+enabled: true
+tags:
+- CTT
+args:
+- name: slack_user_id
+  required: true
+  description: The owner's Slack member ID.
+- name: owner_email
+  required: true
+  description: The owner's email (for the daily DM count).
+- name: message
+  description: The AI-written message (CTT.HygieneMessage).
+- name: fallback_message
+  description: The template message from CTTHygieneTriage.
+- name: issue_url
+  description: The issue link; appended when the message lacks it.
+outputs:
+- contextPath: CTT.DM.content
+  description: The message that was sent.
+  type: String
+dependson:
+  must:
+  - ctt-slack-webhook-send
+fromversion: 8.9.0
+marketplaces:
+- marketplacev2
+- platform
+tests:
+- No tests (auto formatted)

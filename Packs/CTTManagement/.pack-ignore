@@ -12,3 +12,6 @@
 # Require network for tests
 # [tests_require_network]
 # integration-id
+
+[file:CTTHygieneMessagePrompt.yml]
+ignore=DO104,ST110

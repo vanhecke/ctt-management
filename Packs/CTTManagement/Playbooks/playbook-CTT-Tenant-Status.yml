@@ -1,7 +1,7 @@
-id: CTT - Weekly Stats
+id: CTT - Tenant Status
 version: -1
-name: CTT - Weekly Stats
-description: Posts weekly tenant statistics to the team Slack channel. Run by the job of the same name every Monday at 09:00 Singapore time.
+name: CTT - Tenant Status
+description: 'Publishes tenant statistics and hygiene to the CTT Slack channel: replaces the Tenant Status canvas and sets the channel topic. Run by the job of the same name every day at 09:00 Singapore time.'
 fromversion: 8.9.0
 marketplaces:
 - marketplacev2
@@ -35,17 +35,17 @@ tasks:
       - '1'
   '1':
     id: '1'
-    taskid: e4d1ea7d-daed-5142-9884-af6ccd92f548
+    taskid: 8ce0c338-736e-5e7e-8041-9da6e9e1a70c
     type: regular
     task:
-      id: e4d1ea7d-daed-5142-9884-af6ccd92f548
+      id: 8ce0c338-736e-5e7e-8041-9da6e9e1a70c
       version: -1
-      name: Post the weekly tenant statistics
-      description: Runs CTTWeeklyStats.
+      name: Publish the tenant status to Slack
+      description: Runs CTTTenantStatus.
       type: regular
       iscommand: false
       brand: ''
-      scriptName: CTTWeeklyStats
+      scriptName: CTTTenantStatus
     separatecontext: false
     continueonerrortype: ''
     view: '{"position": {"x": 50, "y": 230}}'
@@ -88,13 +88,13 @@ inputs:
   value:
     simple: '7'
   required: false
-  description: Days to report on.
+  description: Days of activity to report.
   playbookInputQuery: null
 - key: send
   value:
     simple: 'true'
   required: false
-  description: false only shows the summary in the War Room.
+  description: false only shows the canvas and topic in the War Room.
   playbookInputQuery: null
 outputs: []
 tests:
