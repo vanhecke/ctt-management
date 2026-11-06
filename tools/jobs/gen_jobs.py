@@ -92,6 +92,9 @@ def playbook(job: dict) -> dict:
         "fromversion": "8.9.0",
         "marketplaces": ["marketplacev2", "platform"],
         "tags": ["CTT"],
+        # Pack-installed playbooks must be adopted before a job, a trigger or the API can attach
+        # them to an issue ("playbook is not adopted (69)"); this adopts them on install.
+        "adopted": True,
         "starttaskid": "0",
         "tasks": {
             "0": task("0", "start", "", "1", 50),

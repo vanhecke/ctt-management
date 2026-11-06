@@ -8,6 +8,7 @@ marketplaces:
 - platform
 tags:
 - CTT
+adopted: true
 starttaskid: '0'
 tasks:
   '0':

@@ -65,8 +65,10 @@ def fallback_message(first_name: str, title: str, details: str, gid: str, gtitle
 
 
 def issue_url(issue_id: str) -> str:
-    urls = demisto.demistoUrls() or {}
-    return urls.get("investigation") or f"{urls.get('server', '').rstrip('/')}/issue-view/{issue_id}"
+    """Issue link in the format the 8.15 UI opens (/issue-view/<id>); demistoUrls()['investigation']
+    still points to the older incidents page and treats the issue ID as a case ID."""
+    server = ((demisto.demistoUrls() or {}).get("server") or "").rstrip("/")
+    return f"{server}/issue-view/{issue_id}"
 
 
 def get_json_list(name: str, default):

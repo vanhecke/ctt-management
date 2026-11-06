@@ -92,6 +92,9 @@ def playbook() -> dict:
         "fromversion": "8.15.0",
         "marketplaces": ["marketplacev2", "platform"],
         "tags": ["CTT"],
+        # Pack-installed playbooks must be adopted before a job, a trigger or the API can attach
+        # them to an issue ("playbook is not adopted (69)"); this adopts them on install.
+        "adopted": True,
         "starttaskid": "0",
         "tasks": t,
         "view": json.dumps({"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 1235, "width": 780, "x": 50, "y": 50}}}),
