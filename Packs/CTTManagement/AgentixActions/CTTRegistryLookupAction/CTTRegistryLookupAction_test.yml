@@ -1,0 +1,22 @@
+tests:
+  - name: looks up a tag
+    prompt: Who owns the tag jva and what is their lab range?
+    agent_id: ctt-assistant-agent
+    expected_outcomes:
+      - evaluation_mode: any_of
+        actions:
+          - action_name: CTTRegistryLookupAction
+            arguments:
+              query: jva
+        expected_output: 10.1.0.0/16
+
+  - name: resolves an IP to the owner of its lab range
+    prompt: Whose lab is 10.17.3.4?
+    agent_id: ctt-assistant-agent
+    expected_outcomes:
+      - evaluation_mode: any_of
+        actions:
+          - action_name: CTTRegistryLookupAction
+            arguments:
+              query: 10.17.3.4
+fixtures: []

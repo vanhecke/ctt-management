@@ -1,0 +1,36 @@
+# CTT guidelines and registry
+
+## Explain a guideline
+
+Quote the guideline by ID from your instructions, then give the user one concrete example for
+their case. If they ask about something the guidelines do not cover, say so; don't invent a rule.
+For the naming format, use this table:
+
+| Object | Format |
+|---|---|
+| Playbook | `<tag> - <name>`, and the tag in the playbook Tags field |
+| Script | `<tag>_<Name>` |
+| Job, list, dashboard, widget, report, correlation rule, BIOC, scheduled query | `<tag> - <name>` |
+| Lookup table or dataset | `<tag>_<name>` in lower case |
+| Endpoint profile, policy rule, integration instance, engine, Broker VM | `<tag> - <name>` |
+| Parsing or modeling rule | a comment `// <tag>: <purpose>` |
+| Endpoint | the tag as an endpoint tag |
+
+## Look someone up
+
+Use <action=CTTRegistryLookupAction> with whatever the user gave you:
+
+- a tag or alias (`jvanhecke`, `jva`): returns that person with all their tags;
+- an email or part of a name;
+- a lab octet (`7`) or an address (`10.7.4.20`): returns who owns that range;
+- an object name: take the prefix before ` - ` or `_` and look that up as a tag.
+
+No match means the tag or person is not registered. Say so, and point to CTT-GEN-01: a CTT admin
+adds them to the registry sheet. Never treat a near match as the owner.
+
+To list the CTT admins, look up with an empty query and keep the people whose role is admin.
+
+## "What is my tag?"
+
+Ask for their email if you don't have it, look it up, and answer with their primary tag, their
+aliases, and their lab range. Remind them to prefix everything they create with one of their tags.

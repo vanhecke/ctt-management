@@ -1,0 +1,54 @@
+commonfields:
+  id: CTTMyFootprintAction
+  version: -1
+display: CTT My Footprint
+name: CTTMyFootprintAction
+tags:
+  - CTT
+category: Utilities
+description: >-
+  List what one DC owns on the shared tenant (custom playbooks, scripts, jobs, integration
+  instances, correlation rules, lookups) and which of their objects or open Security cases break
+  the CTT guidelines, with the guideline ID and detail per finding. Read-only and slow (one to two
+  minutes): it inventories the tenant.
+args:
+  - name: owner
+    description: The DC's tag (jvanhecke, jva) or email. Confirm it with CTTRegistryLookupAction first.
+    type: string
+    required: true
+    underlyingargname: owner
+outputs:
+  - name: owner
+    description: Owner email.
+    type: string
+    underlyingoutputcontextpath: CTT.Footprint.owner
+  - name: tags
+    description: All tags of the owner.
+    type: unknown
+    underlyingoutputcontextpath: CTT.Footprint.tags
+  - name: objects
+    description: Objects owned (kind, name, tag).
+    type: unknown
+    underlyingoutputcontextpath: CTT.Footprint.objects
+  - name: findings
+    description: Guideline findings (guideline, kind, name, detail). Empty means compliant.
+    type: unknown
+    underlyingoutputcontextpath: CTT.Footprint.findings
+underlyingcontentitem:
+  id: CTTMyFootprint
+  name: CTTMyFootprint
+  type: script
+  version: -1
+requiresuserapproval: false
+fewshots:
+  - >-
+    "Is my stuff compliant? I'm jvanhecke." Run owner="jvanhecke" and answer with what they own
+    and what to fix, one guideline ID per finding.
+  - >-
+    An empty findings list is a real answer: everything the user owns follows the guidelines.
+  - >-
+    WRONG: running it without knowing who the user is. Ask for their tag or email first.
+marketplaces:
+  - platform
+supportedModules:
+  - agentix

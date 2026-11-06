@@ -1,0 +1,41 @@
+commonfields:
+  id: ctt-assistant-agent
+  version: -1
+name: CTT Assistant
+tags:
+  - CTT
+category: Utilities
+description: Helps DCs and CTT admins run the shared Cortex Team Tenant (CTT) - explains the CTT guidelines by ID, looks up who owns a tag, object or lab range, lists what you own and what breaks the guidelines, and closes your finished Security Testing cases on request. Read-only except for case closure you confirm.
+color: "#00A3A1"
+visibility: public
+systeminstructions: ""
+conversationstarters:
+  - "What is my tag and lab range?"
+  - "What do I own on this tenant, and does anything break the CTT guidelines?"
+  - "Who owns the tag sfi, and what is their lab range?"
+  - "List my open Security cases so I can close the finished ones"
+  - "Explain guideline CTT-TAG-01 and how to rename my playbook"
+actionids:
+  - CTTRegistryLookupAction
+  - CTTMyFootprintAction
+  # Built-in actions, bound by their tenant ids (present on cttasean, 8.15).
+  - CortexRunXQLQuery
+  - SearchCases
+  - CortexUpdateCase
+  - CortexListEndpoints
+  - CortexListSystemUsers
+builtinactions:
+  - InvokeLLM
+skillids:
+  - ctt-guidelines-skill
+  - ctt-hygiene-skill
+  - ctt-lab-housekeeping-skill
+knowledgeids:
+  - CTTGuidelinesCollection
+  # Managed by Palo Alto on XSIAM 4.0; ignored on 8.15.
+  - cortex-platform-docs
+autoenablenewactions: false
+marketplaces:
+  - platform
+supportedModules:
+  - agentix

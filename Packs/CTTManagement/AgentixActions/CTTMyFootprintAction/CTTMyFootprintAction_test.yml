@@ -1,0 +1,19 @@
+tests:
+  - name: lists a DC's footprint and findings
+    prompt: I'm jvanhecke. What do I own on this tenant and is any of it breaking the guidelines?
+    agent_id: ctt-assistant-agent
+    expected_outcomes:
+      - evaluation_mode: any_of
+        actions:
+          - action_name: CTTMyFootprintAction
+            arguments:
+              owner: jvanhecke
+
+  - name: asks who the user is before running
+    prompt: What do I own on this tenant?
+    agent_id: ctt-assistant-agent
+    expected_outcomes:
+      - evaluation_mode: any_of
+        actions: []
+        expected_output: tag or email
+fixtures: []

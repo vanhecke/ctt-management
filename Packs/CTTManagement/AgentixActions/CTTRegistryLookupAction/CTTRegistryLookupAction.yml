@@ -1,0 +1,62 @@
+commonfields:
+  id: CTTRegistryLookupAction
+  version: -1
+display: CTT Registry Lookup
+name: CTTRegistryLookupAction
+tags:
+  - CTT
+category: Utilities
+description: >-
+  Look up the CTT registry: who owns a tag or alias, what a person's tags and lab range
+  10.x.0.0/16 are, who owns a lab octet or a 10.x.y.z address, and who the CTT admins are.
+  Returns one row per person with all their tags. An empty result means not registered.
+args:
+  - name: query
+    description: A tag (jvanhecke, jva), an email, part of a name, a lab octet (7) or an IP (10.7.1.20). Empty lists everyone.
+    type: string
+    required: false
+    underlyingargname: query
+outputs:
+  - name: owner_name
+    description: Owner name.
+    type: string
+    underlyingoutputcontextpath: CTT.RegistryLookup.owner_name
+  - name: owner_email
+    description: Owner email.
+    type: string
+    underlyingoutputcontextpath: CTT.RegistryLookup.owner_email
+  - name: tags
+    description: All tags of the owner.
+    type: unknown
+    underlyingoutputcontextpath: CTT.RegistryLookup.tags
+  - name: lab_range
+    description: The owner's lab range, 10.x.0.0/16.
+    type: string
+    underlyingoutputcontextpath: CTT.RegistryLookup.lab_range
+  - name: role
+    description: admin (CTT admin), dc, or central (the reserved CTT tag).
+    type: string
+    underlyingoutputcontextpath: CTT.RegistryLookup.role
+  - name: active
+    description: true or false.
+    type: string
+    underlyingoutputcontextpath: CTT.RegistryLookup.active
+underlyingcontentitem:
+  id: CTTRegistryLookup
+  name: CTTRegistryLookup
+  type: script
+  version: -1
+requiresuserapproval: false
+fewshots:
+  - >-
+    Who owns the playbook "sfi - Ransomware demo"? Take the prefix before " - " and look up
+    query="sfi".
+  - >-
+    Whose lab is 10.7.12.40? Look up query="10.7.12.40"; the answer is the owner of octet 7.
+  - >-
+    WRONG: treating a near match as the owner. If "sf" returns nothing, it is not a registered
+    tag, even if "sfi" exists.
+marketplaces:
+  - platform
+supportedModules:
+  - agentix

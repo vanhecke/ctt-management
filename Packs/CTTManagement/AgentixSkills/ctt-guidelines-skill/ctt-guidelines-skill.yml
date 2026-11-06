@@ -1,0 +1,20 @@
+commonfields:
+  id: ctt-guidelines-skill
+  version: -1
+name: CTT Guidelines and Registry
+description: >-
+  Answers questions about the rules of the shared Cortex Team Tenant and about who owns what:
+  explaining a CTT guideline by its ID (CTT-TAG-01, CTT-OWN-01 and so on), how to name or tag an
+  object, what a user's tag, aliases and lab range 10.x.0.0/16 are, who owns a tag, an object name
+  prefix, an IP address or a lab octet, and who the CTT admins are. Use it for onboarding a new DC
+  and for any question that starts with what am I allowed to do, how do I name this, or who owns.
+content: ""
+fromversion: 8.15.0
+tags:
+  - CTT
+internal: false
+disabled: false
+marketplaces:
+  - platform
+supportedModules:
+  - agentix
