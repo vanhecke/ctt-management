@@ -22,9 +22,11 @@ Monitoring raises health issues, assigns each to the person responsible and send
 | Job + playbook | CTT - Registry Sync | Every 6 hours: Google Sheet registry to the `ctt_registry` lookup and the `CTT - Registry` list |
 | Job + playbook | CTT - Hygiene - Daily Sweep | 08:30 SGT: inventory and stale-case checks, one issue per guideline and owner |
 | Job + playbook | CTT - Tenant Status | Daily 09:00 SGT: replaces the Tenant Status canvas and sets the CTT channel topic |
-| Trigger + playbook | CTT - Hygiene - Notify Owner | On every CTT hygiene issue: assign it to its owner, AI-written Slack DM (CTT-* guidelines) |
+| Playbook | CTT - Hygiene - Notify Owner | Per CTT hygiene issue: assign it to its owner and send a Slack DM (FOUND / RULE / FIX template, or AI text with `notify.use_ai`) |
+| Job + playbook | CTT - Hygiene - Notify Dispatcher | Every 15 min: starts Notify Owner on new, unassigned hygiene issues (8.15 uploads do not install the trigger) |
+| Trigger | CTT - Hygiene - Notify Owner | Shipped for tenants that install pack triggers; the dispatcher covers 8.15 |
 | Script | CTTRegistrySync, CTTHygieneSweep, CTTTenantStatus | Backing scripts for the jobs |
-| Script | CTTHygieneTriage, CTTHygieneMessagePrompt (AI prompt), CTTHygieneSendDM | Backing scripts for the notify playbook |
+| Script | CTTHygieneTriage, CTTHygieneMessagePrompt (optional AI prompt), CTTHygieneSendDM, CTTHygieneDispatch | Backing scripts for notifying owners |
 | Integration | CTT Slack Webhook | One-way Slack workflow webhook: DM, channel message, channel topic, Tenant Status canvas |
 | Script | CTTRegistryLookup, CTTMyFootprint | Backing scripts for the agent |
 | Script | CTTEnsureJobs | Creates or updates the three jobs from the `CTT - Jobs` list (run once after install) |
@@ -45,7 +47,8 @@ domain.
 - A GoogleSheets instance that can read the registry sheet (otherwise the sync falls back to the
   `CTT - Registry Source` list).
 - A `CTT Slack Webhook` instance: the Slack workflow trigger URL, the CTT channel ID and a placeholder member ID.
-- `notify.mode` in `CTT - Config`: `allowlist` (default, DMs only to `notify.allowlist`), `admins_only`, `all` or `off`.
+- `notify.mode` in `CTT - Config`: `allowlist` (default, DMs only to `notify.allowlist`), `admins_only`, `all` or `off`. `notify.use_ai` switches the DM text from the template to the AI prompt.
+- Install the pack fresh (uninstall first) when upgrading from a version before 1.1.3: `adopted: true` only takes effect when a playbook is first installed, and playbooks must be adopted to run on issues.
 - XSIAM 4.0 for the agent's knowledge documents. On 8.15 the agent installs, but its knowledge is
   empty.
 
@@ -68,6 +71,10 @@ JSON.
 ## Version History (Managed by GoCortex Spellbook)
 
 <!-- spellbook:version-history:start -->
+### 1.1.7
+
+- Notify Dispatcher job (pack uploads to 8.15 skip triggers); deterministic FOUND / RULE / FIX DM template with optional AI text; playbooks adopted on install; re-runs send one DM.
+
 ### 1.1.0
 
 - Hygiene issues are assigned to their owner and the owner gets an AI-written Slack DM (CTT - Hygiene - Notify Owner, CTT Slack Webhook).

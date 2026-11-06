@@ -51,8 +51,14 @@ def is_true(path: str) -> list:
 def playbook() -> dict:
     t = {}
     t["0"] = base("0", "start", "", "", 50)
-    t["0"]["nexttasks"] = {"#none#": ["1"]}
-    t["1"] = base("1", "regular", "Triage the hygiene issue", "Finds the owner, their Slack ID and the guideline, and decides whether to assign and notify.", 200,
+    t["0"]["nexttasks"] = {"#none#": ["9"]}
+    # A re-run on the same issue appended a second triage result to the context, so the send
+    # task looped over two Slack IDs and sent the DM twice. Start from a clean context.
+    t["9"] = base("9", "regular", "Clear context from an earlier run", "Deletes the issue context so a re-run sends one DM.", 130,
+                  task_extra={"scriptName": "DeleteContext"})
+    t["9"]["scriptarguments"] = {"all": {"simple": "yes"}}
+    t["9"]["nexttasks"] = {"#none#": ["1"]}
+    t["1"] = base("1", "regular", "Triage the hygiene issue", "Finds the owner, their Slack ID and the guideline, and decides whether to assign and notify.", 260,
                   task_extra={"scriptName": "CTTHygieneTriage"})
     t["1"]["nexttasks"] = {"#none#": ["2"]}
     t["2"] = base("2", "condition", "Can the issue be assigned to a person?", "", 370)

@@ -33,6 +33,33 @@ tasks:
     quietmode: 0
     nexttasks:
       '#none#':
+      - '9'
+  '9':
+    id: '9'
+    taskid: 81c82bf1-950a-5fd1-a02e-4a3b37aa239e
+    type: regular
+    task:
+      id: 81c82bf1-950a-5fd1-a02e-4a3b37aa239e
+      version: -1
+      name: Clear context from an earlier run
+      description: Deletes the issue context so a re-run sends one DM.
+      type: regular
+      iscommand: false
+      brand: ''
+      scriptName: DeleteContext
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 450, "y": 130}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    scriptarguments:
+      all:
+        simple: 'yes'
+    nexttasks:
+      '#none#':
       - '1'
   '1':
     id: '1'
@@ -49,7 +76,7 @@ tasks:
       scriptName: CTTHygieneTriage
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 200}}'
+    view: '{"position": {"x": 450, "y": 260}}'
     note: false
     timertriggers: []
     ignoreworker: false

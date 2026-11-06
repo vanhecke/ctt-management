@@ -220,7 +220,7 @@ def main():  # pragma: no cover
         md = tableToMarkdown(
             "CTT hygiene triage", out, headers=["guideline_id", "owner_email", "slack_id", "assign", "notify", "reason"]
         )
-        return_results(CommandResults(readable_output=md, outputs_prefix="CTT.Triage", outputs=out))
+        return_results(CommandResults(readable_output=md, outputs_prefix="CTT.Triage", outputs_key_field="issue_id", outputs=out))
     except Exception as e:
         return_error(f"CTTHygieneTriage failed: {e}")
 

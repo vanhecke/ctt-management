@@ -67,6 +67,9 @@ def main():  # pragma: no cover
             done = []
         rows, handled = [], []
         for iid in pick(search_new_health_issues(hours), set(done), limit):
+            # A new issue has no investigation (War Room) until something opens it, and a playbook
+            # cannot be attached before that: "couldn't find investigation with id ...".
+            core("core-api-post", {"uri": f"/investigation/{iid}", "body": json.dumps({"pageSize": 1})})
             current = core("core-api-get", {"uri": f"/inv-playbook/{iid}"}) or {}
             if isinstance(current, dict) and current.get("playbookId"):
                 rows.append({"Issue": iid, "Action": f"skipped, already runs {current.get('playbookId')}"})
