@@ -71,10 +71,13 @@ QUERIES = {
         ],
     }.items()
 }
-# Older tenants have no conversation_id in agentix_agents_actions; count actions only there.
+# XSIAM 8.15 stores conversation_id but its query validator rejects the field ("unknown field").
+# There, a run is estimated as one person's activity with an agent within a 10-minute window.
 AGENTS_FALLBACK = (
-    "dataset = agentix_agents_actions | comp count() as actions, count_distinct(user) as people by agent_name"
-    " | sort desc actions | limit 5"
+    "dataset = agentix_agents_actions | bin _time span = 10m"
+    ' | alter run_key = concat(user, "|", to_string(_time))'
+    " | comp count_distinct(run_key) as runs, count() as actions, count_distinct(user) as people by agent_name"
+    " | sort desc runs | limit 5"
 )
 
 
@@ -126,6 +129,8 @@ def health_light(open_issues: int) -> str:
 
 def owner_label(owner: str) -> str:
     owner = (owner or "unknown").strip()
+    if owner.lower() in ("null", "none", ""):
+        owner = "unknown"
     return owner.split("@")[0] if "@" in owner else owner
 
 
@@ -172,12 +177,13 @@ def build_canvas(r: dict, days: int, now: datetime, tenant_url: str = "") -> str
         ]
     commands = top_rows(r["commands"], "runs", 5)
     lines.append("• Top scripts and commands: " + (", ".join(f"{c.get('name')} ({c.get('runs')})" for c in commands) or "none"))
-    agents = top_rows(r["agents"], "plans" if any("plans" in a for a in r["agents"]) else "actions", 5)
+    unit = next((u for u in ("plans", "runs") if any(u in a for a in r["agents"])), "actions")
+    agents = top_rows(r["agents"], unit, 5)
     if agents:
         lines.append("• Top AI agents:")
         for a in agents:
-            plans = f"{a.get('plans')} plans, " if "plans" in a else ""
-            lines.append(f"   {a.get('agent_name')}: {plans}{a.get('actions')} actions by {a.get('people')} people")
+            count = f"{a.get('plans')} plans, " if unit == "plans" else f"about {a.get('runs')} runs, " if unit == "runs" else ""
+            lines.append(f"   {a.get('agent_name')}: {count}{a.get('actions')} actions by {a.get('people')} people")
     else:
         lines.append("• AI agents: no activity")
     lines += [

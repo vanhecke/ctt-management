@@ -59,6 +59,7 @@ def test_health_light_and_owner_label():
     assert health_light(12) == "🔴"
     assert owner_label("jvanhecke@paloaltonetworks.com") == "jvanhecke"
     assert owner_label("") == "unknown"
+    assert owner_label("NULL") == "unknown"
 
 
 def test_canvas_with_empty_stats():
@@ -117,8 +118,8 @@ def test_canvas_automation_section():
 
 def test_canvas_agents_without_plans():
     stats = empty_stats()
-    stats["agents"] = [{"agent_name": "A", "actions": 5, "people": 1}]
-    assert "   A: 5 actions by 1 people" in build_canvas(stats, 7, NOW)
+    stats["agents"] = [{"agent_name": "A", "runs": 3, "actions": 5, "people": 1}]
+    assert "   A: about 3 runs, 5 actions by 1 people" in build_canvas(stats, 7, NOW)
 
 
 def test_active_integrations():

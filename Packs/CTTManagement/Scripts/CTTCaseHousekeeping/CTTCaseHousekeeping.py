@@ -195,7 +195,10 @@ def _case_line(case: dict, now_ms: int) -> list[str]:
 def build_digest(first_name: str, groups: dict[str, list[dict]], now_ms: int, max_items: int = 6) -> str:
     """One DM per owner with the cases assigned to them, those to consider closing and those closed."""
     titles = {
-        "assign": ("ASSIGNED TO YOU", "Open for a day without an owner, so they are now yours."),
+        "assign": (
+            "ASSIGNED TO YOU",
+            "Open for a day without an owner, so they are now yours. Resolve them as Security Testing when your test is done.",
+        ),
         "suggest": ("CLOSE IF DONE", "No new issues for a day. Resolve them as Security Testing to stop new issues grouping in."),
         "close": ("CLOSED", "Open for 7 days, resolved as Security Testing."),
     }
@@ -410,12 +413,15 @@ def main():  # pragma: no cover
             except Exception as e:
                 errors.append(f"assign {cid} to {owner}: {e}")
 
+        assigned_now = {str(c.get("case_id")) for c in assigns if state.get(str(c.get("case_id")), {}).get("assigned")}
         for c in cases:
             cid = str(c.get("case_id"))
             owner = str(c.get("assigned_user_mail") or "").lower()
             if "suggest" not in plans[cid] or not owner:
                 continue
             state.setdefault(cid, {})["suggested"] = now_ms
+            if cid in assigned_now:
+                continue  # the assignment line already asks to resolve it when done
             digest.setdefault(owner, {}).setdefault("suggest", []).append(c)
             rows.append({"Case": cid, "Action": "suggest closing", "Owner": owner})
 
