@@ -43,20 +43,22 @@ def test_dataset_summary():
 
 
 def test_health_light_and_owner_label():
-    assert health_light(0) == ":large_green_circle:"
-    assert health_light(3) == ":large_yellow_circle:"
-    assert health_light(12) == ":red_circle:"
+    assert health_light(0) == "🟢"
+    assert health_light(3) == "🟡"
+    assert health_light(12) == "🔴"
     assert owner_label("jvanhecke@paloaltonetworks.com") == "jvanhecke"
     assert owner_label("") == "unknown"
 
 
 def test_canvas_with_empty_stats():
     canvas = build_canvas(empty_stats(quota={"used": 1.5, "license": 200}), 7, NOW, "https://tenant")
-    assert canvas.startswith("# CTT Tenant Status")
+    assert canvas.startswith("CTT TENANT STATUS")
     assert "Updated Mon 09 Nov 2026 09:00 SGT" in canvas
-    assert "[Open the tenant](https://tenant)" in canvas
-    assert "**Open hygiene issues:** 0 (none)" in canvas
+    assert "\nhttps://tenant\n" in canvas
+    assert "• Open hygiene issues: 0 (none)" in canvas
     assert "1.5 of 200 CU" in canvas
+    assert "**" not in canvas
+    assert "#" not in canvas
 
 
 def test_canvas_counts_hygiene_by_guideline_and_owner():
@@ -67,14 +69,14 @@ def test_canvas_counts_hygiene_by_guideline_and_owner():
         {"guideline": "CTT-TAG-01", "owner": "b@x.com", "n": 2},
     ]
     canvas = build_canvas(stats, 7, NOW)
-    assert ":large_yellow_circle: Hygiene" in canvas
-    assert "**Open hygiene issues:** 6 (CTT-TAG-01 5, CTT-CEN-01 1)" in canvas
-    assert "**Most to fix:** j 3, b 3" in canvas
+    assert "🟡 HYGIENE" in canvas
+    assert "• Open hygiene issues: 6 (CTT-TAG-01 5, CTT-CEN-01 1)" in canvas
+    assert "• Most to fix: j 3, b 3" in canvas
 
 
 def test_topic_is_short():
     stats = empty_stats(open_cases=23, daily_bytes=1024**3)
     stats["endpoints"] = [{"endpoint_status": "CONNECTED", "n": 4}]
     topic = build_topic(stats, NOW)
-    assert topic.startswith("CTT status Mon 09 Nov: 0 open hygiene issues | 23 open cases | 4 endpoints connected | 1.0 GB/day")
+    assert topic.startswith("🟢 CTT Mon 09 Nov: 0 open hygiene issues | 23 open cases | 4 endpoints connected | 1.0 GB/day")
     assert len(topic) <= 250

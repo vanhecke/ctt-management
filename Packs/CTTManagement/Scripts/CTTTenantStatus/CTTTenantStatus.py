@@ -116,7 +116,7 @@ def dataset_summary(datasets: list[dict]) -> tuple[float, int, list[str]]:
 
 
 def health_light(open_issues: int) -> str:
-    return ":large_green_circle:" if open_issues == 0 else ":large_yellow_circle:" if open_issues < 10 else ":red_circle:"
+    return "🟢" if open_issues == 0 else "🟡" if open_issues < 10 else "🔴"
 
 
 def owner_label(owner: str) -> str:
@@ -125,48 +125,49 @@ def owner_label(owner: str) -> str:
 
 
 def build_canvas(r: dict, days: int, now: datetime, tenant_url: str = "") -> str:
-    """Markdown for the 'Tenant Status' canvas."""
+    """Plain text for the 'Tenant Status' canvas: the Slack workflow shows content without
+    rendering Markdown, so the layout is emoji headers, short lines and bullets."""
     hygiene = r["hygiene_open"]
     open_issues = total(hygiene)
     owners = {owner_label(k): v for k, v in by(hygiene, "owner", title=False).items()}
     playbooks = top_rows(r["playbooks"], "runs", 50)
     logins = r["logins"][0] if r["logins"] else {}
+    busiest = ", ".join(f"{p.get('playbook_name')} ({p.get('runs')})" for p in playbooks[:3]) or "none"
+    commands = ", ".join(f"{c.get('name')} ({c.get('runs')})" for c in top_rows(r["commands"], "runs", 5)) or "none"
+    builders = ", ".join(f"{c.get('user_name')} ({c.get('changes')})" for c in top_rows(r["changers"], "changes", 5)) or "none"
+    agents = (
+        ", ".join(f"{a.get('agent_name')} ({a.get('actions')} actions)" for a in top_rows(r["agents"], "actions", 5)) or "none"
+    )
     lines = [
-        "# CTT Tenant Status",
-        f"Updated {now.strftime('%a %d %b %Y %H:%M')} SGT by the CTT Management pack."
-        + (f" [Open the tenant]({tenant_url})" if tenant_url else ""),
+        "CTT TENANT STATUS",
+        f"Updated {now.strftime('%a %d %b %Y %H:%M')} SGT by the CTT Management pack",
+        *([tenant_url] if tenant_url else []),
         "",
-        f"## {health_light(open_issues)} Hygiene",
-        f"- **Open hygiene issues:** {open_issues} ({fmt_counts(by(hygiene, 'guideline', title=False))})",
-        f"- **Most to fix:** {fmt_counts(owners, 5)}",
-        "- Every issue is assigned to its owner. Fix the object and the daily sweep closes its own issues.",
+        f"{health_light(open_issues)} HYGIENE",
+        f"• Open hygiene issues: {open_issues} ({fmt_counts(by(hygiene, 'guideline', title=False))})",
+        f"• Most to fix: {fmt_counts(owners, 5)}",
+        "• Each issue is assigned to its owner. Fix the object and the daily sweep closes its own issues.",
         "",
-        f"## :bar_chart: Last {days} days",
-        f"- **Cases:** {total(r['cases'])} new ({fmt_counts(by(r['cases'], 'xdm.case.domain'))}); {r['open_cases']} open now",
-        f"- **Issues:** {total(r['issues'])} new ({fmt_counts(by(r['issues'], 'xdm.issue.severity'))})",
-        f"- **Playbook runs:** {total(playbooks, 'runs')} ({total(playbooks, 'failed')} failed)",
-        "- **Busiest playbooks:** " + (", ".join(f"{p.get('playbook_name')} ({p.get('runs')})" for p in playbooks[:3]) or "none"),
-        "- **Top scripts and commands:** "
-        + (", ".join(f"{c.get('name')} ({c.get('runs')})" for c in top_rows(r["commands"], "runs", 5)) or "none"),
-        f"- **People signed in:** {logins.get('users', 0)} ({logins.get('logins', 0)} sign-ins)",
-        "- **Most active builders:** "
-        + (", ".join(f"{c.get('user_name')} ({c.get('changes')})" for c in top_rows(r["changers"], "changes", 5)) or "none"),
+        f"📊 LAST {days} DAYS",
+        f"• Cases: {total(r['cases'])} new ({fmt_counts(by(r['cases'], 'xdm.case.domain'))}); {r['open_cases']} open now",
+        f"• Issues: {total(r['issues'])} new ({fmt_counts(by(r['issues'], 'xdm.issue.severity'))})",
+        f"• Playbook runs: {total(playbooks, 'runs')} ({total(playbooks, 'failed')} failed)",
+        f"• Busiest playbooks: {busiest}",
+        f"• Top scripts and commands: {commands}",
+        f"• People signed in: {logins.get('users', 0)} ({logins.get('logins', 0)} sign-ins)",
+        f"• Most active builders: {builders}",
         "",
-        "## :inbox_tray: Data and compute",
-        f"- **Ingested:** about {human_bytes(r['daily_bytes'])}/day across {r['datasets_with_data']} datasets",
-        f"- **Biggest datasets:** {', '.join(r['top_datasets']) or 'none'}",
+        "📥 DATA AND COMPUTE",
+        f"• Ingested: about {human_bytes(r['daily_bytes'])}/day across {r['datasets_with_data']} datasets",
+        f"• Biggest datasets: {', '.join(r['top_datasets']) or 'none'}",
     ]
     if r.get("quota"):
-        lines.append(f"- **XQL compute today:** {r['quota']['used']:.1f} of {r['quota']['license']:.0f} CU")
+        lines.append(f"• XQL compute today: {r['quota']['used']:.1f} of {r['quota']['license']:.0f} CU")
     lines += [
         "",
-        "## :computer: Endpoints and agents",
-        f"- **Endpoints:** {total(r['endpoints'])} ({fmt_counts(by(r['endpoints'], 'endpoint_status'))})",
-        "- **AI agents used:** "
-        + (
-            ", ".join(f"{a.get('agent_name')} ({a.get('actions')} actions)" for a in top_rows(r["agents"], "actions", 5))
-            or "none"
-        ),
+        "💻 ENDPOINTS AND AGENTS",
+        f"• Endpoints: {total(r['endpoints'])} ({fmt_counts(by(r['endpoints'], 'endpoint_status'))})",
+        f"• AI agents used: {agents}",
     ]
     return "\n".join(lines)
 
@@ -175,8 +176,9 @@ def build_topic(r: dict, now: datetime) -> str:
     """One line for the channel topic (Slack allows 250 characters)."""
     open_issues = total(r["hygiene_open"])
     endpoints = by(r["endpoints"], "endpoint_status")
+    plural = "s" if open_issues != 1 else ""
     topic = (
-        f"CTT status {now.strftime('%a %d %b')}: {open_issues} open hygiene issue{'s' if open_issues != 1 else ''} | "
+        f"{health_light(open_issues)} CTT {now.strftime('%a %d %b')}: {open_issues} open hygiene issue{plural} | "
         f"{r['open_cases']} open cases | {endpoints.get('Connected', 0)} endpoints connected | "
         f"{human_bytes(r['daily_bytes'])}/day ingested | details in the Tenant Status canvas"
     )
