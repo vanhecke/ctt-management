@@ -118,8 +118,18 @@ def test_canvas_automation_section():
 
 def test_canvas_agents_without_plans():
     stats = empty_stats()
-    stats["agents"] = [{"agent_name": "A", "runs": 3, "actions": 5, "people": 1}]
-    assert "   A: about 3 runs, 5 actions by 1 people" in build_canvas(stats, 7, NOW)
+    stats["agents"] = [{"agent_name": "A", "runs": 1, "actions": 5, "people": 1}]
+    assert "   A: about 1 run, 5 actions by 1 person" in build_canvas(stats, 7, NOW)
+
+
+def test_most_to_fix_merges_unknown_owners():
+    stats = empty_stats()
+    stats["hygiene_open"] = [
+        {"guideline": "CTT-LAB-01", "owner": "NULL", "n": 9},
+        {"guideline": "CTT-TAG-01", "owner": "j@x.com", "n": 5},
+        {"guideline": "CTT-TAG-01", "owner": "unknown", "n": 3},
+    ]
+    assert "• Most to fix: unknown 12, j 5" in build_canvas(stats, 7, NOW)
 
 
 def test_active_integrations():

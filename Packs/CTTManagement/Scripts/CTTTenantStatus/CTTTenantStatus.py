@@ -134,6 +134,10 @@ def owner_label(owner: str) -> str:
     return owner.split("@")[0] if "@" in owner else owner
 
 
+def plural(n: Any, one: str, many: str = "") -> str:
+    return f"{n} {one if str(n) == '1' else many or one + 's'}"
+
+
 def thousands(n: Any) -> str:
     return f"{n:,}" if isinstance(n, int) else str(n)
 
@@ -143,7 +147,10 @@ def build_canvas(r: dict, days: int, now: datetime, tenant_url: str = "") -> str
     rendering Markdown, so the layout is emoji headers, short lines and bullets."""
     hygiene = r["hygiene_open"]
     open_issues = total(hygiene)
-    owners = {owner_label(k): v for k, v in by(hygiene, "owner", title=False).items()}
+    owners: dict[str, int] = {}
+    for k, v in by(hygiene, "owner", title=False).items():
+        owners[owner_label(k)] = owners.get(owner_label(k), 0) + v
+    owners = dict(sorted(owners.items(), key=lambda kv: -kv[1]))
     playbooks = top_rows(r["playbooks"], "runs", 50)
     logins = r["logins"][0] if r["logins"] else {}
     builders = ", ".join(f"{c.get('user_name')} ({c.get('changes')})" for c in top_rows(r["changers"], "changes", 5)) or "none"
@@ -182,8 +189,15 @@ def build_canvas(r: dict, days: int, now: datetime, tenant_url: str = "") -> str
     if agents:
         lines.append("• Top AI agents:")
         for a in agents:
-            count = f"{a.get('plans')} plans, " if unit == "plans" else f"about {a.get('runs')} runs, " if unit == "runs" else ""
-            lines.append(f"   {a.get('agent_name')}: {count}{a.get('actions')} actions by {a.get('people')} people")
+            count = (
+                f"{plural(a.get('plans'), 'plan')}, "
+                if unit == "plans"
+                else f"about {plural(a.get('runs'), 'run')}, "
+                if unit == "runs"
+                else ""
+            )
+            people = plural(a.get("people"), "person", "people")
+            lines.append(f"   {a.get('agent_name')}: {count}{plural(a.get('actions'), 'action')} by {people}")
     else:
         lines.append("• AI agents: no activity")
     lines += [
