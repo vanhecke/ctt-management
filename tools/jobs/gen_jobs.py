@@ -17,39 +17,35 @@ ALL_DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
 JOBS = [
     {
         "name": "CTT - Registry Sync",
-        "script": "CTTRegistrySync",
-        "description": "Syncs the CTT registry (tags, lab octets, Slack IDs, admins) from the Google Sheet into the ctt_registry lookup dataset and the 'CTT - Registry' list. Run by the job of the same name every hour.",
-        "task": "Sync the CTT registry",
-        "inputs": {"source": ("", "auto, sheet or list. Empty uses registry.source in 'CTT - Config'.")},
+        "description": "Syncs the CTT registry (tags, lab octets, Slack IDs, admins) from the Google Sheet into the ctt_registry lookup dataset and the 'CTT - Registry' list, then updates the ctt_object_owners lookup (who created and last changed each object) from the audit log. Run by the job of the same name every hour.",
+        "steps": [
+            {"script": "CTTRegistrySync", "task": "Sync the CTT registry", "args": ["source"]},
+            {"script": "CTTOwnerIndex", "task": "Update the object owner index", "args": ["hours"]},
+        ],
+        "inputs": {
+            "source": ("", "auto, sheet or list. Empty uses registry.source in 'CTT - Config'."),
+            "hours": ("3", "Hours of audit log the owner index reads (it backfills 365 days when its lookup is empty)."),
+        },
         "cron": {"timePeriodType": "hours", "timePeriod": 1},
     },
     {
-        "name": "CTT - Hygiene - Daily Sweep",
-        "script": "CTTHygieneSweep",
-        "description": "Daily CTT hygiene sweep: checks custom objects and open Security cases against the CTT guidelines and raises one health issue per guideline and owner. Run by the job of the same name every day at 08:30 Singapore time.",
-        "task": "Run the CTT hygiene sweep",
-        "inputs": {
-            "dry_run": ("false", "true reports findings without raising or resolving issues."),
-            "stale_case_days": ("", "Days without change before an open Security case is stale. Empty uses 'CTT - Config'."),
-        },
+        "name": "CTT - Hygiene - Inventory Check",
+        "description": "Daily CTT inventory check for what the correlation rules cannot see: objects that already exist without a registered owner tag, playbooks without the owner's tag in their Tags field, and objects of inactive owners. Raises one health issue per guideline and owner. Run by the job of the same name every day at 08:30 Singapore time.",
+        "steps": [{"script": "CTTInventoryCheck", "task": "Run the CTT inventory check", "args": ["dry_run"]}],
+        "inputs": {"dry_run": ("false", "true reports findings without raising or resolving issues.")},
         "cron": {"days": ALL_DAYS, "atTimeHour": "08", "atTimeMinute": "30", "timePeriodType": "weeks", "timePeriod": 1},
     },
     {
-        "name": "CTT - Hygiene - Notify Dispatcher",
-        "script": "CTTHygieneDispatch",
-        "description": "Starts the CTT - Hygiene - Notify Owner playbook on new, unassigned CTT hygiene issues. Run by the job of the same name every 15 minutes, because pack uploads to XSIAM 8.15 do not install automation rules.",
-        "task": "Dispatch new CTT hygiene issues",
-        "inputs": {
-            "lookback_hours": ("48", "How far back to look for new hygiene issues."),
-            "max_per_run": ("20", "The most issues to dispatch in one run."),
-        },
-        "cron": {"timePeriodType": "minutes", "timePeriod": 15},
+        "name": "CTT - Case Housekeeping",
+        "description": "Keeps open Security cases tidy: assigns cases unassigned for a day to their owner (rule tag, endpoint owner or lab range), suggests closing cases without new issues for a day, and resolves cases open for 7 days as Security Testing. Owners get one Slack DM per run. Run by the job of the same name every 4 hours.",
+        "steps": [{"script": "CTTCaseHousekeeping", "task": "Tidy open Security cases", "args": ["dry_run"]}],
+        "inputs": {"dry_run": ("", "true only reports what would change. Empty uses cases.dry_run in 'CTT - Config'.")},
+        "cron": {"timePeriodType": "hours", "timePeriod": 4},
     },
     {
         "name": "CTT - Tenant Status",
-        "script": "CTTTenantStatus",
         "description": "Publishes tenant statistics and hygiene to the CTT Slack channel: replaces the Tenant Status canvas and sets the channel topic. Run by the job of the same name every day at 09:00 Singapore time.",
-        "task": "Publish the tenant status to Slack",
+        "steps": [{"script": "CTTTenantStatus", "task": "Publish the tenant status to Slack", "args": ["period_days", "send"]}],
         "inputs": {
             "period_days": ("7", "Days of activity to report."),
             "send": ("true", "false only shows the canvas and topic in the War Room."),
@@ -84,17 +80,22 @@ def task(tid: str, kind: str, name: str, nxt: str | None, y: int, extra: dict | 
 
 
 def playbook(job: dict) -> dict:
-    script_task = task(
-        "1",
-        "regular",
-        job["task"],
-        "2",
-        230,
-        {
-            "task": {"scriptName": job["script"], "description": f"Runs {job['script']}."},
-            "scriptarguments": {k: {"simple": f"${{inputs.{k}}}"} for k in job["inputs"]},
-        },
-    )
+    steps = job["steps"]
+    tasks = {"0": task("0", "start", "", "1", 50)}
+    for i, step in enumerate(steps, start=1):
+        tasks[str(i)] = task(
+            str(i),
+            "regular",
+            step["task"],
+            str(i + 1),
+            50 + 180 * i,
+            {
+                "task": {"scriptName": step["script"], "description": f"Runs {step['script']}."},
+                "scriptarguments": {k: {"simple": f"${{inputs.{k}}}"} for k in step["args"]},
+            },
+        )
+    done = str(len(steps) + 1)
+    tasks[done] = task(done, "title", "Done", None, 50 + 180 * (len(steps) + 1))
     return {
         "id": job["name"],
         "version": -1,
@@ -107,12 +108,8 @@ def playbook(job: dict) -> dict:
         # them to an issue ("playbook is not adopted (69)"); this adopts them on install.
         "adopted": True,
         "starttaskid": "0",
-        "tasks": {
-            "0": task("0", "start", "", "1", 50),
-            "1": script_task,
-            "2": task("2", "title", "Done", None, 410),
-        },
-        "view": json.dumps({"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 425, "width": 380, "x": 50, "y": 50}}}),
+        "tasks": tasks,
+        "view": json.dumps({"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 245 + 180 * len(steps), "width": 380, "x": 50, "y": 50}}}),
         "inputs": [
             {"key": k, "value": {"simple": v}, "required": False, "description": d, "playbookInputQuery": None}
             for k, (v, d) in job["inputs"].items()
@@ -180,7 +177,8 @@ def main() -> None:
         stem = re.sub(r"[^A-Za-z0-9]+", "-", job["name"])
         pb = PACK / "Playbooks" / f"playbook-{stem}.yml"
         pb.write_text(yaml.dump(playbook(job), sort_keys=False, width=10000))
-        (PACK / "Playbooks" / f"playbook-{stem}_README.md").write_text(f"{job['description']}\n\nRuns the `{job['script']}` script.\n")
+        scripts = ", then ".join(f"`{st['script']}`" for st in job["steps"])
+        (PACK / "Playbooks" / f"playbook-{stem}_README.md").write_text(f"{job['description']}\n\nRuns {scripts}.\n")
         jb = PACK / "Jobs" / f"job-{stem}.json"
         jb.write_text(json.dumps(job_json(job), indent=4) + "\n")
         print(f"wrote {pb.name}, {jb.name}")

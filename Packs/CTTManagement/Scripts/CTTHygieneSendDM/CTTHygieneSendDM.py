@@ -95,7 +95,10 @@ def main():  # pragma: no cover
             raise DemistoException("No Slack ID to send to.")
         message = args.get("message") or ""
         url = args.get("issue_url", "")
-        if usable_ai_message(message):
+        if args.get("content"):
+            # Already laid out by the caller (the case housekeeping digest).
+            content = args["content"]
+        elif usable_ai_message(message):
             content = build_dm(args.get("guideline_id", ""), message.strip(), args.get("issue_id", ""), url)
         else:
             body = template_body(

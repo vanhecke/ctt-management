@@ -29,11 +29,11 @@ dataset = issues
 ```
 
 Explain what the issue means, which guideline it refers to, and how to fix the object. Rules that
-watch the audit log raise one issue per change; the daily sweep raises one issue per guideline and
+watch the audit log raise one issue per change; the daily inventory check raises one issue per guideline and
 owner and resolves it on its own once the objects are fixed.
 
 ## Things you must not do
 
 - Don't rename, retag, disable or delete objects. Explain the fix; the owner does it.
-- Don't close or resolve hygiene issues. The sweep resolves its own issues; CTT admins handle the
+- Don't close or resolve hygiene issues. The inventory check resolves its own issues; CTT admins handle the
   rest.

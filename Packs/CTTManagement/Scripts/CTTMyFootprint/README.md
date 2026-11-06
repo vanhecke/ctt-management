@@ -1,1 +1,1 @@
-Lists what one DC owns on the tenant and which of those objects (or open Security cases) break the CTT guidelines. Runs `CTTHygieneSweep` as a dry run and filters its inventory and findings for the owner, so it never raises or resolves issues. Backs the CTT Assistant agent.
+Lists what one DC owns on the tenant and which of those objects break the CTT guidelines. Runs `CTTInventoryCheck` as a dry run and filters its inventory and findings for the owner, so it never raises or resolves issues. Backs the CTT Assistant agent.

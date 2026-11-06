@@ -1,0 +1,53 @@
+commonfields:
+  id: CTTInventoryCheck
+  version: -1
+name: CTTInventoryCheck
+comment: Daily CTT inventory check for what the correlation rules cannot see. Inventories custom playbooks, scripts, jobs, integration instances, correlation rules and lookup datasets and raises one Medium health issue per guideline and owner (CTT-TAG-01 for objects that already exist, CTT-TAG-02 for the playbook Tags field, CTT-LIFE-02). Owners of untagged objects come from the API creator or the ctt_object_owners lookup (who last changed the object). Objects already named in an open rule issue are skipped. Tracks raised issues in the "CTT - Sweep State" list, replaces an issue when new items appear and resolves it once the findings clear. Never changes the objects it checks.
+script: '-'
+type: python
+subtype: python3
+dockerimage: demisto/python3:3.12.15.14069087
+runas: DBotWeakRole
+enabled: true
+tags:
+- CTT
+args:
+- name: dry_run
+  auto: PREDEFINED
+  predefined:
+  - "true"
+  - "false"
+  defaultValue: "false"
+  description: Report findings without raising or resolving issues.
+- name: include_inventory
+  auto: PREDEFINED
+  predefined:
+  - "true"
+  - "false"
+  defaultValue: "false"
+  description: Also return every inspected object with its tag and owner (CTT.InventoryCheck.Inventory).
+outputs:
+- contextPath: CTT.InventoryCheck.Findings
+  description: One entry per finding (kind, name, guideline, owner, detail).
+  type: Unknown
+- contextPath: CTT.InventoryCheck.Inventory
+  description: With include_inventory, every inspected object (kind, name, tag, owner).
+  type: Unknown
+- contextPath: CTT.InventoryCheck.Raised
+  description: Guideline|owner keys that got a new issue.
+  type: Unknown
+- contextPath: CTT.InventoryCheck.Resolved
+  description: Guideline|owner keys whose previous issue was resolved.
+  type: Unknown
+- contextPath: CTT.InventoryCheck.Errors
+  description: Collection errors (an object type that could not be read).
+  type: Unknown
+dependson:
+  must:
+  - core-api-post
+fromversion: 8.9.0
+marketplaces:
+- marketplacev2
+- platform
+tests:
+- No tests (auto formatted)

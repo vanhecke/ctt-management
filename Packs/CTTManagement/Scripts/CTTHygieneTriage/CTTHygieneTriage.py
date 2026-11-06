@@ -61,11 +61,12 @@ def decide(
     return True, True, "assigned and notified"
 
 
-OBJ_RE = re.compile(r"(?:created|on) (?P<kind>[A-Za-z][\w ]*?) '(?P<name>[^']+)'")
+OBJ_RE = re.compile(r"(?:created|saved|on) (?P<kind>[A-Za-z][\w ]*?) '(?P<name>[^']+)'")
 OWNED_BY_RE = re.compile(r"which belongs to (?P<owner>[^\s,(]+)")
 RAN_RE = re.compile(r"ran '(?P<action>[^']+)'")
-FINDING_RE = re.compile(r"'[^']+': (?P<finding>[^.]+)\.")
-UNDERSCORE_KINDS = {"Script", "Lookup dataset", "DATASETS", "LOOKUPS"}
+# The finding runs to the first full stop that ends a sentence, so names with dots stay whole.
+FINDING_RE = re.compile(r"'[^']+': (?P<finding>.+?)\.(?= [A-Z]|$)")
+UNDERSCORE_KINDS = {"Script", "Lookup dataset", "Dataset", "DATASETS", "LOOKUPS"}
 
 
 def rename_target(kind: str, name: str, tag: str) -> str:
@@ -86,15 +87,11 @@ def compose(gid: str, title: str, details: str, tags: list[str], lab_octet: str)
     m = FINDING_RE.search(details or "")
     finding = m.group("finding") if m else ""
     lines = [line[2:] for line in (details or "").splitlines() if line.startswith("- ")]
-    if lines:  # a daily sweep issue: a list of items
-        found = f"The daily sweep found {len(lines)} item(s): " + "; ".join(lines[:4]) + ("; ..." if len(lines) > 4 else ".")
+    if lines:  # an inventory check issue: a list of items
+        found = f"The inventory check found {len(lines)} item(s): " + "; ".join(lines[:4]) + ("; ..." if len(lines) > 4 else ".")
         fixes = {
             "CTT-TAG-01": [f'Rename each one with your tag, for example "{tag} - <name>"'],
             "CTT-TAG-02": [f"Add one of your tags ({', '.join(tags) or tag}) to each playbook's Tags field"],
-            "CTT-CASE-01": [
-                "Resolve the finished test cases with reason Security Testing",
-                "Assign the ones still in use to yourself",
-            ],
             "CTT-LIFE-02": ["Hand them over to another DC or delete them"],
         }
         return found, fixes.get(gid, [f"Fix the items listed (guideline {gid})"])
@@ -104,6 +101,11 @@ def compose(gid: str, title: str, details: str, tags: list[str], lab_octet: str)
         if others:
             fix.append(f"Or use another of your tags: {others}")
         return f'{kind} "{name}" was created {what}.', fix
+    if gid == "CTT-TAG-02" and name:
+        return f'{kind} "{name}" is not scoped by your tag: {finding or "it targets something else"}.', [
+            f"Change its target to endpoints tagged {tag}",
+            f"Add {tag} as an endpoint tag on your lab machines first",
+        ]
     if gid == "CTT-OWN-01" and name:
         owned = OWNED_BY_RE.search(details)
         ran = RAN_RE.search(details)

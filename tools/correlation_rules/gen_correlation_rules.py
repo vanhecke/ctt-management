@@ -49,8 +49,13 @@ ENDPOINT_BASE = """dataset = endpoints
 | join type = left (dataset = ctt_registry | filter role != "central" | alter policy_tag = ctt_tag, policy_owner = owner_email | fields policy_tag, policy_owner) as tp tp.policy_tag = policy_tag
 | join type = left (dataset = ctt_registry | filter role != "central" | alter package_tag = ctt_tag, package_owner = owner_email | fields package_tag, package_owner) as tk tk.package_tag = package_tag
 | join type = left (dataset = ctt_registry | filter lab_octet != "" | comp max(owner_email) as range_owner by lab_octet | alter ip_octet = lab_octet | fields ip_octet, range_owner) as tr tr.ip_octet = ip_octet
-| alter owner = coalesce(tag_owner, policy_owner, package_owner)"""
-ENDPOINT_FIELDS = "| fields endpoint_id, endpoint_name, ip10, owner, tag_owner, range_owner, assigned_prevention_policy, installation_package, finding, guideline_id, title"
+| join type = left (dataset = ctt_object_owners | filter object_kind = "Agent installer" and object_name !~= "^(?i)ctt\\s*[-_]" | alter installation_package = object_name, installer_owner = coalesce(creator, last_editor) | fields installation_package, installer_owner) as io io.installation_package = installation_package
+| join type = left (dataset = ctt_object_owners | filter object_kind = "Policy rule" and object_name !~= "^(?i)(ctt\\s*[-_]|default)" | alter assigned_prevention_policy = object_name, policy_editor = last_editor | fields assigned_prevention_policy, policy_editor) as po po.assigned_prevention_policy = assigned_prevention_policy
+| alter installer_owner = if(installer_owner = "", null, installer_owner), policy_editor = if(policy_editor = "", null, policy_editor)
+| alter owner = coalesce(tag_owner, policy_owner, package_owner, installer_owner, policy_editor)
+| alter owner_source = if(tag_owner != null, "endpoint tag", if(policy_owner != null, "tag in its policy name", if(package_owner != null, "tag in its installer name", if(installer_owner != null, concat("creator of installer ", installation_package), if(policy_editor != null, concat("last editor of policy ", assigned_prevention_policy), null)))))
+| alter owner_label = coalesce(owner, "unknown"), owner_note = if(owner != null, concat("Owner: ", owner, " (", owner_source, ")."), "No owner found: add your tag to the endpoint.")"""
+ENDPOINT_FIELDS = "| fields endpoint_id, endpoint_name, ip10, owner, owner_label, owner_source, owner_note, tag_owner, range_owner, assigned_prevention_policy, installation_package, finding, guideline_id, title"
 ENDPOINT_LINK = 'dataset = endpoints | filter endpoint_name = "$endpoint_name" | dedup endpoint_id by desc last_seen'
 
 RULES = [
@@ -112,14 +117,40 @@ RULES = [
         "file": "Builtin_or_untagged_content_changed",
         "name": "CTT - Hygiene - Built-in or untagged content changed",
         "guideline": "CTT-OOTB-01",
-        "description": "Someone who is not a CTT admin edited, deleted, adopted or detached content without a registered owner tag: built-in or marketplace content, or an untagged custom object (CTT-OOTB-01, CTT-OOTB-02 for AI agents).",
+        "description": "Someone, CTT admins included, edited, deleted, adopted or detached content without a registered owner tag: built-in or marketplace content, or an untagged custom object (CTT-OOTB-01, CTT-OOTB-02 for AI agents).",
         "xql": f"""{AUDIT}
 | filter (action in ("modify", "delete") and object_name != null and obj_owner_role = null) or subtype ~= "^(Adopt|Detach)"
-| filter actor_is_admin != 1
 | alter guideline_id = if(object_kind in ("Agent", "Action"), "CTT-OOTB-02", "CTT-OOTB-01"), title = "Built-in or untagged content changed"
 | alter finding = if(subtype ~= "^(Adopt|Detach)", "marketplace content adopted or detached", if(obj_tag = null, "object has no owner tag", concat("prefix '", obj_tag, "' is not a registered tag")))
 {AUDIT_FIELDS}""",
         "alert_description": "$actor ran '$subtype' on $object_kind '$object_name' ($finding). Duplicate built-in content and change the copy under your own tag (guideline $guideline_id).",
+        "crontab": "*/30 * * * *",
+        "window": "35 minutes",
+        "suppress": ["actor", "object_name"],
+        "link": AUDIT_LINK,
+        "fields": {"actor_effective_username": "actor"},
+    },
+    {
+        "file": "Policy_rule_not_scoped_by_owner_tag",
+        "name": "CTT - Hygiene - Policy rule not scoped by your tag",
+        "guideline": "CTT-TAG-02",
+        "description": "Someone created a policy rule, or changed its scope, without targeting one of their own endpoint tags: it targets endpoint names or other conditions, or only tags that belong to someone else (CTT-TAG-02). Collector policies are skipped.",
+        "xql": f"""{AUDIT}
+| filter object_kind = "Policy rule" and object_name != null and action in ("create", "modify")
+| alter scope_target = coalesce(arrayindex(regextract(description, "with target (.+?) created$"), 0), arrayindex(regextract(description, "scope updated to include: (.+)$"), 0))
+| filter scope_target != null and scope_target !~= "^collector"
+| alter scope_tags = arrayindex(regextract(scope_target, "tags (?:=|in) ([^=]+?)(?: and [a-z ]+ (?:=|in) .*)?$"), 0)
+| alter ttags = if(scope_tags = null, arraycreate("-"), split(scope_tags, ","))
+| arrayexpand ttags
+| alter ttag = lowercase(trim(ttags))
+| join type = left (dataset = ctt_registry | alter ttag = ctt_tag, ttag_owner = owner_email, ttag_role = role | fields ttag, ttag_owner, ttag_role) as tt tt.ttag = ttag
+| alter mine = if(ttag_owner = actor or (ttag_role = "central" and actor_is_admin = 1), 1, 0)
+| comp max(mine) as has_own_tag by _time, actor, actor_email, actor_registered, object_kind, object_name, obj_tag, obj_owner, action, subtype, description, scope_target, scope_tags
+| filter has_own_tag = 0
+| alter guideline_id = "CTT-TAG-02", title = "Policy rule not scoped by your tag"
+| alter finding = if(scope_tags = null, concat("it targets ", scope_target, " instead of your endpoint tag"), concat("it targets tag ", scope_tags, ", which is not one of your tags"))
+{AUDIT_FIELDS}""",
+        "alert_description": "$actor saved $object_kind '$object_name': $finding. Scope policies to endpoints that carry your own tag (guideline $guideline_id).",
         "crontab": "*/30 * * * *",
         "window": "35 minutes",
         "suppress": ["actor", "object_name"],
@@ -151,19 +182,19 @@ RULES = [
         "file": "Endpoint_outside_owners_lab_range",
         "name": "CTT - Hygiene - Endpoint outside owner's lab range",
         "guideline": "CTT-LAB-01",
-        "description": "An endpoint has a 10.x.y.z address in a lab range that is unassigned or belongs to someone other than the endpoint's owner (found through its endpoint tag, prevention policy or installation package tag) (CTT-LAB-01).",
+        "description": "An endpoint has a 10.x.y.z address in a lab range that is unassigned or belongs to someone other than the endpoint's owner. The owner is found through its endpoint tag, the tag in its policy or installer name, the creator of its installer, or the last editor of its policy rule (CTT-LAB-01).",
         "xql": f"""{ENDPOINT_BASE}
 | filter ip10 != null and (range_owner = null or (owner != null and range_owner != owner))
 | alter guideline_id = "CTT-LAB-01", title = "Endpoint outside owner's lab range"
 | alter finding = if(range_owner = null, concat("IP ", ip10, " is in an unassigned lab range"), concat("IP ", ip10, " is in the lab range of ", range_owner, " but the endpoint belongs to ", owner))
 {ENDPOINT_FIELDS}""",
-        "alert_description": "Endpoint $endpoint_name: $finding. Move it into your own 10.x.0.0/16 range (guideline $guideline_id).",
+        "alert_description": "Endpoint $endpoint_name: $finding. $owner_note Move it into your own 10.x.0.0/16 range (guideline $guideline_id).",
         "crontab": "0 2 * * *",
         "window": "7 days",
         "suppress": ["endpoint_id"],
-        "owner_field": "owner",
+        "owner_field": "owner_label",
         "link": ENDPOINT_LINK,
-        "fields": {"agent_hostname": "endpoint_name", "actor_effective_username": "owner"},
+        "fields": {"agent_hostname": "endpoint_name", "actor_effective_username": "owner_label"},
     },
     {
         "file": "Endpoint_without_owner_tag",
@@ -175,13 +206,13 @@ RULES = [
 | filter tag_owner = null
 | alter guideline_id = "CTT-LAB-02", title = "Endpoint without owner tag", finding = if(owner != null, concat("no endpoint tag; likely owner ", owner), "no endpoint tag and no owner found")
 {ENDPOINT_FIELDS}""",
-        "alert_description": "Endpoint $endpoint_name has no registered owner tag ($finding). Add your tag as an endpoint tag (guideline $guideline_id).",
+        "alert_description": "Endpoint $endpoint_name has no registered owner tag ($finding). $owner_note Add your tag as an endpoint tag (guideline $guideline_id).",
         "crontab": "0 2 * * *",
         "window": "7 days",
         "suppress": ["endpoint_id"],
-        "owner_field": "owner",
+        "owner_field": "owner_label",
         "link": ENDPOINT_LINK,
-        "fields": {"agent_hostname": "endpoint_name", "actor_effective_username": "owner"},
+        "fields": {"agent_hostname": "endpoint_name", "actor_effective_username": "owner_label"},
     },
     {
         "file": "API_key_created_without_expiry",
@@ -267,7 +298,39 @@ def build(spec: dict) -> dict:
     }
 
 
+SCRIPTS = CONTENT / "Packs" / "CTTManagement" / "Scripts"
+OWNER_INDEX_QUERY = f"""{EXTRACT}
+{ACTOR}
+{OBJECT.splitlines()[-1]}
+| filter object_name != null and object_name != "" and action in ("create", "modify")
+| alter is_create = if(action = "create", 1, 0)
+| comp earliest(actor) as first_actor, latest(actor) as last_editor, max(is_create) as has_create, max(_time) as last_ts by object_kind, object_name
+| alter creator = if(has_create = 1, first_actor, ""), last_change = format_timestamp("%Y-%m-%dT%H:%M:%SZ", last_ts)
+| fields object_kind, object_name, creator, last_editor, last_change"""
+ENDPOINT_OWNER_QUERY = f"""{ENDPOINT_BASE}
+| fields endpoint_id, endpoint_name, ip10, owner, owner_source"""
+# Queries that scripts run with the same stages as the rules, so a rule, the owner index and the
+# case housekeeping always agree on object names and endpoint owners.
+GENERATED = [
+    (SCRIPTS / "CTTOwnerIndex" / "CTTOwnerIndex.py", "OWNER_QUERY", OWNER_INDEX_QUERY),
+    (SCRIPTS / "CTTCaseHousekeeping" / "CTTCaseHousekeeping.py", "ENDPOINT_OWNER_QUERY", ENDPOINT_OWNER_QUERY),
+]
+
+
+def write_script_queries() -> None:
+    for script, var, query in GENERATED:
+        lint(var, query + "\n")
+        begin, end = f"# BEGIN GENERATED {var}", f"# END GENERATED {var}"
+        text = script.read_text()
+        head, rest = text.split(begin, 1)
+        _, tail = rest.split(end, 1)
+        block = f'{begin} (tools/correlation_rules/gen_correlation_rules.py; do not edit)\n{var} = r"""{query}"""\n{end}'
+        script.write_text(head + block + tail)
+        print(f"wrote {var} into {script.relative_to(CONTENT)}")
+
+
 def main() -> None:
+    write_script_queries()
     OUT.mkdir(parents=True, exist_ok=True)
     expected = set()
     for spec in RULES:

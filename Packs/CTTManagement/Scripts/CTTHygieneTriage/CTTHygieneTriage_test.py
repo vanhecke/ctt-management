@@ -84,11 +84,11 @@ def test_compose_owner_rule():
 
 def test_compose_sweep_and_lab():
     details = (
-        "Daily sweep found 2 item(s) for owner j@x.com that break guideline CTT-TAG-01.\n"
+        "The inventory check found 2 item(s) for owner j@x.com that break guideline CTT-TAG-01.\n"
         "- Script 'A': no tag prefix\n- Job 'B': no tag prefix"
     )
     found, fix = compose("CTT-TAG-01", "Objects without a registered owner tag (j@x.com)", details, ["jva"], "")
-    assert found == "The daily sweep found 2 item(s): Script 'A': no tag prefix; Job 'B': no tag prefix."
+    assert found == "The inventory check found 2 item(s): Script 'A': no tag prefix; Job 'B': no tag prefix."
     assert fix == ['Rename each one with your tag, for example "jva - <name>"']
     found, fix = compose(
         "CTT-LAB-01",
@@ -99,3 +99,16 @@ def test_compose_sweep_and_lab():
     )
     assert found == "Endpoint PC1: IP 10.9.1.2 is in an unassigned lab range."
     assert fix == ["Move it into your lab range 10.20.0.0/16"]
+
+
+def test_compose_policy_scope():
+    details = (
+        "jva@x.com saved Policy rule 'jva - lab': it targets endpoint name = lnx-2.europe-west1-b.c.prod.internal "
+        "instead of your endpoint tag. Scope policies to endpoints that carry your own tag (guideline CTT-TAG-02)."
+    )
+    found, fix = compose("CTT-TAG-02", "Policy rule not scoped by your tag", details, ["jva"], "")
+    assert found == (
+        'Policy rule "jva - lab" is not scoped by your tag: it targets endpoint name = '
+        "lnx-2.europe-west1-b.c.prod.internal instead of your endpoint tag."
+    )
+    assert fix[0] == "Change its target to endpoints tagged jva"

@@ -36,9 +36,9 @@ def main():  # pragma: no cover
         if not email and not tags:
             raise DemistoException(f"'{who}' is not a registered tag or email. Use CTTRegistryLookup to find the right one.")
         # Always a dry run: this action reports, it never raises or resolves issues.
-        sweep_res = demisto.executeCommand("CTTHygieneSweep", {"dry_run": "true", "include_inventory": "true"})
+        sweep_res = demisto.executeCommand("CTTInventoryCheck", {"dry_run": "true", "include_inventory": "true"})
         if is_error(sweep_res):
-            raise DemistoException(f"CTTHygieneSweep failed: {get_error(sweep_res)}")
+            raise DemistoException(f"CTTInventoryCheck failed: {get_error(sweep_res)}")
         sweep = sweep_res[0].get("Contents") or {}
         if isinstance(sweep, str):
             sweep = json.loads(sweep)

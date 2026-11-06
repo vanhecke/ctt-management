@@ -1,7 +1,7 @@
 id: CTT - Registry Sync
 version: -1
 name: CTT - Registry Sync
-description: Syncs the CTT registry (tags, lab octets, Slack IDs, admins) from the Google Sheet into the ctt_registry lookup dataset and the 'CTT - Registry' list. Run by the job of the same name every hour.
+description: Syncs the CTT registry (tags, lab octets, Slack IDs, admins) from the Google Sheet into the ctt_registry lookup dataset and the 'CTT - Registry' list, then updates the ctt_object_owners lookup (who created and last changed each object) from the audit log. Run by the job of the same name every hour.
 fromversion: 8.9.0
 marketplaces:
 - marketplacev2
@@ -63,16 +63,17 @@ tasks:
         simple: ${inputs.source}
   '2':
     id: '2'
-    taskid: cc2815d0-a964-5e3d-9307-e66665df8d20
-    type: title
+    taskid: e53af5d2-03a3-5b3f-b264-832b651710dd
+    type: regular
     task:
-      id: cc2815d0-a964-5e3d-9307-e66665df8d20
+      id: e53af5d2-03a3-5b3f-b264-832b651710dd
       version: -1
-      name: Done
-      description: ''
-      type: title
+      name: Update the object owner index
+      description: Runs CTTOwnerIndex.
+      type: regular
       iscommand: false
       brand: ''
+      scriptName: CTTOwnerIndex
     separatecontext: false
     continueonerrortype: ''
     view: '{"position": {"x": 50, "y": 410}}'
@@ -81,13 +82,45 @@ tasks:
     ignoreworker: false
     skipunavailable: false
     quietmode: 0
-view: '{"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 425, "width": 380, "x": 50, "y": 50}}}'
+    nexttasks:
+      '#none#':
+      - '3'
+    scriptarguments:
+      hours:
+        simple: ${inputs.hours}
+  '3':
+    id: '3'
+    taskid: 8fd67056-f0cf-5c63-8d5e-190b553cf555
+    type: title
+    task:
+      id: 8fd67056-f0cf-5c63-8d5e-190b553cf555
+      version: -1
+      name: Done
+      description: ''
+      type: title
+      iscommand: false
+      brand: ''
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 50, "y": 590}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+view: '{"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 605, "width": 380, "x": 50, "y": 50}}}'
 inputs:
 - key: source
   value:
     simple: ''
   required: false
   description: auto, sheet or list. Empty uses registry.source in 'CTT - Config'.
+  playbookInputQuery: null
+- key: hours
+  value:
+    simple: '3'
+  required: false
+  description: Hours of audit log the owner index reads (it backfills 365 days when its lookup is empty).
   playbookInputQuery: null
 outputs: []
 tests:

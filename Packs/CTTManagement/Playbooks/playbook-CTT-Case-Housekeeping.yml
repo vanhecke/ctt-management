@@ -1,7 +1,7 @@
-id: CTT - Hygiene - Daily Sweep
+id: CTT - Case Housekeeping
 version: -1
-name: CTT - Hygiene - Daily Sweep
-description: 'Daily CTT hygiene sweep: checks custom objects and open Security cases against the CTT guidelines and raises one health issue per guideline and owner. Run by the job of the same name every day at 08:30 Singapore time.'
+name: CTT - Case Housekeeping
+description: 'Keeps open Security cases tidy: assigns cases unassigned for a day to their owner (rule tag, endpoint owner or lab range), suggests closing cases without new issues for a day, and resolves cases open for 7 days as Security Testing. Owners get one Slack DM per run. Run by the job of the same name every 4 hours.'
 fromversion: 8.9.0
 marketplaces:
 - marketplacev2
@@ -36,17 +36,17 @@ tasks:
       - '1'
   '1':
     id: '1'
-    taskid: ee3df7b6-1a56-5c56-a2ca-03d77166b614
+    taskid: a78ddd87-4549-5696-95f8-ba5b64bd96cd
     type: regular
     task:
-      id: ee3df7b6-1a56-5c56-a2ca-03d77166b614
+      id: a78ddd87-4549-5696-95f8-ba5b64bd96cd
       version: -1
-      name: Run the CTT hygiene sweep
-      description: Runs CTTHygieneSweep.
+      name: Tidy open Security cases
+      description: Runs CTTCaseHousekeeping.
       type: regular
       iscommand: false
       brand: ''
-      scriptName: CTTHygieneSweep
+      scriptName: CTTCaseHousekeeping
     separatecontext: false
     continueonerrortype: ''
     view: '{"position": {"x": 50, "y": 230}}'
@@ -61,8 +61,6 @@ tasks:
     scriptarguments:
       dry_run:
         simple: ${inputs.dry_run}
-      stale_case_days:
-        simple: ${inputs.stale_case_days}
   '2':
     id: '2'
     taskid: cc2815d0-a964-5e3d-9307-e66665df8d20
@@ -87,15 +85,9 @@ view: '{"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 425, "width
 inputs:
 - key: dry_run
   value:
-    simple: 'false'
-  required: false
-  description: true reports findings without raising or resolving issues.
-  playbookInputQuery: null
-- key: stale_case_days
-  value:
     simple: ''
   required: false
-  description: Days without change before an open Security case is stale. Empty uses 'CTT - Config'.
+  description: true only reports what would change. Empty uses cases.dry_run in 'CTT - Config'.
   playbookInputQuery: null
 outputs: []
 tests:

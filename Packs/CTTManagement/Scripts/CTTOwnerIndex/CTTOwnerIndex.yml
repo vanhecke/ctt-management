@@ -1,0 +1,43 @@
+commonfields:
+  id: CTTOwnerIndex
+  version: -1
+name: CTTOwnerIndex
+comment: Keeps the ctt_object_owners lookup dataset up to date from the management audit log, with the person who created each object and the person who last changed it (for example agent installers, policy rules, playbooks and integration instances). The correlation rules, the inventory check and the case housekeeping use it to find an owner when an object carries no registered tag. Run every hour by the CTT - Registry Sync job.
+script: '-'
+type: python
+subtype: python3
+dockerimage: demisto/python3:3.12.15.14069087
+runas: DBotWeakRole
+enabled: true
+tags:
+- CTT
+args:
+- name: hours
+  defaultValue: "3"
+  description: Hours of audit log to read on a normal run. The job runs every hour, so 3 leaves room for a missed run.
+- name: backfill
+  auto: PREDEFINED
+  predefined:
+  - "true"
+  - "false"
+  defaultValue: "false"
+  description: Read backfill_days of audit log instead of the last few hours. Done automatically when the lookup is empty.
+- name: backfill_days
+  defaultValue: "365"
+  description: Days of audit log to read on a backfill.
+outputs:
+- contextPath: CTT.OwnerIndex.RowsWritten
+  description: Lookup rows added or updated.
+  type: Number
+- contextPath: CTT.OwnerIndex.ObjectsSeen
+  description: Objects changed in the window that was read.
+  type: Number
+dependson:
+  must:
+  - core-api-post
+fromversion: 8.9.0
+marketplaces:
+- marketplacev2
+- platform
+tests:
+- No tests (auto formatted)

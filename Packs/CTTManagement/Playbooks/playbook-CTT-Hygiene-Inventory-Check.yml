@@ -1,7 +1,7 @@
-id: CTT - Hygiene - Notify Dispatcher
+id: CTT - Hygiene - Inventory Check
 version: -1
-name: CTT - Hygiene - Notify Dispatcher
-description: Starts the CTT - Hygiene - Notify Owner playbook on new, unassigned CTT hygiene issues. Run by the job of the same name every 15 minutes, because pack uploads to XSIAM 8.15 do not install automation rules.
+name: CTT - Hygiene - Inventory Check
+description: 'Daily CTT inventory check for what the correlation rules cannot see: objects that already exist without a registered owner tag, playbooks without the owner''s tag in their Tags field, and objects of inactive owners. Raises one health issue per guideline and owner. Run by the job of the same name every day at 08:30 Singapore time.'
 fromversion: 8.9.0
 marketplaces:
 - marketplacev2
@@ -36,17 +36,17 @@ tasks:
       - '1'
   '1':
     id: '1'
-    taskid: f44a0553-701a-544b-a63a-f5c9d7516454
+    taskid: 622be5b5-0269-5625-ab5d-479cdb1f057e
     type: regular
     task:
-      id: f44a0553-701a-544b-a63a-f5c9d7516454
+      id: 622be5b5-0269-5625-ab5d-479cdb1f057e
       version: -1
-      name: Dispatch new CTT hygiene issues
-      description: Runs CTTHygieneDispatch.
+      name: Run the CTT inventory check
+      description: Runs CTTInventoryCheck.
       type: regular
       iscommand: false
       brand: ''
-      scriptName: CTTHygieneDispatch
+      scriptName: CTTInventoryCheck
     separatecontext: false
     continueonerrortype: ''
     view: '{"position": {"x": 50, "y": 230}}'
@@ -59,10 +59,8 @@ tasks:
       '#none#':
       - '2'
     scriptarguments:
-      lookback_hours:
-        simple: ${inputs.lookback_hours}
-      max_per_run:
-        simple: ${inputs.max_per_run}
+      dry_run:
+        simple: ${inputs.dry_run}
   '2':
     id: '2'
     taskid: cc2815d0-a964-5e3d-9307-e66665df8d20
@@ -85,17 +83,11 @@ tasks:
     quietmode: 0
 view: '{"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 425, "width": 380, "x": 50, "y": 50}}}'
 inputs:
-- key: lookback_hours
+- key: dry_run
   value:
-    simple: '48'
+    simple: 'false'
   required: false
-  description: How far back to look for new hygiene issues.
-  playbookInputQuery: null
-- key: max_per_run
-  value:
-    simple: '20'
-  required: false
-  description: The most issues to dispatch in one run.
+  description: true reports findings without raising or resolving issues.
   playbookInputQuery: null
 outputs: []
 tests:

@@ -65,12 +65,17 @@ QUERIES = {
         ],
         "agents": [
             "dataset = agentix_agents_actions",
-            "comp count() as actions, count_distinct(user) as people by agent_name",
-            "sort desc actions",
+            "comp count_distinct(conversation_id) as plans, count() as actions, count_distinct(user) as people by agent_name",
+            "sort desc plans",
             "limit 5",
         ],
     }.items()
 }
+# Older tenants have no conversation_id in agentix_agents_actions; count actions only there.
+AGENTS_FALLBACK = (
+    "dataset = agentix_agents_actions | comp count() as actions, count_distinct(user) as people by agent_name"
+    " | sort desc actions | limit 5"
+)
 
 
 # ---------- pure helpers (unit tested) ----------
@@ -124,6 +129,10 @@ def owner_label(owner: str) -> str:
     return owner.split("@")[0] if "@" in owner else owner
 
 
+def thousands(n: Any) -> str:
+    return f"{n:,}" if isinstance(n, int) else str(n)
+
+
 def build_canvas(r: dict, days: int, now: datetime, tenant_url: str = "") -> str:
     """Plain text for the 'Tenant Status' canvas: the Slack workflow shows content without
     rendering Markdown, so the layout is emoji headers, short lines and bullets."""
@@ -132,12 +141,7 @@ def build_canvas(r: dict, days: int, now: datetime, tenant_url: str = "") -> str
     owners = {owner_label(k): v for k, v in by(hygiene, "owner", title=False).items()}
     playbooks = top_rows(r["playbooks"], "runs", 50)
     logins = r["logins"][0] if r["logins"] else {}
-    busiest = ", ".join(f"{p.get('playbook_name')} ({p.get('runs')})" for p in playbooks[:3]) or "none"
-    commands = ", ".join(f"{c.get('name')} ({c.get('runs')})" for c in top_rows(r["commands"], "runs", 5)) or "none"
     builders = ", ".join(f"{c.get('user_name')} ({c.get('changes')})" for c in top_rows(r["changers"], "changes", 5)) or "none"
-    agents = (
-        ", ".join(f"{a.get('agent_name')} ({a.get('actions')} actions)" for a in top_rows(r["agents"], "actions", 5)) or "none"
-    )
     lines = [
         "CTT TENANT STATUS",
         f"Updated {now.strftime('%a %d %b %Y %H:%M')} SGT by the CTT Management pack",
@@ -146,43 +150,73 @@ def build_canvas(r: dict, days: int, now: datetime, tenant_url: str = "") -> str
         f"{health_light(open_issues)} HYGIENE",
         f"• Open hygiene issues: {open_issues} ({fmt_counts(by(hygiene, 'guideline', title=False))})",
         f"• Most to fix: {fmt_counts(owners, 5)}",
-        "• Each issue is assigned to its owner. Fix the object and the daily sweep closes its own issues.",
+        "• Each issue is assigned to its owner. Fix the object; the inventory check closes its own issues.",
         "",
         f"📊 LAST {days} DAYS",
-        f"• Cases: {total(r['cases'])} new ({fmt_counts(by(r['cases'], 'xdm.case.domain'))}); {r['open_cases']} open now",
+        f"• Cases: {total(r['cases'])} new ({fmt_counts(by(r['cases'], 'xdm.case.domain'))}); {thousands(r['open_cases'])} open now, {thousands(r.get('new_cases_24h', '?'))} new in 24h",
         f"• Issues: {total(r['issues'])} new ({fmt_counts(by(r['issues'], 'xdm.issue.severity'))})",
-        f"• Playbook runs: {total(playbooks, 'runs')} ({total(playbooks, 'failed')} failed)",
-        f"• Busiest playbooks: {busiest}",
-        f"• Top scripts and commands: {commands}",
         f"• People signed in: {logins.get('users', 0)} ({logins.get('logins', 0)} sign-ins)",
         f"• Most active builders: {builders}",
         "",
-        "📥 DATA AND COMPUTE",
+        "⚙️ AUTOMATION",
+        f"• Playbook runs: {total(playbooks, 'runs')} ({total(playbooks, 'failed')} failed)",
+    ]
+    top_pb = top_rows(playbooks, "runs", 8)
+    if top_pb:
+        lines.append("• Top playbooks:")
+        lines += [
+            f"   {p.get('playbook_name')}: {p.get('runs')} runs"
+            + (f", {p.get('failed')} failed" if int(p.get("failed") or 0) else "")
+            for p in top_pb
+        ]
+    commands = top_rows(r["commands"], "runs", 5)
+    lines.append("• Top scripts and commands: " + (", ".join(f"{c.get('name')} ({c.get('runs')})" for c in commands) or "none"))
+    agents = top_rows(r["agents"], "plans" if any("plans" in a for a in r["agents"]) else "actions", 5)
+    if agents:
+        lines.append("• Top AI agents:")
+        for a in agents:
+            plans = f"{a.get('plans')} plans, " if "plans" in a else ""
+            lines.append(f"   {a.get('agent_name')}: {plans}{a.get('actions')} actions by {a.get('people')} people")
+    else:
+        lines.append("• AI agents: no activity")
+    lines += [
+        "",
+        "📥 DATA AND INTEGRATIONS",
         f"• Ingested: about {human_bytes(r['daily_bytes'])}/day across {r['datasets_with_data']} datasets",
         f"• Biggest datasets: {', '.join(r['top_datasets']) or 'none'}",
+        f"• Integrations active: {thousands(r.get('integrations_active', '?'))}",
     ]
     if r.get("quota"):
         lines.append(f"• XQL compute today: {r['quota']['used']:.1f} of {r['quota']['license']:.0f} CU")
     lines += [
         "",
-        "💻 ENDPOINTS AND AGENTS",
+        "💻 ENDPOINTS",
         f"• Endpoints: {total(r['endpoints'])} ({fmt_counts(by(r['endpoints'], 'endpoint_status'))})",
-        f"• AI agents used: {agents}",
     ]
     return "\n".join(lines)
 
 
 def build_topic(r: dict, now: datetime) -> str:
-    """One line for the channel topic (Slack allows 250 characters)."""
-    open_issues = total(r["hygiene_open"])
+    """One line for the channel topic (Slack allows 250 characters): tenant activity only."""
     endpoints = by(r["endpoints"], "endpoint_status")
-    plural = "s" if open_issues != 1 else ""
-    topic = (
-        f"{health_light(open_issues)} CTT {now.strftime('%a %d %b')}: {open_issues} open hygiene issue{plural} | "
-        f"{r['open_cases']} open cases | {endpoints.get('Connected', 0)} endpoints connected | "
-        f"{human_bytes(r['daily_bytes'])}/day ingested | details in the Tenant Status canvas"
-    )
-    return topic[:250]
+    parts = [
+        f"CTT {now.strftime('%a %d %b')}",
+        f"{thousands(r['open_cases'])} open cases (+{thousands(r.get('new_cases_24h', '?'))} in 24h)",
+        f"{endpoints.get('Connected', 0)} endpoints connected",
+        f"{human_bytes(r['daily_bytes'])}/day ingested",
+        f"{thousands(r.get('integrations_active', '?'))} integrations active",
+    ]
+    return " · ".join(parts)[:250]
+
+
+def filtered_count(reply: dict) -> Any:
+    value = reply.get("FILTER_COUNT")
+    return value if value is not None else reply.get("TOTAL_COUNT", "?")
+
+
+def active_integrations(instances: list[dict]) -> int:
+    """Enabled integration instances, without the built-in ones every tenant has."""
+    return sum(1 for i in instances if isinstance(i, dict) and str(i.get("enabled")).lower() == "true" and not i.get("isBuiltin"))
 
 
 # ---------- tenant I/O ----------
@@ -223,6 +257,12 @@ def collect(days: int, errors: list[str]) -> dict:
             stats[key] = run_xql(query, 90 if key == "hygiene_open" else days)
         except Exception as e:
             stats[key] = []
+            if key == "agents":
+                try:
+                    stats[key] = run_xql(AGENTS_FALLBACK, days)
+                    continue
+                except Exception as e2:
+                    e = e2
             errors.append(f"{key}: {e}")
     try:
         body = {
@@ -232,10 +272,21 @@ def collect(days: int, errors: list[str]) -> dict:
                 "search_to": 1,
             }
         }
-        stats["open_cases"] = core_post("/public_api/v1/case/search", body).get("TOTAL_COUNT", "?")
+        # FILTER_COUNT is the count that matches the filters; TOTAL_COUNT counts every case.
+        stats["open_cases"] = filtered_count(core_post("/public_api/v1/case/search", body))
+        since = int(time.time() * 1000) - DAY_MS
+        body["request_data"]["filters"] = [{"field": "creation_time", "operator": "gte", "value": since}]
+        stats["new_cases_24h"] = filtered_count(core_post("/public_api/v1/case/search", body))
     except Exception as e:
-        stats["open_cases"] = "?"
-        errors.append(f"open cases: {e}")
+        stats.setdefault("open_cases", "?")
+        stats.setdefault("new_cases_24h", "?")
+        errors.append(f"cases: {e}")
+    try:
+        res = core_post("/settings/integration/search", {"size": 1000})
+        stats["integrations_active"] = active_integrations(res.get("instances") or [] if isinstance(res, dict) else [])
+    except Exception as e:
+        stats["integrations_active"] = "?"
+        errors.append(f"integrations: {e}")
     try:
         daily, count, top = dataset_summary(core_post("/public_api/v1/xql/get_datasets", {"request_data": {}}) or [])
         stats.update(daily_bytes=daily, datasets_with_data=count, top_datasets=top)

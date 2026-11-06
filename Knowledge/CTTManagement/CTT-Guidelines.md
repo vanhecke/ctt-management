@@ -155,11 +155,17 @@ Uninstall agents, delete broker VMs and engines, and disable collectors once a l
 
 **CTT-CASE-01: Close Security Testing cases when your attack chain is done.** *Active*
 When you finish a test or demo attack chain, resolve its cases with the resolution reason
-*Security Testing*. Open test cases bury everyone else's demos.
+*Security Testing*. Open test cases bury everyone else's demos, and new issues keep grouping into
+a case while it is open. When a case gets no new issues for a day, you get a Slack reminder to
+close it. Security cases still open after 7 days are resolved as *Security Testing*
+automatically. Star a case to keep it open longer.
 
-**CTT-CASE-02: Assign your test cases to yourself.** *Proposed*
+**CTT-CASE-02: Assign your test cases to yourself.** *Active*
 While you are testing, assign the cases your lab creates to yourself so others can see who is
-working on them.
+working on them. A Security case still unassigned after a day is assigned to its owner
+automatically: the owner of the tag in the name of the correlation rule behind it, the owner of an
+endpoint in it, or the owner of the lab range of a 10.x address in it. You get a Slack DM when
+that happens.
 
 ### LIFE: Lifecycle
 
@@ -171,15 +177,18 @@ Before you leave the team, delete your objects or hand them over to another DC, 
 
 ## How monitoring works
 
-- The CTT Management pack watches the management audit log and runs a daily sweep.
+- The CTT Management pack watches the management audit log and the endpoint list with
+  correlation rules, and runs a daily inventory check for what the audit log can't show (objects
+  that already exist, the playbook Tags field).
 - When a guideline is broken, it raises a **health issue** named
   `CTT - Hygiene - <guideline ID> - <what happened>`. Each one appears in the Issues table and
   opens its own case, both in the **Health** domain, apart from the Security cases you demo with.
 - The issue is **assigned to you** when it is about something you did or own, and you get a short
   **Slack DM** from the CTT workflow explaining what was found, the guideline, how to fix it, and a
   link to the issue. At most three DMs per person per day.
-- Nothing on the tenant is changed or deleted automatically. You fix the object; the daily sweep
-  closes its own issues once things are fixed.
+- Objects are never changed or deleted automatically. You fix the object; the inventory check
+  closes its own issues once things are fixed. The one exception is cases: Security cases are
+  assigned after a day and resolved after 7 days (`CTT-CASE-01`, `CTT-CASE-02`).
 - If something was intended (a test, a demo), reply in the team channel and a CTT admin resolves
   the issue.
 - The **Tenant Status** canvas and the topic of the team channel show the tenant's health every

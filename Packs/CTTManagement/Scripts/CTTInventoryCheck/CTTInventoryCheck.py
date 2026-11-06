@@ -8,15 +8,26 @@ import time
 from typing import Any
 
 CONFIG_LIST = "CTT - Config"
+# Kept from the daily sweep this check replaces, so issues it raised are not raised again.
 STATE_LIST = "CTT - Sweep State"
+OWNERS_DATASET = "ctt_object_owners"
 TAG_RE = re.compile(r"^\s*([A-Za-z0-9]{2,16})\s*[-_]")
 ISSUE_PREFIX = "CTT - Hygiene"
 TITLES = {
     "CTT-TAG-01": "Objects without a registered owner tag",
     "CTT-TAG-02": "Playbooks missing the owner tag field",
     "CTT-LIFE-02": "Objects owned by an inactive DC",
-    "CTT-CASE-01": "Stale open Security cases",
 }
+# Inventory kinds and the object kinds the owner index (audit log) uses for them.
+INDEX_KINDS = {
+    "Playbook": ("Playbook",),
+    "Script": ("Script", "Automation"),
+    "Job": ("Job", "JobCenter"),
+    "Integration instance": ("Integrations", "Integration"),
+    "Correlation rule": ("Correlation rule",),
+    "Lookup dataset": ("Lookup dataset", "Dataset"),
+}
+QUOTED_RE = re.compile(r"'([^']+)'")
 DAY_MS = 86_400_000
 PAGE = 100  # the public API refuses search sizes above 100
 
@@ -41,7 +52,44 @@ def registry_index(rows: list[dict]) -> dict[str, dict]:
     return {str(r.get("tag", "")).lower(): r for r in rows if r.get("tag")}
 
 
-def check_object(obj: dict, registry: dict[str, dict]) -> list[dict]:
+def owner_index(rows: list[dict]) -> dict[tuple[str, str], str]:
+    """(object kind, lower-case name) -> the person who last changed it, else who created it."""
+    out: dict[tuple[str, str], str] = {}
+    for r in rows:
+        person = normalize_creator(r.get("last_editor") or r.get("creator"))
+        if person != "unknown" and r.get("object_name"):
+            out[(str(r.get("object_kind")), str(r["object_name"]).lower())] = person
+    return out
+
+
+def find_owner(obj: dict, owners: dict[tuple[str, str], str]) -> str:
+    """Who to hold responsible for an untagged object: its creator from the API when that is a
+    person, else whoever last changed it according to the audit log ("Updated By")."""
+    creator = normalize_creator(obj.get("creator"))
+    if creator != "unknown":
+        return creator
+    name = str(obj.get("name") or "").lower()
+    for kind in INDEX_KINDS.get(obj.get("kind", ""), (obj.get("kind", ""),)):
+        if (kind, name) in owners:
+            return owners[(kind, name)]
+    return "unknown"
+
+
+def reported_names(issues: list[dict]) -> set[str]:
+    """Object names already quoted in an open hygiene issue raised by a correlation rule, so the
+    inventory check does not raise a second issue for the same object."""
+    names: set[str] = set()
+    for issue in issues:
+        if not str(issue.get("name", "")).startswith(ISSUE_PREFIX + " - "):
+            continue
+        desc = str(issue.get("description") or "")
+        if desc.startswith(("Daily sweep found", "The inventory check found")):
+            continue
+        names.update(n.lower() for n in QUOTED_RE.findall(desc))
+    return names
+
+
+def check_object(obj: dict, registry: dict[str, dict], owners: dict | None = None) -> list[dict]:
     """obj: kind, name, creator (email or ''), tags (list, playbooks only). Returns findings."""
     name = obj.get("name") or ""
     tag = parse_tag(name)
@@ -49,7 +97,7 @@ def check_object(obj: dict, registry: dict[str, dict]) -> list[dict]:
     base = {"kind": obj["kind"], "name": name}
     if not entry:
         detail = "no tag prefix" if not tag else f"prefix '{tag}' is not a registered tag"
-        return [{**base, "guideline": "CTT-TAG-01", "owner": normalize_creator(obj.get("creator")), "detail": detail}]
+        return [{**base, "guideline": "CTT-TAG-01", "owner": find_owner(obj, owners or {}), "detail": detail}]
     findings = []
     owner = entry.get("owner_email") or "central"
     if entry.get("active") == "false":
@@ -63,25 +111,11 @@ def check_object(obj: dict, registry: dict[str, dict]) -> list[dict]:
     return findings
 
 
-def inventory_entry(obj: dict, registry: dict[str, dict]) -> dict:
+def inventory_entry(obj: dict, registry: dict[str, dict], owners: dict | None = None) -> dict:
     tag = parse_tag(obj.get("name") or "")
     entry = registry.get(tag or "")
-    owner = (entry.get("owner_email") or "central") if entry else normalize_creator(obj.get("creator"))
+    owner = (entry.get("owner_email") or "central") if entry else find_owner(obj, owners or {})
     return {"kind": obj["kind"], "name": obj.get("name") or "", "tag": tag if entry else None, "owner": owner}
-
-
-def check_case(case: dict, now_ms: int, stale_days: int) -> dict | None:
-    modified = case.get("modification_time") or case.get("creation_time") or now_ms
-    idle_days = int((now_ms - modified) // DAY_MS)
-    if idle_days < stale_days:
-        return None
-    return {
-        "kind": "Case",
-        "name": f"#{case.get('case_id')} {case.get('case_name', '')}".strip(),
-        "guideline": "CTT-CASE-01",
-        "owner": (case.get("assigned_user") or "unassigned").lower(),
-        "detail": f"open, no change for {idle_days} days",
-    }
 
 
 def item_key(f: dict) -> str:
@@ -134,7 +168,7 @@ def issue_body(group: dict, now_ms: int, max_items: int = 60) -> dict:
         "request_data": {
             "issue": {
                 "name": f"{ISSUE_PREFIX} - {gid} - {TITLES[gid]} ({group['owner']})",
-                "description": f"Daily sweep found {len(items)} item(s) for owner {group['owner']} "
+                "description": f"The inventory check found {len(items)} item(s) for owner {group['owner']} "
                 f"that break guideline {gid}. See CTT-Guidelines.\n{lines}{more}\n[owner: {group['owner']}]",
                 "observation_time": now_ms,
                 "issue_domain": "Health",
@@ -263,29 +297,25 @@ def collect_objects(errors: list[str]) -> list[dict]:
     return objects
 
 
-def collect_open_security_cases(stale_days: int, now_ms: int) -> list[dict]:
+def read_owner_index() -> dict[tuple[str, str], str]:
+    res = core_post("/public_api/v1/xql/lookups/get_data", {"request_data": {"dataset_name": OWNERS_DATASET, "limit": 10000}})
+    rows = res.get("data", []) if isinstance(res, dict) else (res or [])
+    return owner_index([r for r in rows if isinstance(r, dict)])
+
+
+def open_hygiene_issues() -> list[dict]:
     filters = [
-        {"field": "status_progress", "operator": "nin", "value": ["Resolved"]},
-        {"field": "case_domain", "operator": "in", "value": ["Security"]},
-        {"field": "modification_time", "operator": "lte", "value": now_ms - stale_days * DAY_MS},
+        {"field": "issue_domain", "operator": "in", "value": ["Health"]},
+        {"field": "status.progress", "operator": "in", "value": ["New", "In Progress"]},
     ]
-    cases: list[dict] = []
-    for start in range(0, 1000, PAGE):
-        # Sorted, so a tenant with more stale cases than the cap gets the same (oldest) cases every
-        # run instead of an arbitrary subset that would replace the issue daily.
-        body = {
-            "request_data": {
-                "filters": filters,
-                "search_from": start,
-                "search_to": start + PAGE,
-                "sort": {"field": "creation_time", "keyword": "asc"},
-            }
-        }
-        page = core_post("/public_api/v1/case/search", body).get("DATA") or []
-        cases.extend(page)
+    issues: list[dict] = []
+    for start in range(0, 2000, PAGE):
+        body = {"request_data": {"filters": filters, "search_from": start, "search_to": start + PAGE}}
+        page = core_post("/public_api/v1/issue/search", body).get("DATA") or []
+        issues.extend(page)
         if len(page) < PAGE:
             break
-    return cases
+    return issues
 
 
 def create_issue(group: dict, now_ms: int) -> str:
@@ -321,9 +351,8 @@ def main():  # pragma: no cover
         dry_run = argToBoolean(args.get("dry_run", "false"))
         include_inventory = argToBoolean(args.get("include_inventory", "false"))
         cfg = get_list_json(CONFIG_LIST, {})
-        sweep_cfg = cfg.get("sweep", {})
-        stale_days = int(args.get("stale_case_days") or sweep_cfg.get("stale_case_days", 7))
-        max_new = int(sweep_cfg.get("max_new_issues_per_run", 50))
+        check_cfg = cfg.get("inventory") or cfg.get("sweep", {})
+        max_new = int(check_cfg.get("max_new_issues_per_run", 50))
         registry_rows = get_list_json(cfg.get("registry", {}).get("output_list", "CTT - Registry"), [])
         if not registry_rows:
             raise DemistoException("The 'CTT - Registry' list is empty. Run the CTT - Registry Sync job first.")
@@ -331,18 +360,23 @@ def main():  # pragma: no cover
         now_ms = int(time.time() * 1000)
 
         errors: list[str] = []
+        owners: dict = {}
+        try:
+            owners = read_owner_index()
+        except Exception as e:
+            errors.append(f"owner index ({OWNERS_DATASET}): {e}")
+        skip: set[str] = set()
+        try:
+            skip = reported_names(open_hygiene_issues())
+        except Exception as e:
+            errors.append(f"open issues: {e}")
         findings: list[dict] = []
         objects = collect_objects(errors)
         for obj in objects:
-            findings.extend(check_object(obj, registry))
-        inventory = [inventory_entry(o, registry) for o in objects] if include_inventory else []
-        try:
-            for case in collect_open_security_cases(stale_days, now_ms):
-                f = check_case(case, now_ms, stale_days)
-                if f:
-                    findings.append(f)
-        except Exception as e:
-            errors.append(f"cases: {e}")
+            if str(obj.get("name") or "").lower() in skip:
+                continue
+            findings.extend(check_object(obj, registry, owners))
+        inventory = [inventory_entry(o, registry, owners) for o in objects] if include_inventory else []
 
         groups = group_findings(findings)
         state = get_list_json(STATE_LIST, {})
@@ -351,7 +385,7 @@ def main():  # pragma: no cover
         if not dry_run:
             for key in resolve_keys:
                 try:
-                    resolve_issue(state[key].get("external_id", ""), "Superseded or fixed; found by the CTT daily sweep.")
+                    resolve_issue(state[key].get("external_id", ""), "Superseded or fixed; found by the CTT inventory check.")
                     resolved.append(key)
                 except Exception as e:
                     errors.append(f"resolve {key}: {e}")
@@ -376,20 +410,20 @@ def main():  # pragma: no cover
             for k, g in sorted(groups.items())
         ]
         md = tableToMarkdown(
-            f"CTT hygiene sweep{' (dry run)' if dry_run else ''}", rows, headers=["Guideline", "Owner", "Items", "New issue"]
+            f"CTT inventory check{' (dry run)' if dry_run else ''}", rows, headers=["Guideline", "Owner", "Items", "New issue"]
         )
-        md += f"\nRaised {len(raised)} issue(s), resolved {len(resolved)}."
+        md += f"\nRaised {len(raised)} issue(s), resolved {len(resolved)}. Skipped {len(skip)} object name(s) already in open rule issues."
         if errors:
             md += tableToMarkdown("Collection errors", [{"Error": e} for e in errors])
         return_results(
             CommandResults(
                 readable_output=md,
-                outputs_prefix="CTT.Sweep",
+                outputs_prefix="CTT.InventoryCheck",
                 outputs={"Findings": findings, "Inventory": inventory, "Raised": raised, "Resolved": resolved, "Errors": errors},
             )
         )
     except Exception as e:
-        return_error(f"CTTHygieneSweep failed: {e}")
+        return_error(f"CTTInventoryCheck failed: {e}")
 
 
 if __name__ in ("__main__", "__builtin__", "builtins"):

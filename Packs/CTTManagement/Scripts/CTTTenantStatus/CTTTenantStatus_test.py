@@ -1,6 +1,17 @@
 from datetime import datetime
 
-from CTTTenantStatus import QUERIES, build_canvas, build_topic, by, dataset_summary, health_light, human_bytes, owner_label, total
+from CTTTenantStatus import (
+    QUERIES,
+    active_integrations,
+    build_canvas,
+    build_topic,
+    by,
+    dataset_summary,
+    health_light,
+    human_bytes,
+    owner_label,
+    total,
+)
 
 NOW = datetime(2026, 11, 9, 9, 0)
 
@@ -74,9 +85,40 @@ def test_canvas_counts_hygiene_by_guideline_and_owner():
     assert "• Most to fix: j 3, b 3" in canvas
 
 
-def test_topic_is_short():
-    stats = empty_stats(open_cases=23, daily_bytes=1024**3)
-    stats["endpoints"] = [{"endpoint_status": "CONNECTED", "n": 4}]
+def test_topic_is_tenant_activity_only():
+    stats = empty_stats(open_cases=1866, new_cases_24h=41, daily_bytes=15.3 * 1024**3, integrations_active=42)
+    stats["endpoints"] = [{"endpoint_status": "CONNECTED", "n": 19}, {"endpoint_status": "DISCONNECTED", "n": 9}]
     topic = build_topic(stats, NOW)
-    assert topic.startswith("🟢 CTT Mon 09 Nov: 0 open hygiene issues | 23 open cases | 4 endpoints connected | 1.0 GB/day")
-    assert len(topic) <= 250
+    assert topic == (
+        "CTT Mon 09 Nov · 1,866 open cases (+41 in 24h) · 19 endpoints connected · 15.3 GB/day ingested · 42 integrations active"
+    )
+    assert "hygiene" not in topic and "canvas" not in topic
+    assert len(topic) <= 250 and all(ord(ch) < 0x2000 or ch == "·" for ch in topic)
+
+
+def test_canvas_automation_section():
+    stats = empty_stats()
+    stats["playbooks"] = [
+        {"playbook_name": "FW Alert Triage", "runs": 40, "failed": 2},
+        {"playbook_name": "CTT - Registry Sync", "runs": 24, "failed": 0},
+    ]
+    stats["agents"] = [{"agent_name": "Simple FW Alert Triager", "plans": 12, "actions": 80, "people": 2}]
+    canvas = build_canvas(stats, 7, NOW)
+    auto = canvas.split("⚙️ AUTOMATION", 1)[1].split("📥", 1)[0]
+    assert "• Playbook runs: 64 (2 failed)" in auto
+    assert "   FW Alert Triage: 40 runs, 2 failed" in auto
+    assert "   CTT - Registry Sync: 24 runs" in auto
+    assert "   Simple FW Alert Triager: 12 plans, 80 actions by 2 people" in auto
+    endpoints = canvas.split("💻 ENDPOINTS", 1)[1]
+    assert "agent" not in endpoints.lower()
+
+
+def test_canvas_agents_without_plans():
+    stats = empty_stats()
+    stats["agents"] = [{"agent_name": "A", "actions": 5, "people": 1}]
+    assert "   A: 5 actions by 1 people" in build_canvas(stats, 7, NOW)
+
+
+def test_active_integrations():
+    instances = [{"enabled": "true"}, {"enabled": "false"}, {"enabled": "true", "isBuiltin": True}, {"enabled": True}]
+    assert active_integrations(instances) == 2

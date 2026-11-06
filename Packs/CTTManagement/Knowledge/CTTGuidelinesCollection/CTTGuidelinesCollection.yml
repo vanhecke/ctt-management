@@ -6,7 +6,7 @@ description: >-
   The rules for the shared ASEAN Cortex Team Tenant (CTT), one guideline per ID
   (CTT-GEN, CTT-TAG, CTT-OWN, CTT-OOTB, CTT-CEN, CTT-LAB, CTT-CASE, CTT-LIFE), with why, how to
   comply and examples, a naming quick reference per object type, and the coverage table that
-  says which guidelines are monitored and by which rule or sweep check. Consult it to explain a
+  says which guidelines are monitored, by a correlation rule (CR) or a playbook check (PB). Consult it to explain a
   guideline, a hygiene issue or how to name an object.
 fromversion: 8.15.0
 marketplaces:

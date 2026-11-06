@@ -1,0 +1,92 @@
+global_rule_id: db6b7b1d-5ad1-553b-9f12-d9e7cfdc7fd3
+name: CTT - Hygiene - Policy rule not scoped by your tag
+description: 'Someone created a policy rule, or changed its scope, without targeting one of their own endpoint tags: it targets endpoint names or other conditions, or only tags that belong to someone else (CTT-TAG-02). Collector policies are skipped.'
+fromversion: 8.9.0
+is_enabled: true
+dataset: alerts
+execution_mode: SCHEDULED
+crontab: '*/30 * * * *'
+search_window: 35 minutes
+timezone: UTC
+xql_query: |
+  dataset = management_auditing
+  | filter management_auditing_result = ENUM.MANAGEMENT_AUDIT_SUCCESS
+  | filter email != null and email != "" and email not in ("Palo Alto Networks", "N/A", "Xpanse Development", "Cortex Automation")
+  | filter user_name = null or user_name !~= "^(Public API - [0-9]+|APIKeyUser_[0-9]+|XSIAM Automation|Cortex Automation)$"
+  | alter actor_email = if(email contains "@", lowercase(email), null), actor_name = lowercase(user_name)
+  | alter object_kind = coalesce(arrayindex(regextract(subtype, "^[A-Za-z ]+ - (.+)$"), 0), replex(to_string(management_auditing_type), "^(MANAGEMENT_AUDIT_|management_auditing_type_)", ""))
+  | alter action = if(subtype ~= "^(Add|Upload|Copy|Create|New|Save as new|Import)" or subtype ~= "^(Create|Upload lookup|Addition)", "create", if(subtype ~= "(Delete|Remove)", "delete", if(subtype ~= "(Edit|Change|Update|Modif|Adopt|Detach|Enable|Disable|Rename|Scope Edit)", "modify", "other")))
+  | alter object_name = coalesce(
+      arrayindex(regextract(description, "ClonedPlaybookName: (.+?), ID:"), 0),
+      arrayindex(regextract(description, "playbookName: (.+?), ID:"), 0),
+      arrayindex(regextract(description, "scriptName: (.+?), (?:removed from|ID):"), 0),
+      arrayindex(regextract(description, "aiTaskName: (.+?), "), 0),
+      arrayindex(regextract(description, "CredentialsName: (.+?), ID:"), 0),
+      arrayindex(regextract(description, "ModuleName: ([^,]+)"), 0),
+      arrayindex(regextract(description, "ModuleBrand: (.+?), ID:"), 0),
+      arrayindex(regextract(description, "Layout (?:created|edited|deleted) - Name: (.+?), ID:"), 0),
+      arrayindex(regextract(description, "CaseField (?:created|edited|deleted) - Name: (.+?), Type:"), 0),
+      arrayindex(regextract(description, "Name: (.+?), JobID:"), 0),
+      arrayindex(regextract(description, "JobID: [^,]+, Name: (.+?), ID:"), 0),
+      arrayindex(regextract(description, "^name: (.+?), ID:"), 0),
+      arrayindex(regextract(description, "^Name: (.+?), ID:"), 0),
+      arrayindex(regextract(description, "dashboard '(.+?)'"), 0),
+      arrayindex(regextract(description, "(?:BIOC|Correlations? rule|IOC|Analytics BIOC|Attack Surface Rule) [a-z]+ - name: (.+?),? id: "), 0),
+      arrayindex(regextract(description, " profile (.+?) was (?:created|edited|deleted)"), 0),
+      arrayindex(regextract(description, "policy rule (.+?) (?:with target|updated|scope updated|was deleted|was created|created|was)"), 0),
+      arrayindex(regextract(description, "^Rule (.+?) status changed"), 0),
+      arrayindex(regextract(description, "Security Control: [^,]+, (.+)$"), 0),
+      arrayindex(regextract(description, "Connector Template '?(.+?)'? (?:created|deleted|modified)"), 0),
+      arrayindex(regextract(description, "Endpoint group '(.+?)'"), 0),
+      arrayindex(regextract(description, "lookup dataset called (\S+)"), 0),
+      arrayindex(regextract(description, "Dataset (\S+) of type"), 0),
+      arrayindex(regextract(description, "(?:query|macro) '(.+?)'"), 0),
+      arrayindex(regextract(description, "report template\(?s?\)? '(.+?)'"), 0),
+      arrayindex(regextract(description, "Cloud Security Rule '(.+?)'"), 0),
+      arrayindex(regextract(description, "installation package '(.+?)'"), 0),
+      arrayindex(regextract(description, "script, name: (.+?), description"), 0),
+      arrayindex(regextract(description, "^Edit (.+?), script id"), 0),
+      if(object_kind in ("Agent", "Action", "KnowledgeSource", "JobCenter"), arrayindex(regextract(description, "^(.+?)(?:, ID: .*)?$"), 0), null)
+    )
+  | alter obj_tag = lowercase(arrayindex(regextract(object_name, "^\s*([A-Za-z0-9]{2,16})\s*[-_]"), 0))
+  | alter object_kind = if(object_kind = "RULES", if(description ~= "^Correlations? rule", "Correlation rule", if(description ~= "^BIOC", "BIOC rule", if(description ~= "^IOC", "IOC rule", "Detection rule"))), if(object_kind = "DISTRIBUTIONS", "Agent installer", if(object_kind = "POLICY_RULES", "Policy rule", if(object_kind = "POLICY_PROFILES", "Policy profile", if(object_kind = "DASHBOARD", "Dashboard", if(object_kind = "LOOKUPS", "Lookup dataset", if(object_kind = "DATASETS", "Dataset", if(object_kind = "CLOUDSEC_RULE", "Cloud security rule", object_kind))))))))
+  | join type = left (dataset = ctt_registry | filter owner_email != "" | alter is_adm = if(role = "admin", 1, 0) | comp max(is_adm) as reg_actor_admin by owner_email | alter reg_actor_email = owner_email | fields reg_actor_email, reg_actor_admin) as ra ra.reg_actor_email = actor_email
+  | join type = left (dataset = ctt_registry | filter owner_email != "" | alter is_adm = if(role = "admin", 1, 0), reg_name_key = lowercase(owner_name) | comp max(is_adm) as reg_name_admin, max(owner_email) as reg_name_email by reg_name_key | fields reg_name_key, reg_name_admin, reg_name_email) as rn rn.reg_name_key = actor_name
+  | alter actor = coalesce(reg_actor_email, reg_name_email, actor_email, actor_name), actor_is_admin = coalesce(reg_actor_admin, reg_name_admin, 0), actor_registered = if(coalesce(reg_actor_email, reg_name_email) != null, "yes", "no")
+  | join type = left (dataset = ctt_registry | alter obj_tag = ctt_tag, obj_owner = owner_email, obj_owner_role = role | fields obj_tag, obj_owner, obj_owner_role) as ro ro.obj_tag = obj_tag
+  | filter object_kind not in ("AITask", "CaseField", "IssueField", "Credentials", "KnowledgeSource", "Investigation", "Indicator", "Entry", "War Room", "Whitelist", "Content", "Execute")
+  | filter object_kind = "Policy rule" and object_name != null and action in ("create", "modify")
+  | alter scope_target = coalesce(arrayindex(regextract(description, "with target (.+?) created$"), 0), arrayindex(regextract(description, "scope updated to include: (.+)$"), 0))
+  | filter scope_target != null and scope_target !~= "^collector"
+  | alter scope_tags = arrayindex(regextract(scope_target, "tags (?:=|in) ([^=]+?)(?: and [a-z ]+ (?:=|in) .*)?$"), 0)
+  | alter ttags = if(scope_tags = null, arraycreate("-"), split(scope_tags, ","))
+  | arrayexpand ttags
+  | alter ttag = lowercase(trim(ttags))
+  | join type = left (dataset = ctt_registry | alter ttag = ctt_tag, ttag_owner = owner_email, ttag_role = role | fields ttag, ttag_owner, ttag_role) as tt tt.ttag = ttag
+  | alter mine = if(ttag_owner = actor or (ttag_role = "central" and actor_is_admin = 1), 1, 0)
+  | comp max(mine) as has_own_tag by _time, actor, actor_email, actor_registered, object_kind, object_name, obj_tag, obj_owner, action, subtype, description, scope_target, scope_tags
+  | filter has_own_tag = 0
+  | alter guideline_id = "CTT-TAG-02", title = "Policy rule not scoped by your tag"
+  | alter finding = if(scope_tags = null, concat("it targets ", scope_target, " instead of your endpoint tag"), concat("it targets tag ", scope_tags, ", which is not one of your tags"))
+  | fields _time, actor, actor_email, actor_registered, object_kind, object_name, obj_tag, obj_owner, action, subtype, finding, guideline_id, title, description
+action: ALERTS
+alert_domain: DOMAIN_HEALTH
+alert_type: Unclassified
+alert_category: OTHER
+alert_name: CTT - Hygiene - $guideline_id - $title
+alert_description: '$actor saved $object_kind ''$object_name'': $finding. Scope policies to endpoints that carry your own tag (guideline $guideline_id). [owner: $actor]'
+alert_fields:
+  actor_effective_username: actor
+severity: SEV_030_MEDIUM
+user_defined_severity: null
+user_defined_category: null
+mapping_strategy: CUSTOM
+mitre_defs: {}
+suppression_enabled: true
+suppression_duration: 1 days
+suppression_fields:
+- actor
+- object_name
+investigation_query_link: dataset = management_auditing | filter email = "$actor_email" or lowercase(user_name) = "$actor" | sort desc _time
+drilldown_query_timeframe: ALERT
+lookup_mapping: []

@@ -34,6 +34,8 @@ args:
   description: The issue ID, shown in the footer.
 - name: guideline_id
   description: The guideline ID, shown in the header box.
+- name: content
+  description: Text that is already laid out for the code block (for example the case housekeeping digest). Sent as is instead of the template or AI message.
 outputs:
 - contextPath: CTT.DM.content
   description: The message that was sent.

@@ -1,6 +1,7 @@
-from CTTHygieneSweep import (
-    DAY_MS,
-    check_case,
+from CTTInventoryCheck import (
+    find_owner,
+    owner_index,
+    reported_names,
     check_object,
     group_findings,
     inventory_entry,
@@ -57,15 +58,6 @@ def test_inactive_owner():
     assert [x["guideline"] for x in f] == ["CTT-LIFE-02"]
 
 
-def test_check_case():
-    now = 100 * DAY_MS
-    stale = check_case({"case_id": 7, "case_name": "Lab", "modification_time": now - 10 * DAY_MS, "assigned_user": None}, now, 7)
-    fresh = check_case({"case_id": 8, "modification_time": now - 2 * DAY_MS}, now, 7)
-    assert stale["owner"] == "unassigned"
-    assert "10 days" in stale["detail"]
-    assert fresh is None
-
-
 def test_group_and_plan():
     findings = [
         {"kind": "Script", "name": "a", "guideline": "CTT-TAG-01", "owner": "u", "detail": "no tag prefix"},
@@ -119,3 +111,53 @@ def test_inventory_entry():
 def test_system_creators_are_unknown():
     f = check_object({"kind": "Playbook", "name": "Old", "creator": "DBot@demisto.com", "tags": []}, REGISTRY)
     assert f[0]["owner"] == "unknown"
+
+
+OWNERS = owner_index(
+    [
+        {
+            "object_kind": "Integrations",
+            "object_name": "Tor Exit Addresses Feed_instance_1",
+            "creator": "",
+            "last_editor": "bob@x.com",
+        },
+        {"object_kind": "Playbook", "object_name": "FW Alert Triage", "creator": "alice@x.com", "last_editor": ""},
+        {"object_kind": "Playbook", "object_name": "Bot made", "creator": "DBot", "last_editor": ""},
+    ]
+)
+
+
+def test_find_owner_prefers_the_api_creator():
+    assert find_owner({"kind": "Playbook", "name": "FW Alert Triage", "creator": "carol@x.com"}, OWNERS) == "carol@x.com"
+
+
+def test_find_owner_falls_back_to_the_audit_log():
+    assert (
+        find_owner({"kind": "Integration instance", "name": "tor exit addresses feed_instance_1", "creator": ""}, OWNERS)
+        == "bob@x.com"
+    )
+    assert find_owner({"kind": "Playbook", "name": "FW Alert Triage", "creator": "DBot@demisto.com"}, OWNERS) == "alice@x.com"
+    assert find_owner({"kind": "Playbook", "name": "Bot made", "creator": ""}, OWNERS) == "unknown"
+    assert find_owner({"kind": "Job", "name": "nothing", "creator": ""}, OWNERS) == "unknown"
+
+
+def test_check_object_uses_the_owner_index():
+    f = check_object(
+        {"kind": "Integration instance", "name": "Tor Exit Addresses Feed_instance_1", "creator": ""}, REGISTRY, OWNERS
+    )
+    assert f[0]["owner"] == "bob@x.com"
+
+
+def test_reported_names_only_from_rule_issues():
+    issues = [
+        {
+            "name": "CTT - Hygiene - CTT-TAG-01 - Object created without owner tag",
+            "description": "a@x.com created Playbook 'FW Alert Triage': no tag prefix.",
+        },
+        {
+            "name": "CTT - Hygiene - CTT-TAG-01 - Objects without a registered owner tag (a@x.com)",
+            "description": "The inventory check found 1 item(s) ... Script 'AddIOC'",
+        },
+        {"name": "Something else", "description": "'Other'"},
+    ]
+    assert reported_names(issues) == {"fw alert triage"}

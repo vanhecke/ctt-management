@@ -1,0 +1,30 @@
+{
+    "id": "CTT - Case Housekeeping",
+    "name": "CTT - Case Housekeeping",
+    "details": "Keeps open Security cases tidy: assigns cases unassigned for a day to their owner (rule tag, endpoint owner or lab range), suggests closing cases without new issues for a day, and resolves cases open for 7 days as Security Testing. Owners get one Slack DM per run. Run by the job of the same name every 4 hours.",
+    "playbookId": "CTT - Case Housekeeping",
+    "scheduled": true,
+    "recurrent": true,
+    "cronView": false,
+    "humanCron": {
+        "timePeriodType": "hours",
+        "timePeriod": 4
+    },
+    "startDate": "2026-11-06T00:00:00Z",
+    "type": "##default##",
+    "timezone": "Asia/Singapore",
+    "timezoneOffset": -480,
+    "shouldTriggerNew": true,
+    "closePrevRun": true,
+    "tags": [
+        "CTT"
+    ],
+    "isFeed": false,
+    "selectedFeeds": [],
+    "isAllFeeds": false,
+    "fromVersion": "8.9.0",
+    "supportedModules": [
+        "xsiam",
+        "agentix"
+    ]
+}

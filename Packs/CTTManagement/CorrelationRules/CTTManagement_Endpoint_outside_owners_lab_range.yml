@@ -1,6 +1,6 @@
 global_rule_id: 5961bb90-be76-59d8-80e1-1f1e98e24453
 name: CTT - Hygiene - Endpoint outside owner's lab range
-description: An endpoint has a 10.x.y.z address in a lab range that is unassigned or belongs to someone other than the endpoint's owner (found through its endpoint tag, prevention policy or installation package tag) (CTT-LAB-01).
+description: An endpoint has a 10.x.y.z address in a lab range that is unassigned or belongs to someone other than the endpoint's owner. The owner is found through its endpoint tag, the tag in its policy or installer name, the creator of its installer, or the last editor of its policy rule (CTT-LAB-01).
 fromversion: 8.9.0
 is_enabled: true
 dataset: alerts
@@ -23,20 +23,25 @@ xql_query: |
   | join type = left (dataset = ctt_registry | filter role != "central" | alter policy_tag = ctt_tag, policy_owner = owner_email | fields policy_tag, policy_owner) as tp tp.policy_tag = policy_tag
   | join type = left (dataset = ctt_registry | filter role != "central" | alter package_tag = ctt_tag, package_owner = owner_email | fields package_tag, package_owner) as tk tk.package_tag = package_tag
   | join type = left (dataset = ctt_registry | filter lab_octet != "" | comp max(owner_email) as range_owner by lab_octet | alter ip_octet = lab_octet | fields ip_octet, range_owner) as tr tr.ip_octet = ip_octet
-  | alter owner = coalesce(tag_owner, policy_owner, package_owner)
+  | join type = left (dataset = ctt_object_owners | filter object_kind = "Agent installer" and object_name !~= "^(?i)ctt\s*[-_]" | alter installation_package = object_name, installer_owner = coalesce(creator, last_editor) | fields installation_package, installer_owner) as io io.installation_package = installation_package
+  | join type = left (dataset = ctt_object_owners | filter object_kind = "Policy rule" and object_name !~= "^(?i)(ctt\s*[-_]|default)" | alter assigned_prevention_policy = object_name, policy_editor = last_editor | fields assigned_prevention_policy, policy_editor) as po po.assigned_prevention_policy = assigned_prevention_policy
+  | alter installer_owner = if(installer_owner = "", null, installer_owner), policy_editor = if(policy_editor = "", null, policy_editor)
+  | alter owner = coalesce(tag_owner, policy_owner, package_owner, installer_owner, policy_editor)
+  | alter owner_source = if(tag_owner != null, "endpoint tag", if(policy_owner != null, "tag in its policy name", if(package_owner != null, "tag in its installer name", if(installer_owner != null, concat("creator of installer ", installation_package), if(policy_editor != null, concat("last editor of policy ", assigned_prevention_policy), null)))))
+  | alter owner_label = coalesce(owner, "unknown"), owner_note = if(owner != null, concat("Owner: ", owner, " (", owner_source, ")."), "No owner found: add your tag to the endpoint.")
   | filter ip10 != null and (range_owner = null or (owner != null and range_owner != owner))
   | alter guideline_id = "CTT-LAB-01", title = "Endpoint outside owner's lab range"
   | alter finding = if(range_owner = null, concat("IP ", ip10, " is in an unassigned lab range"), concat("IP ", ip10, " is in the lab range of ", range_owner, " but the endpoint belongs to ", owner))
-  | fields endpoint_id, endpoint_name, ip10, owner, tag_owner, range_owner, assigned_prevention_policy, installation_package, finding, guideline_id, title
+  | fields endpoint_id, endpoint_name, ip10, owner, owner_label, owner_source, owner_note, tag_owner, range_owner, assigned_prevention_policy, installation_package, finding, guideline_id, title
 action: ALERTS
 alert_domain: DOMAIN_HEALTH
 alert_type: Unclassified
 alert_category: OTHER
 alert_name: CTT - Hygiene - $guideline_id - $title
-alert_description: 'Endpoint $endpoint_name: $finding. Move it into your own 10.x.0.0/16 range (guideline $guideline_id). [owner: $owner]'
+alert_description: 'Endpoint $endpoint_name: $finding. $owner_note Move it into your own 10.x.0.0/16 range (guideline $guideline_id). [owner: $owner_label]'
 alert_fields:
   agent_hostname: endpoint_name
-  actor_effective_username: owner
+  actor_effective_username: owner_label
 severity: SEV_030_MEDIUM
 user_defined_severity: null
 user_defined_category: null

@@ -2,7 +2,7 @@ commonfields:
   id: CTTEnsureJobs
   version: -1
 name: CTTEnsureJobs
-comment: Creates or updates the CTT jobs (registry sync, daily sweep, weekly stats) from the "CTT - Jobs" list. Run it once after installing or upgrading the pack; uploads of a pack to XSIAM 8.15 skip the Jobs folder.
+comment: Creates or updates the CTT jobs (registry sync, inventory check, case housekeeping, tenant status) from the "CTT - Jobs" list. Run it once after installing or upgrading the pack; uploads of a pack to XSIAM 8.15 skip the Jobs folder.
 script: '-'
 type: python
 subtype: python3
