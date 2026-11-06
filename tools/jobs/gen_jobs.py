@@ -118,6 +118,11 @@ def job_json(job: dict) -> dict:
         "recurrent": True,
         "cronView": False,
         "humanCron": job["cron"],
+        # The scheduler refuses a job without a start date (error 151), and a pack install then
+        # drops the job silently.
+        "startDate": "2026-11-06T00:00:00Z",
+        # Likewise required: the job's incident type (error 100008 without it).
+        "type": "##default##",
         "timezone": "Asia/Singapore",
         "timezoneOffset": -480,
         "shouldTriggerNew": True,

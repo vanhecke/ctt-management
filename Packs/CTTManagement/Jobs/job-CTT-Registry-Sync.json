@@ -10,6 +10,8 @@
         "timePeriodType": "hours",
         "timePeriod": 6
     },
+    "startDate": "2026-11-06T00:00:00Z",
+    "type": "##default##",
     "timezone": "Asia/Singapore",
     "timezoneOffset": -480,
     "shouldTriggerNew": true,

@@ -267,6 +267,12 @@ def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     expected = set()
     for spec in RULES:
+        if spec.get("enabled", True) is False:
+            # A pack install ignores is_enabled: false and installs the rule enabled (seen on
+            # joris, 2026-11-06). Rules for proposed guidelines stay out of the pack until the
+            # guideline is accepted; set "enabled": True on the spec to ship one.
+            print(f"skipped {spec['name']} (proposed guideline, not shipped)")
+            continue
         path = OUT / f"CTTManagement_{spec['file']}.yml"
         expected.add(path.name)
         path.write_text(yaml.dump(build(spec), sort_keys=False, allow_unicode=True, width=10000))

@@ -165,27 +165,32 @@ def core_api_post(uri: str, body: dict) -> Any:
     return response.get("reply", response) if isinstance(response, dict) else response
 
 
-def read_sheet(reg: dict) -> tuple[list[dict], list[dict]]:
+def read_tab(reg: dict, a1_range: str) -> list[dict]:
+    """Read one tab. The integration sends a comma-separated ranges value as a single range, which
+    the Sheets API rejects, so each tab is its own call."""
     args = {
         "spreadsheet_id": reg["spreadsheet_id"],
         "include_grid_data": "true",
-        "ranges": f"{reg['users_range']},{reg['extra_tags_range']}",
+        "ranges": a1_range,
         "using-brand": reg.get("sheets_brand") or "GoogleSheets",
     }
     res = demisto.executeCommand("google-sheets-spreadsheet-get", args)
     if is_error(res):
-        raise DemistoException(f"google-sheets-spreadsheet-get failed: {get_error(res)}")
+        raise DemistoException(f"google-sheets-spreadsheet-get {a1_range} failed: {get_error(res)}")
     contents = res[0].get("Contents") or {}
     if isinstance(contents, str):
         contents = json.loads(contents)
+    title = a1_range.split("!")[0]
     sheets = contents.get("sheets", [])
-    users_title = reg["users_range"].split("!")[0]
-    extra_title = reg["extra_tags_range"].split("!")[0]
-    by_title = {s.get("title"): s for s in sheets}
-    if users_title not in by_title:
-        raise DemistoException(f"Sheet tab '{users_title}' not found (got {list(by_title)})")
-    users = rows_to_dicts(sheet_values(by_title[users_title]))
-    extra = rows_to_dicts(sheet_values(by_title.get(extra_title, {})))
+    sheet = next((s for s in sheets if s.get("title") == title), sheets[0] if len(sheets) == 1 else None)
+    if sheet is None:
+        raise DemistoException(f"Sheet tab '{title}' not found (got {[s.get('title') for s in sheets]})")
+    return rows_to_dicts(sheet_values(sheet))
+
+
+def read_sheet(reg: dict) -> tuple[list[dict], list[dict]]:
+    users = read_tab(reg, reg["users_range"])
+    extra = read_tab(reg, reg["extra_tags_range"]) if reg.get("extra_tags_range") else []
     return users, extra
 
 
