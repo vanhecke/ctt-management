@@ -1,0 +1,102 @@
+id: CTT - Hygiene - Notify Dispatcher
+version: -1
+name: CTT - Hygiene - Notify Dispatcher
+description: Starts the CTT - Hygiene - Notify Owner playbook on new, unassigned CTT hygiene issues. Run by the job of the same name every 15 minutes, because pack uploads to XSIAM 8.15 do not install automation rules.
+fromversion: 8.9.0
+marketplaces:
+- marketplacev2
+- platform
+tags:
+- CTT
+adopted: true
+starttaskid: '0'
+tasks:
+  '0':
+    id: '0'
+    taskid: 30040b00-00a6-5dbe-ba11-23341cf0d82d
+    type: start
+    task:
+      id: 30040b00-00a6-5dbe-ba11-23341cf0d82d
+      version: -1
+      name: ''
+      description: ''
+      type: start
+      iscommand: false
+      brand: ''
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 50, "y": 50}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    nexttasks:
+      '#none#':
+      - '1'
+  '1':
+    id: '1'
+    taskid: f44a0553-701a-544b-a63a-f5c9d7516454
+    type: regular
+    task:
+      id: f44a0553-701a-544b-a63a-f5c9d7516454
+      version: -1
+      name: Dispatch new CTT hygiene issues
+      description: Runs CTTHygieneDispatch.
+      type: regular
+      iscommand: false
+      brand: ''
+      scriptName: CTTHygieneDispatch
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 50, "y": 230}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    nexttasks:
+      '#none#':
+      - '2'
+    scriptarguments:
+      lookback_hours:
+        simple: ${inputs.lookback_hours}
+      max_per_run:
+        simple: ${inputs.max_per_run}
+  '2':
+    id: '2'
+    taskid: cc2815d0-a964-5e3d-9307-e66665df8d20
+    type: title
+    task:
+      id: cc2815d0-a964-5e3d-9307-e66665df8d20
+      version: -1
+      name: Done
+      description: ''
+      type: title
+      iscommand: false
+      brand: ''
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 50, "y": 410}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+view: '{"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 425, "width": 380, "x": 50, "y": 50}}}'
+inputs:
+- key: lookback_hours
+  value:
+    simple: '48'
+  required: false
+  description: How far back to look for new hygiene issues.
+  playbookInputQuery: null
+- key: max_per_run
+  value:
+    simple: '20'
+  required: false
+  description: The most issues to dispatch in one run.
+  playbookInputQuery: null
+outputs: []
+tests:
+- No tests (auto formatted)

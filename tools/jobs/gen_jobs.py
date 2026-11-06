@@ -35,6 +35,17 @@ JOBS = [
         "cron": {"days": ALL_DAYS, "atTimeHour": "08", "atTimeMinute": "30", "timePeriodType": "weeks", "timePeriod": 1},
     },
     {
+        "name": "CTT - Hygiene - Notify Dispatcher",
+        "script": "CTTHygieneDispatch",
+        "description": "Starts the CTT - Hygiene - Notify Owner playbook on new, unassigned CTT hygiene issues. Run by the job of the same name every 15 minutes, because pack uploads to XSIAM 8.15 do not install automation rules.",
+        "task": "Dispatch new CTT hygiene issues",
+        "inputs": {
+            "lookback_hours": ("48", "How far back to look for new hygiene issues."),
+            "max_per_run": ("20", "The most issues to dispatch in one run."),
+        },
+        "cron": {"timePeriodType": "minutes", "timePeriod": 15},
+    },
+    {
         "name": "CTT - Tenant Status",
         "script": "CTTTenantStatus",
         "description": "Publishes tenant statistics and hygiene to the CTT Slack channel: replaces the Tenant Status canvas and sets the channel topic. Run by the job of the same name every day at 09:00 Singapore time.",
