@@ -1,0 +1,33 @@
+{
+    "id": "CTT - Weekly Stats",
+    "name": "CTT - Weekly Stats",
+    "details": "Posts weekly tenant statistics to the team Slack channel. Run by the job of the same name every Monday at 09:00 Singapore time.",
+    "playbookId": "CTT - Weekly Stats",
+    "scheduled": true,
+    "recurrent": true,
+    "cronView": false,
+    "humanCron": {
+        "days": [
+            "MON"
+        ],
+        "atTimeHour": "09",
+        "atTimeMinute": "00",
+        "timePeriodType": "weeks",
+        "timePeriod": 1
+    },
+    "timezone": "Asia/Singapore",
+    "timezoneOffset": -480,
+    "shouldTriggerNew": true,
+    "closePrevRun": true,
+    "tags": [
+        "CTT"
+    ],
+    "isFeed": false,
+    "selectedFeeds": [],
+    "isAllFeeds": false,
+    "fromVersion": "8.9.0",
+    "supportedModules": [
+        "xsiam",
+        "agentix"
+    ]
+}

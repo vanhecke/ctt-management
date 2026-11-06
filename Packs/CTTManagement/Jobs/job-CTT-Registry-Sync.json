@@ -1,0 +1,28 @@
+{
+    "id": "CTT - Registry Sync",
+    "name": "CTT - Registry Sync",
+    "details": "Syncs the CTT registry (tags, lab octets, Slack IDs, admins) from the Google Sheet into the ctt_registry lookup dataset and the 'CTT - Registry' list. Run by the job of the same name every 6 hours.",
+    "playbookId": "CTT - Registry Sync",
+    "scheduled": true,
+    "recurrent": true,
+    "cronView": false,
+    "humanCron": {
+        "timePeriodType": "hours",
+        "timePeriod": 6
+    },
+    "timezone": "Asia/Singapore",
+    "timezoneOffset": -480,
+    "shouldTriggerNew": true,
+    "closePrevRun": true,
+    "tags": [
+        "CTT"
+    ],
+    "isFeed": false,
+    "selectedFeeds": [],
+    "isAllFeeds": false,
+    "fromVersion": "8.9.0",
+    "supportedModules": [
+        "xsiam",
+        "agentix"
+    ]
+}

@@ -1,0 +1,39 @@
+{
+    "id": "CTT - Hygiene - Daily Sweep",
+    "name": "CTT - Hygiene - Daily Sweep",
+    "details": "Daily CTT hygiene sweep: checks custom objects and open Security cases against the CTT guidelines and raises one health issue per guideline and owner. Run by the job of the same name every day at 08:30 Singapore time.",
+    "playbookId": "CTT - Hygiene - Daily Sweep",
+    "scheduled": true,
+    "recurrent": true,
+    "cronView": false,
+    "humanCron": {
+        "days": [
+            "MON",
+            "TUE",
+            "WED",
+            "THU",
+            "FRI",
+            "SAT",
+            "SUN"
+        ],
+        "atTimeHour": "08",
+        "atTimeMinute": "30",
+        "timePeriodType": "weeks",
+        "timePeriod": 1
+    },
+    "timezone": "Asia/Singapore",
+    "timezoneOffset": -480,
+    "shouldTriggerNew": true,
+    "closePrevRun": true,
+    "tags": [
+        "CTT"
+    ],
+    "isFeed": false,
+    "selectedFeeds": [],
+    "isAllFeeds": false,
+    "fromVersion": "8.9.0",
+    "supportedModules": [
+        "xsiam",
+        "agentix"
+    ]
+}
