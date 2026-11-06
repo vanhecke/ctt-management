@@ -153,7 +153,8 @@ def build_canvas(r: dict, days: int, now: datetime, tenant_url: str = "") -> str
         "• Each issue is assigned to its owner. Fix the object; the inventory check closes its own issues.",
         "",
         f"📊 LAST {days} DAYS",
-        f"• Cases: {total(r['cases'])} new ({fmt_counts(by(r['cases'], 'xdm.case.domain'))}); {thousands(r['open_cases'])} open now, {thousands(r.get('new_cases_24h', '?'))} new in 24h",
+        f"• Cases: {total(r['cases'])} new ({fmt_counts(by(r['cases'], 'xdm.case.domain'))}); "
+        f"{thousands(r['open_cases'])} open now, {thousands(r.get('new_cases_24h', '?'))} new in 24h",
         f"• Issues: {total(r['issues'])} new ({fmt_counts(by(r['issues'], 'xdm.issue.severity'))})",
         f"• People signed in: {logins.get('users', 0)} ({logins.get('logins', 0)} sign-ins)",
         f"• Most active builders: {builders}",
@@ -257,13 +258,14 @@ def collect(days: int, errors: list[str]) -> dict:
             stats[key] = run_xql(query, 90 if key == "hygiene_open" else days)
         except Exception as e:
             stats[key] = []
+            error = str(e)
             if key == "agents":
                 try:
                     stats[key] = run_xql(AGENTS_FALLBACK, days)
                     continue
                 except Exception as e2:
-                    e = e2
-            errors.append(f"{key}: {e}")
+                    error = str(e2)
+            errors.append(f"{key}: {error}")
     try:
         body = {
             "request_data": {

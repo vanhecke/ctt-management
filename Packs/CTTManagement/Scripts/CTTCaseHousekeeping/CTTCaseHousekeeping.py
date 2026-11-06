@@ -370,7 +370,10 @@ def main():  # pragma: no cover
                         {
                             "status_progress": "Resolved",
                             "resolve_reason": cfg["resolve_reason"],
-                            "resolve_comment": f"Closed by CTT case housekeeping after {cfg['close_after_days']} days open (CTT-CASE-01). Star a case to keep it open.",
+                            "resolve_comment": (
+                                f"Closed by CTT case housekeeping after {cfg['close_after_days']} days open (CTT-CASE-01). "
+                                "Star a case to keep it open."
+                            ),
                         },
                     )
                 owner = str(c.get("assigned_user_mail") or "").lower()

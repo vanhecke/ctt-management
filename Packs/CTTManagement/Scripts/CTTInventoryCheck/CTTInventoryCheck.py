@@ -412,7 +412,10 @@ def main():  # pragma: no cover
         md = tableToMarkdown(
             f"CTT inventory check{' (dry run)' if dry_run else ''}", rows, headers=["Guideline", "Owner", "Items", "New issue"]
         )
-        md += f"\nRaised {len(raised)} issue(s), resolved {len(resolved)}. Skipped {len(skip)} object name(s) already in open rule issues."
+        md += (
+            f"\nRaised {len(raised)} issue(s), resolved {len(resolved)}. "
+            f"Skipped {len(skip)} object name(s) already in open rule issues."
+        )
         if errors:
             md += tableToMarkdown("Collection errors", [{"Error": e} for e in errors])
         return_results(
