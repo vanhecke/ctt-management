@@ -47,3 +47,7 @@ def test_build_message_sorts_top_lists():
     msg = build_message(stats, 7)
     assert "Busiest: big (3), small (1)" in msg
     assert "4 (1 failed)" in msg
+
+
+def test_guidelines_keep_their_case():
+    assert by([{"guideline": "CTT-CEN-01", "n": 2}], "guideline", title=False) == {"CTT-CEN-01": 2}

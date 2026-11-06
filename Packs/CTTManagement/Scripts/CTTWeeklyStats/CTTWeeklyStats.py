@@ -61,7 +61,7 @@ QUERIES = {
         ],
         "agents": [
             "dataset = agentix_agents_actions",
-            "comp count() as actions, count_distinct(conversation_id) as conversations by agent_name",
+            "comp count() as actions, count_distinct(user) as people by agent_name",
             "sort desc actions",
             "limit 5",
         ],
@@ -85,10 +85,11 @@ def total(rows: list[dict], field: str = "n") -> int:
     return int(sum(int(r.get(field) or 0) for r in rows))
 
 
-def by(rows: list[dict], key: str, field: str = "n") -> dict[str, int]:
+def by(rows: list[dict], key: str, field: str = "n", title: bool = True) -> dict[str, int]:
     out: dict[str, int] = {}
     for r in rows:
-        k = str(r.get(key) or "unknown").title()
+        k = str(r.get(key) or "unknown")
+        k = k.title() if title else k
         out[k] = out.get(k, 0) + int(r.get(field) or 0)
     return dict(sorted(out.items(), key=lambda kv: -kv[1]))
 
@@ -133,9 +134,11 @@ def build_message(stats: dict, days: int) -> str:
     changers = ", ".join(f"{c.get('user_name')} ({c.get('changes')})" for c in r["changers"]) or "none"
     lines.append(f":building_construction: *Most active builders:* {changers}")
     lines.append(f":computer: *Endpoints:* {total(r['endpoints'])} ({fmt_counts(by(r['endpoints'], 'endpoint_status'))})")
-    agents = ", ".join(f"{a.get('agent_name')} ({a.get('conversations')} chats)" for a in r["agents"]) or "none"
+    agents = ", ".join(f"{a.get('agent_name')} ({a.get('people')} people)" for a in r["agents"]) or "none"
     lines.append(f":robot_face: *AI agents:* {total(r['agents'], 'actions')} actions. Most used: {agents}")
-    lines.append(f":broom: *Hygiene issues raised:* {total(r['hygiene'])} ({fmt_counts(by(r['hygiene'], 'guideline'))})")
+    lines.append(
+        f":broom: *Hygiene issues raised:* {total(r['hygiene'])} ({fmt_counts(by(r['hygiene'], 'guideline', title=False))})"
+    )
     return "\n".join(lines)
 
 

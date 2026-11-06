@@ -188,7 +188,7 @@ RULES = [
         "description": "Someone created an API key with no expiration date (CTT-CEN-02, proposed guideline; ships disabled).",
         "xql": """dataset = management_auditing
 | filter management_auditing_type = ENUM.MANAGEMENT_AUDIT_API_KEY and subtype = "Add New Key" and description contains "Expiration UTC Time: Not specified"
-| filter management_auditing_result = ENUM.MANAGEMENT_AUDIT_SUCCESS and email != null and email not in ("Palo Alto Networks", "N/A")
+| filter management_auditing_result = ENUM.MANAGEMENT_AUDIT_SUCCESS and email contains "@"
 | alter actor_email = if(email contains "@", lowercase(email), null), actor_name = lowercase(user_name)
 """
         + ACTOR
