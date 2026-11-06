@@ -18,10 +18,16 @@ args:
 - name: owner_email
   required: true
   description: The owner's email (for the daily DM count).
+- name: first_name
+  description: The owner's first name (template greeting).
+- name: found
+  description: The FOUND sentence from CTTHygieneTriage.
+- name: fix
+  description: The FIX steps from CTTHygieneTriage, one per line.
+- name: guideline_title
+  description: The guideline's one-line rule.
 - name: message
-  description: The AI-written message (CTT.HygieneMessage).
-- name: fallback_message
-  description: The template message from CTTHygieneTriage.
+  description: Optional AI-written message (CTT.HygieneMessage); used instead of the template when complete.
 - name: issue_url
   description: The issue link, shown in the footer (and sent as the url key when the instance allows).
 - name: issue_id

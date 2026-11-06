@@ -1,4 +1,4 @@
-from CTTHygieneTriage import decide, fallback_message, find_owner, owner_entry, owner_tags, strip_marker
+from CTTHygieneTriage import compose, decide, fallback_message, find_owner, owner_entry, owner_tags, rename_target, strip_marker
 
 REGISTRY = [
     {"tag": "jva", "owner_email": "j@x.com", "owner_name": "Joris V", "slack_id": "U1", "role": "admin", "tag_kind": "extra"},
@@ -57,3 +57,45 @@ def test_fallback_message_shape():
 def test_owner_tags_primary_first():
     assert owner_tags(REGISTRY, "j@x.com") == "jvanhecke, jva"
     assert owner_tags(REGISTRY, "") == ""
+
+
+def test_rename_target():
+    assert rename_target("Playbook", "Local Analysis", "jva") == "jva - Local Analysis"
+    assert rename_target("Script", "GetUsers", "jva") == "jva_GetUsers"
+    assert rename_target("POLICY_PROFILES", "SF - Labs", "sfi") == "sfi - Labs"
+
+
+def test_compose_tag_rule():
+    details = (
+        "j@x.com created Playbook 'Local Analysis alert Investigation_copy': no tag prefix. "
+        "Rename it to start with your own tag (guideline CTT-TAG-01)."
+    )
+    found, fix = compose("CTT-TAG-01", "Object created without owner tag", details, ["jvanhecke", "jva"], "20")
+    assert found == 'Playbook "Local Analysis alert Investigation_copy" was created without your tag prefix.'
+    assert fix == ['Rename it to "jvanhecke - Local Analysis alert Investigation_copy"', "Or use another of your tags: jva"]
+
+
+def test_compose_owner_rule():
+    details = "b@x.com ran 'Edit - Playbook' on Playbook 'jva - Demo', which belongs to j@x.com (guideline CTT-OWN-01)."
+    found, fix = compose("CTT-OWN-01", "Another owner's object changed", details, ["bob"], "")
+    assert found == 'You ran "Edit - Playbook" on Playbook "jva - Demo", which belongs to j@x.com.'
+    assert fix[0] == "Ask j@x.com before changing their objects"
+
+
+def test_compose_sweep_and_lab():
+    details = (
+        "Daily sweep found 2 item(s) for owner j@x.com that break guideline CTT-TAG-01.\n"
+        "- Script 'A': no tag prefix\n- Job 'B': no tag prefix"
+    )
+    found, fix = compose("CTT-TAG-01", "Objects without a registered owner tag (j@x.com)", details, ["jva"], "")
+    assert found == "The daily sweep found 2 item(s): Script 'A': no tag prefix; Job 'B': no tag prefix."
+    assert fix == ['Rename each one with your tag, for example "jva - <name>"']
+    found, fix = compose(
+        "CTT-LAB-01",
+        "Endpoint outside owner's lab range",
+        "Endpoint PC1: IP 10.9.1.2 is in an unassigned lab range. Move it into your own range.",
+        ["jva"],
+        "20",
+    )
+    assert found == "Endpoint PC1: IP 10.9.1.2 is in an unassigned lab range."
+    assert fix == ["Move it into your lab range 10.20.0.0/16"]

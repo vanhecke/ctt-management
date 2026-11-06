@@ -61,6 +61,82 @@ def decide(
     return True, True, "assigned and notified"
 
 
+OBJ_RE = re.compile(r"(?:created|on) (?P<kind>[A-Za-z][\w ]*?) '(?P<name>[^']+)'")
+OWNED_BY_RE = re.compile(r"which belongs to (?P<owner>[^\s,(]+)")
+RAN_RE = re.compile(r"ran '(?P<action>[^']+)'")
+FINDING_RE = re.compile(r"'[^']+': (?P<finding>[^.]+)\.")
+UNDERSCORE_KINDS = {"Script", "Lookup dataset", "DATASETS", "LOOKUPS"}
+
+
+def rename_target(kind: str, name: str, tag: str) -> str:
+    """The name with the owner's tag in front, replacing a prefix that is not a registered tag."""
+    sep = "_" if kind in UNDERSCORE_KINDS else " - "
+    rest = (
+        re.sub(r"^\s*[A-Za-z0-9]{2,16}\s*(?: - |-|_)\s*", "", name) if re.match(r"^\s*[A-Za-z0-9]{2,16}\s*[-_]", name) else name
+    )
+    return f"{tag}{sep}{rest}"
+
+
+def compose(gid: str, title: str, details: str, tags: list[str], lab_octet: str) -> tuple[str, list[str]]:
+    """FOUND sentence and FIX steps for the DM, per guideline, from the issue text."""
+    tag = tags[0] if tags else "<your tag>"
+    others = ", ".join(tags[1:])
+    obj = OBJ_RE.search(details or "")
+    kind, name = (obj.group("kind"), obj.group("name")) if obj else ("", "")
+    m = FINDING_RE.search(details or "")
+    finding = m.group("finding") if m else ""
+    lines = [line[2:] for line in (details or "").splitlines() if line.startswith("- ")]
+    if lines:  # a daily sweep issue: a list of items
+        found = f"The daily sweep found {len(lines)} item(s): " + "; ".join(lines[:4]) + ("; ..." if len(lines) > 4 else ".")
+        fixes = {
+            "CTT-TAG-01": [f'Rename each one with your tag, for example "{tag} - <name>"'],
+            "CTT-TAG-02": [f"Add one of your tags ({', '.join(tags) or tag}) to each playbook's Tags field"],
+            "CTT-CASE-01": [
+                "Resolve the finished test cases with reason Security Testing",
+                "Assign the ones still in use to yourself",
+            ],
+            "CTT-LIFE-02": ["Hand them over to another DC or delete them"],
+        }
+        return found, fixes.get(gid, [f"Fix the items listed (guideline {gid})"])
+    if gid in ("CTT-TAG-01", "CTT-TAG-04") and name:
+        what = "without your tag prefix" if finding.startswith("no tag") else f"({finding})" if finding else "without your tag"
+        fix = [f'Rename it to "{rename_target(kind, name, tag)}"']
+        if others:
+            fix.append(f"Or use another of your tags: {others}")
+        return f'{kind} "{name}" was created {what}.', fix
+    if gid == "CTT-OWN-01" and name:
+        owned = OWNED_BY_RE.search(details)
+        ran = RAN_RE.search(details)
+        owner = owned.group("owner").rstrip(".") if owned else "another DC"
+        action = ran.group("action") if ran else "a change"
+        return (
+            f'You ran "{action}" on {kind} "{name}", which belongs to {owner}.',
+            [f"Ask {owner} before changing their objects", "To make your own version, duplicate it under your tag"],
+        )
+    if gid in ("CTT-OOTB-01", "CTT-OOTB-02") and name:
+        return (
+            f'You changed {kind} "{name}", which has no registered owner tag ({finding or "built-in or untagged"}).',
+            ["Leave built-in and marketplace content as it is", f'Duplicate it and change the copy, named "{tag} - <name>"'],
+        )
+    if gid == "CTT-CEN-01":
+        area = (
+            details.split("centrally managed area: ", 1)[-1].split(" (guideline")[0]
+            if "centrally managed area: " in details
+            else title
+        )
+        return (
+            f"You made a change in a centrally managed area: {area}.",
+            ["Central settings, packs and integrations are for the CTT admins", "Ask in the CTT channel when you need a change"],
+        )
+    if gid == "CTT-LAB-01":
+        found = details.split(" Move it", 1)[0] if details else title
+        return found, [
+            f"Move it into your lab range 10.{lab_octet}.0.0/16" if lab_octet else "Ask a CTT admin for your lab range"
+        ]
+    first = (details or title).split(". ")[0].rstrip(".")
+    return f"{first}.", [f"Follow guideline {gid}"]
+
+
 def fallback_message(first_name: str, title: str, details: str, gid: str, gtitle: str, url: str = "") -> str:
     """Template body in the same shape as the AI message; CTTHygieneSendDM adds header and link."""
     return (
@@ -117,6 +193,8 @@ def main():  # pragma: no cover
         guideline = guidelines.get(gid, {})
         title = re.sub(r"^CTT - Hygiene - CTT-[A-Z]+-\d+ - ", "", name)
         first_name = (entry.get("owner_name") or owner.split("@")[0] or "there").split()[0]
+        tags = [t.strip() for t in owner_tags(registry, owner).split(",") if t.strip()]
+        found, fix = compose(gid, title, details, tags, entry.get("lab_octet", ""))
         url = issue_url(issue_id)
         out = {
             "issue_id": issue_id,
@@ -131,6 +209,9 @@ def main():  # pragma: no cover
             "first_name": first_name,
             "slack_id": entry.get("slack_id", ""),
             "owner_tags": owner_tags(registry, owner),
+            "found": found,
+            "fix": "\n".join(fix),
+            "use_ai": "true" if notify and notify_cfg.get("use_ai") else "false",
             "assign": "true" if assign else "false",
             "notify": "true" if notify else "false",
             "reason": reason,

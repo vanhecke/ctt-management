@@ -31,7 +31,30 @@ def header(left: str, right: str, width: int = WIDTH) -> str:
     return "\n".join(["╭" + "─" * inner + "╮", "│" + text[:inner].ljust(inner) + "│", "╰" + "─" * inner + "╯"])
 
 
-def build_dm(guideline_id: str, body: str, issue_id: str, url: str) -> str:
+def section(label: str, text: str, width: int = WIDTH, indent: int = 8) -> list[str]:
+    """A labelled block: the label in the first 8 columns, the text wrapped beside it."""
+    out = []
+    for i, part in enumerate(t for t in (text or "").splitlines() if t.strip()):
+        bullet = part.lstrip().startswith(("• ", "- "))
+        part = "• " + part.lstrip()[2:] if bullet else part
+        wrapped = textwrap.wrap(part, width - indent, subsequent_indent="  " if bullet else "") or [part]
+        for j, line in enumerate(wrapped):
+            lead = label.ljust(indent) if i == 0 and j == 0 else " " * indent
+            out.append(lead + line)
+    return out
+
+
+def template_body(first_name: str, found: str, guideline_id: str, guideline_title: str, fix: str) -> str:
+    """The deterministic DM: greeting, FOUND, RULE and FIX blocks."""
+    fixes = "\n".join(f"• {f}" for f in (fix or "").splitlines() if f.strip())
+    lines = [f"Hi {first_name or 'there'},", ""]
+    lines += section("FOUND", found) + [""]
+    lines += section("RULE", f"{guideline_id} · {guideline_title}".strip(" ·")) + [""]
+    lines += section("FIX", fixes or "• See the issue for details")
+    return "\n".join(lines)
+
+
+def build_dm(guideline_id: str, body: str, issue_id: str, url: str, prewrapped: bool = False) -> str:
     """ASCII layout for the code block the CTT workflow puts a DM in: header box, the message, a
     footer with the issue number and the link (also sent separately when the instance allows)."""
     url = url or ""
@@ -39,9 +62,10 @@ def build_dm(guideline_id: str, body: str, issue_id: str, url: str) -> str:
     parts = [
         header("CTT HYGIENE", guideline_id or "CTT"),
         "",
-        wrap_body(body),
+        body if prewrapped else wrap_body(body),
         "",
         "─" * WIDTH,
+        "Intended? Reply in the CTT channel.",
         f"Issue #{issue_id} · assigned to you" if issue_id else "Issue assigned to you",
     ]
     if url:
@@ -70,9 +94,18 @@ def main():  # pragma: no cover
         if not slack_id:
             raise DemistoException("No Slack ID to send to.")
         message = args.get("message") or ""
-        body = message.strip() if usable_ai_message(message) else (args.get("fallback_message") or "").strip()
         url = args.get("issue_url", "")
-        content = build_dm(args.get("guideline_id", ""), body, args.get("issue_id", ""), url)
+        if usable_ai_message(message):
+            content = build_dm(args.get("guideline_id", ""), message.strip(), args.get("issue_id", ""), url)
+        else:
+            body = template_body(
+                args.get("first_name", ""),
+                args.get("found", ""),
+                args.get("guideline_id", ""),
+                args.get("guideline_title", ""),
+                args.get("fix", ""),
+            )
+            content = build_dm(args.get("guideline_id", ""), body, args.get("issue_id", ""), url, prewrapped=True)
         res = demisto.executeCommand(
             "ctt-slack-webhook-send", {"action": "msg_person", "slack_user_id": slack_id, "content": content, "url": url}
         )

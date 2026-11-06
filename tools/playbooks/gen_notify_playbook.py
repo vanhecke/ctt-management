@@ -65,25 +65,31 @@ def playbook() -> dict:
     t["3"]["nexttasks"] = {"#none#": ["4"]}
     t["4"] = base("4", "condition", "Should the owner get a Slack DM?", "", 710, x=250)
     t["4"]["conditions"] = [{"label": "yes", "condition": is_true("notify")}]
-    t["4"]["nexttasks"] = {"#default#": ["7"], "yes": ["5"]}
-    t["5"] = base("5", "aiTask", "Write the Slack message", "CTTHygieneMessagePrompt writes a short DM with the fix and the issue link.", 880, x=50,
+    t["4"]["nexttasks"] = {"#default#": ["7"], "yes": ["8"]}
+    t["8"] = base("8", "condition", "Write the message with AI?", "notify.use_ai in CTT - Config; otherwise the FOUND / RULE / FIX template is used.", 880, x=250)
+    t["8"]["conditions"] = [{"label": "yes", "condition": is_true("use_ai")}]
+    t["8"]["nexttasks"] = {"#default#": ["6"], "yes": ["5"]}
+    t["5"] = base("5", "aiTask", "Write the Slack message with AI", "CTTHygieneMessagePrompt writes the DM text (only with notify.use_ai).", 1050, x=50,
                   task_extra={"aiTaskId": "CTTHygieneMessagePrompt"})
     t["5"]["scriptarguments"] = {k: arg(k) for k in ("first_name", "owner_tags", "issue_title", "issue_details", "guideline_id", "guideline_title", "guideline_text")}
     t["5"]["continueonerror"] = True
     t["5"]["nexttasks"] = {"#none#": ["6"]}
-    t["6"] = base("6", "regular", "Send the Slack DM", "Sends the message through the CTT Slack Webhook (msg_person).", 1050, x=50,
+    t["6"] = base("6", "regular", "Send the Slack DM", "Lays out the DM (FOUND / RULE / FIX, or the AI text) and sends it through the CTT Slack Webhook (msg_person).", 1220, x=250,
                   task_extra={"scriptName": "CTTHygieneSendDM"})
     t["6"]["scriptarguments"] = {
         "slack_user_id": arg("slack_id"),
         "owner_email": arg("owner_email"),
+        "first_name": arg("first_name"),
+        "found": arg("found"),
+        "fix": arg("fix"),
+        "guideline_title": arg("guideline_title"),
         "message": {"simple": "${CTT.HygieneMessage}"},
-        "fallback_message": arg("fallback_message"),
         "issue_url": arg("issue_url"),
         "issue_id": arg("issue_id"),
         "guideline_id": arg("guideline_id"),
     }
     t["6"]["nexttasks"] = {"#none#": ["7"]}
-    t["7"] = base("7", "title", "Done", "", 1220)
+    t["7"] = base("7", "title", "Done", "", 1390)
     return {
         "id": NAME,
         "version": -1,
@@ -97,7 +103,7 @@ def playbook() -> dict:
         "adopted": True,
         "starttaskid": "0",
         "tasks": t,
-        "view": json.dumps({"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 1235, "width": 780, "x": 50, "y": 50}}}),
+        "view": json.dumps({"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 1405, "width": 780, "x": 50, "y": 50}}}),
         "inputs": [],
         "outputs": [],
         "tests": ["No tests (auto formatted)"],
@@ -129,8 +135,8 @@ def main() -> None:
         "Runs on every CTT hygiene health issue (trigger `CTT - Hygiene - Notify Owner`).\n\n"
         "1. `CTTHygieneTriage` finds the owner from the issue's `[owner: ...]` marker, their name, role and Slack ID in the CTT registry, and the guideline.\n"
         "2. `core-update-issue` assigns the issue to the owner's email.\n"
-        "3. The `CTTHygieneMessagePrompt` AI task writes a short Slack DM.\n"
-        "4. `CTTHygieneSendDM` sends it through the CTT Slack Webhook integration.\n\n"
+        "3. With `notify.use_ai`, the `CTTHygieneMessagePrompt` AI task writes the DM text; otherwise the FOUND / RULE / FIX template from triage is used.\n"
+        "4. `CTTHygieneSendDM` lays it out for the workflow's code block and sends it through the CTT Slack Webhook integration.\n\n"
         "Assigning and the AI step continue on error. DMs follow `notify.mode` (`off`, `admins_only`, `all`) and the daily limit in `CTT - Config`.\n"
     )
     (PACK / "Triggers").mkdir(exist_ok=True)

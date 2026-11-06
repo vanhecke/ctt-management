@@ -48,6 +48,15 @@ outputs:
 - contextPath: CTT.Triage.owner_tags
   description: The owner's tags, primary first.
   type: String
+- contextPath: CTT.Triage.found
+  description: The FOUND sentence for the DM.
+  type: String
+- contextPath: CTT.Triage.fix
+  description: The FIX steps for the DM, one per line.
+  type: String
+- contextPath: CTT.Triage.use_ai
+  description: true when the DM text should be written by CTTHygieneMessagePrompt (notify.use_ai).
+  type: String
 - contextPath: CTT.Triage.assign
   description: true when the issue can be assigned to a person.
   type: String

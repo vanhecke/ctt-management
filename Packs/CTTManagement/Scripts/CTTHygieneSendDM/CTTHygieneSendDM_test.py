@@ -1,4 +1,4 @@
-from CTTHygieneSendDM import WIDTH, build_dm, bump, header, usable_ai_message, wrap_body
+from CTTHygieneSendDM import WIDTH, build_dm, bump, header, section, template_body, usable_ai_message, wrap_body
 
 
 def test_header_is_a_closed_box():
@@ -23,6 +23,7 @@ def test_build_dm_moves_link_to_footer():
     lines = dm.splitlines()
     assert lines[-1] == "https://t/1"
     assert lines[-2] == "Issue #60900 · assigned to you"
+    assert lines[-3] == "Intended? Reply in the CTT channel."
     assert dm.count("https://t/1") == 1
 
 
@@ -36,3 +37,26 @@ def test_usable_ai_message():
     assert usable_ai_message("Hi Bob,\n\nFix:\n• Rename it.\n\nIf this was intended, reply in the CTT channel.")
     assert not usable_ai_message("Hi Bob,\n\nFix:\n• Rename the playbook to")
     assert not usable_ai_message("")
+
+
+def test_section_wraps_beside_label():
+    out = section("FIX", '• Rename it to "jvanhecke - Local Analysis alert Investigation_copy"')
+    assert out[0].startswith("FIX     • Rename it to")
+    assert all(line.startswith("          ") for line in out[1:])
+    assert all(len(line) <= WIDTH for line in out)
+
+
+def test_template_body():
+    body = template_body(
+        "Joris",
+        'Playbook "X" was created without your tag prefix.',
+        "CTT-TAG-01",
+        "Prefix object names with your tag",
+        'Rename it to "jva - X"\nOr use another of your tags: jvanhecke',
+    )
+    lines = body.splitlines()
+    assert lines[0] == "Hi Joris,"
+    assert lines[2].startswith("FOUND   Playbook")
+    assert any(line.startswith("RULE    CTT-TAG-01 · Prefix object names") for line in lines)
+    assert any(line.startswith("FIX     • Rename it to") for line in lines)
+    assert any(line.startswith("        • Or use another of your tags") for line in lines)
