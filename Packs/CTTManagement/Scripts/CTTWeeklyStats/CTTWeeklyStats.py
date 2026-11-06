@@ -109,9 +109,8 @@ def build_message(stats: dict, days: int) -> str:
     r["changers"] = top_rows(r["changers"], "changes", 5)
     r["agents"] = top_rows(r["agents"], "actions", 5)
     lines = [f"*CTT weekly stats* (last {days} days)", ""]
-    lines.append(
-        f":briefcase: *Cases:* {total(r['cases'])} new ({fmt_counts(by(r['cases'], 'xdm.case.domain'))}); {r['open_cases']} open now"
-    )
+    case_domains = fmt_counts(by(r["cases"], "xdm.case.domain"))
+    lines.append(f":briefcase: *Cases:* {total(r['cases'])} new ({case_domains}); {r['open_cases']} open now")
     lines.append(
         f":rotating_light: *Issues:* {total(r['issues'])} new; by severity {fmt_counts(by(r['issues'], 'xdm.issue.severity'))}; "
         f"by domain {fmt_counts(by(r['issues'], 'xdm.issue.domain'))}"
