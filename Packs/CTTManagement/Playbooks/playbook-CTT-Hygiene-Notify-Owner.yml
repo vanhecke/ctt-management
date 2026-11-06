@@ -305,6 +305,36 @@ tasks:
         simple: ${CTT.Triage.guideline_id}
     nexttasks:
       '#none#':
+      - '10'
+  '10':
+    id: '10'
+    taskid: e1b24a89-47f3-5c19-a7ed-83a3815590a4
+    type: regular
+    task:
+      id: e1b24a89-47f3-5c19-a7ed-83a3815590a4
+      version: -1
+      name: Set the issue to In Progress
+      description: The owner has been told; the issue now waits for their fix.
+      type: regular
+      iscommand: true
+      brand: Cortex Core - Platform
+      script: Cortex Core - Platform|||core-update-issue
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 250, "y": 1390}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    scriptarguments:
+      id:
+        simple: ${CTT.Triage.issue_id}
+      status:
+        simple: In Progress
+    continueonerror: true
+    nexttasks:
+      '#none#':
       - '7'
   '7':
     id: '7'
@@ -320,13 +350,13 @@ tasks:
       brand: ''
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 1390}}'
+    view: '{"position": {"x": 450, "y": 1560}}'
     note: false
     timertriggers: []
     ignoreworker: false
     skipunavailable: false
     quietmode: 0
-view: '{"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 1405, "width": 780, "x": 50, "y": 50}}}'
+view: '{"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 1575, "width": 780, "x": 50, "y": 50}}}'
 inputs: []
 outputs: []
 tests:

@@ -94,8 +94,13 @@ def playbook() -> dict:
         "issue_id": arg("issue_id"),
         "guideline_id": arg("guideline_id"),
     }
-    t["6"]["nexttasks"] = {"#none#": ["7"]}
-    t["7"] = base("7", "title", "Done", "", 1390)
+    t["6"]["nexttasks"] = {"#none#": ["10"]}
+    t["10"] = base("10", "regular", "Set the issue to In Progress", "The owner has been told; the issue now waits for their fix.", 1390, x=250,
+                   task_extra={"script": "Cortex Core - Platform|||core-update-issue", "iscommand": True, "brand": "Cortex Core - Platform"})
+    t["10"]["scriptarguments"] = {"id": arg("issue_id"), "status": {"simple": "In Progress"}}
+    t["10"]["continueonerror"] = True
+    t["10"]["nexttasks"] = {"#none#": ["7"]}
+    t["7"] = base("7", "title", "Done", "", 1560)
     return {
         "id": NAME,
         "version": -1,
@@ -109,7 +114,7 @@ def playbook() -> dict:
         "adopted": True,
         "starttaskid": "0",
         "tasks": t,
-        "view": json.dumps({"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 1405, "width": 780, "x": 50, "y": 50}}}),
+        "view": json.dumps({"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 1575, "width": 780, "x": 50, "y": 50}}}),
         "inputs": [],
         "outputs": [],
         "tests": ["No tests (auto formatted)"],
@@ -142,7 +147,8 @@ def main() -> None:
         "1. `CTTHygieneTriage` finds the owner from the issue's `[owner: ...]` marker, their name, role and Slack ID in the CTT registry, and the guideline.\n"
         "2. `core-update-issue` assigns the issue to the owner's email.\n"
         "3. With `notify.use_ai`, the `CTTHygieneMessagePrompt` AI task writes the DM text; otherwise the FOUND / RULE / FIX template from triage is used.\n"
-        "4. `CTTHygieneSendDM` lays it out for the workflow's code block and sends it through the CTT Slack Webhook integration.\n\n"
+        "4. `CTTHygieneSendDM` lays it out for the workflow's code block and sends it through the CTT Slack Webhook integration.\n"
+        "5. The issue is set to In Progress once the owner has been told.\n\n"
         "Assigning and the AI step continue on error. DMs follow `notify.mode` (`off`, `admins_only`, `all`) and the daily limit in `CTT - Config`.\n"
     )
     (PACK / "Triggers").mkdir(exist_ok=True)

@@ -4,5 +4,6 @@ Runs on every CTT hygiene health issue (trigger `CTT - Hygiene - Notify Owner`).
 2. `core-update-issue` assigns the issue to the owner's email.
 3. With `notify.use_ai`, the `CTTHygieneMessagePrompt` AI task writes the DM text; otherwise the FOUND / RULE / FIX template from triage is used.
 4. `CTTHygieneSendDM` lays it out for the workflow's code block and sends it through the CTT Slack Webhook integration.
+5. The issue is set to In Progress once the owner has been told.
 
 Assigning and the AI step continue on error. DMs follow `notify.mode` (`off`, `admins_only`, `all`) and the daily limit in `CTT - Config`.

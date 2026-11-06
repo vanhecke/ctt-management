@@ -73,7 +73,7 @@ JSON.
 <!-- spellbook:version-history:start -->
 ### 1.1.7
 
-- Notify Dispatcher job (pack uploads to 8.15 skip triggers); deterministic FOUND / RULE / FIX DM template with optional AI text; playbooks adopted on install; re-runs send one DM.
+- Notify Dispatcher job (pack uploads to 8.15 skip triggers); the issue goes to In Progress after the DM; deterministic FOUND / RULE / FIX DM template with optional AI text; playbooks adopted on install; re-runs send one DM.
 
 ### 1.1.0
 
