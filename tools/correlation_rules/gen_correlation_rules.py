@@ -4,6 +4,7 @@ Run from content/:  uv run --with pyyaml python3 tools/correlation_rules/gen_cor
 Every rule is a health-domain rule; its issue name carries the guideline ID.
 """
 
+import json
 import subprocess
 import sys
 import uuid
@@ -317,6 +318,15 @@ GENERATED = [
 ]
 
 
+def py_chunks(query: str, width: int = 100) -> str:
+    """The query as adjacent string literals, so no line passes the content pipeline's 130
+    character limit."""
+    pieces = []
+    for line in query.splitlines(keepends=True):
+        pieces += [line[i : i + width] for i in range(0, len(line), width)]
+    return "\n".join(f"    {json.dumps(p)}" for p in pieces)
+
+
 def write_script_queries() -> None:
     for script, var, query in GENERATED:
         lint(var, query + "\n")
@@ -324,7 +334,7 @@ def write_script_queries() -> None:
         text = script.read_text()
         head, rest = text.split(begin, 1)
         _, tail = rest.split(end, 1)
-        block = f'{begin} (tools/correlation_rules/gen_correlation_rules.py; do not edit)\n{var} = r"""{query}"""\n{end}'
+        block = f"{begin} (tools/correlation_rules/gen_correlation_rules.py; do not edit)\n{var} = (\n{py_chunks(query)}\n)\n{end}"
         script.write_text(head + block + tail)
         print(f"wrote {var} into {script.relative_to(CONTENT)}")
 

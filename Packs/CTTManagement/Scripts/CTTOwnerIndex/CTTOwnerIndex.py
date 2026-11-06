@@ -13,56 +13,85 @@ DAY_MS = 86_400_000
 BATCH = 1000  # the add_data API takes about 1000 rows per call
 
 # BEGIN GENERATED OWNER_QUERY (tools/correlation_rules/gen_correlation_rules.py; do not edit)
-OWNER_QUERY = r"""dataset = management_auditing
-| filter management_auditing_result = ENUM.MANAGEMENT_AUDIT_SUCCESS
-| filter email != null and email != "" and email not in ("Palo Alto Networks", "N/A", "Xpanse Development", "Cortex Automation")
-| filter user_name = null or user_name !~= "^(Public API - [0-9]+|APIKeyUser_[0-9]+|XSIAM Automation|Cortex Automation)$"
-| alter actor_email = if(email contains "@", lowercase(email), null), actor_name = lowercase(user_name)
-| alter object_kind = coalesce(arrayindex(regextract(subtype, "^[A-Za-z ]+ - (.+)$"), 0), replex(to_string(management_auditing_type), "^(MANAGEMENT_AUDIT_|management_auditing_type_)", ""))
-| alter action = if(subtype ~= "^(Add|Upload|Copy|Create|New|Save as new|Import)" or subtype ~= "^(Create|Upload lookup|Addition)", "create", if(subtype ~= "(Delete|Remove)", "delete", if(subtype ~= "(Edit|Change|Update|Modif|Adopt|Detach|Enable|Disable|Rename|Scope Edit)", "modify", "other")))
-| alter object_name = coalesce(
-    arrayindex(regextract(description, "ClonedPlaybookName: (.+?), ID:"), 0),
-    arrayindex(regextract(description, "playbookName: (.+?), ID:"), 0),
-    arrayindex(regextract(description, "scriptName: (.+?), (?:removed from|ID):"), 0),
-    arrayindex(regextract(description, "aiTaskName: (.+?), "), 0),
-    arrayindex(regextract(description, "CredentialsName: (.+?), ID:"), 0),
-    arrayindex(regextract(description, "ModuleName: ([^,]+)"), 0),
-    arrayindex(regextract(description, "ModuleBrand: (.+?), ID:"), 0),
-    arrayindex(regextract(description, "Layout (?:created|edited|deleted) - Name: (.+?), ID:"), 0),
-    arrayindex(regextract(description, "CaseField (?:created|edited|deleted) - Name: (.+?), Type:"), 0),
-    arrayindex(regextract(description, "Name: (.+?), JobID:"), 0),
-    arrayindex(regextract(description, "JobID: [^,]+, Name: (.+?), ID:"), 0),
-    arrayindex(regextract(description, "^name: (.+?), ID:"), 0),
-    arrayindex(regextract(description, "^Name: (.+?), ID:"), 0),
-    arrayindex(regextract(description, "dashboard '(.+?)'"), 0),
-    arrayindex(regextract(description, "(?:BIOC|Correlations? rule|IOC|Analytics BIOC|Attack Surface Rule) [a-z]+ - name: (.+?),? id: "), 0),
-    arrayindex(regextract(description, " profile (.+?) was (?:created|edited|deleted)"), 0),
-    arrayindex(regextract(description, "policy rule (.+?) (?:with target|updated|scope updated|was deleted|was created|created|was)"), 0),
-    arrayindex(regextract(description, "^Rule (.+?) status changed"), 0),
-    arrayindex(regextract(description, "Security Control: [^,]+, (.+)$"), 0),
-    arrayindex(regextract(description, "Connector Template '?(.+?)'? (?:created|deleted|modified)"), 0),
-    arrayindex(regextract(description, "Endpoint group '(.+?)'"), 0),
-    arrayindex(regextract(description, "lookup dataset called (\S+)"), 0),
-    arrayindex(regextract(description, "Dataset (\S+) of type"), 0),
-    arrayindex(regextract(description, "(?:query|macro) '(.+?)'"), 0),
-    arrayindex(regextract(description, "report template\(?s?\)? '(.+?)'"), 0),
-    arrayindex(regextract(description, "Cloud Security Rule '(.+?)'"), 0),
-    arrayindex(regextract(description, "installation package '(.+?)'"), 0),
-    arrayindex(regextract(description, "script, name: (.+?), description"), 0),
-    arrayindex(regextract(description, "^Edit (.+?), script id"), 0),
-    if(object_kind in ("Agent", "Action", "KnowledgeSource", "JobCenter"), arrayindex(regextract(description, "^(.+?)(?:, ID: .*)?$"), 0), null)
-  )
-| alter obj_tag = lowercase(arrayindex(regextract(object_name, "^\s*([A-Za-z0-9]{2,16})\s*[-_]"), 0))
-| alter object_kind = if(object_kind = "RULES", if(description ~= "^Correlations? rule", "Correlation rule", if(description ~= "^BIOC", "BIOC rule", if(description ~= "^IOC", "IOC rule", "Detection rule"))), if(object_kind = "DISTRIBUTIONS", "Agent installer", if(object_kind = "POLICY_RULES", "Policy rule", if(object_kind = "POLICY_PROFILES", "Policy profile", if(object_kind = "DASHBOARD", "Dashboard", if(object_kind = "LOOKUPS", "Lookup dataset", if(object_kind = "DATASETS", "Dataset", if(object_kind = "CLOUDSEC_RULE", "Cloud security rule", object_kind))))))))
-| join type = left (dataset = ctt_registry | filter owner_email != "" | alter is_adm = if(role = "admin", 1, 0) | comp max(is_adm) as reg_actor_admin by owner_email | alter reg_actor_email = owner_email | fields reg_actor_email, reg_actor_admin) as ra ra.reg_actor_email = actor_email
-| join type = left (dataset = ctt_registry | filter owner_email != "" | alter is_adm = if(role = "admin", 1, 0), reg_name_key = lowercase(owner_name) | comp max(is_adm) as reg_name_admin, max(owner_email) as reg_name_email by reg_name_key | fields reg_name_key, reg_name_admin, reg_name_email) as rn rn.reg_name_key = actor_name
-| alter actor = coalesce(reg_actor_email, reg_name_email, actor_email, actor_name), actor_is_admin = coalesce(reg_actor_admin, reg_name_admin, 0), actor_registered = if(coalesce(reg_actor_email, reg_name_email) != null, "yes", "no")
-| filter object_kind not in ("AITask", "CaseField", "IssueField", "Credentials", "KnowledgeSource", "Investigation", "Indicator", "Entry", "War Room", "Whitelist", "Content", "Execute")
-| filter object_name != null and object_name != "" and action in ("create", "modify")
-| alter is_create = if(action = "create", 1, 0)
-| comp earliest(actor) as first_actor, latest(actor) as last_editor, max(is_create) as has_create, max(_time) as last_ts by object_kind, object_name
-| alter creator = if(has_create = 1, first_actor, ""), last_change = format_timestamp("%Y-%m-%dT%H:%M:%SZ", last_ts)
-| fields object_kind, object_name, creator, last_editor, last_change"""
+OWNER_QUERY = (
+    "dataset = management_auditing\n"
+    "| filter management_auditing_result = ENUM.MANAGEMENT_AUDIT_SUCCESS\n"
+    '| filter email != null and email != "" and email not in ("Palo Alto Networks", "N/A", "Xpanse Develo'
+    'pment", "Cortex Automation")\n'
+    '| filter user_name = null or user_name !~= "^(Public API - [0-9]+|APIKeyUser_[0-9]+|XSIAM Automation'
+    '|Cortex Automation)$"\n'
+    '| alter actor_email = if(email contains "@", lowercase(email), null), actor_name = lowercase(user_na'
+    "me)\n"
+    '| alter object_kind = coalesce(arrayindex(regextract(subtype, "^[A-Za-z ]+ - (.+)$"), 0), replex(to_'
+    'string(management_auditing_type), "^(MANAGEMENT_AUDIT_|management_auditing_type_)", ""))\n'
+    '| alter action = if(subtype ~= "^(Add|Upload|Copy|Create|New|Save as new|Import)" or subtype ~= "^(C'
+    'reate|Upload lookup|Addition)", "create", if(subtype ~= "(Delete|Remove)", "delete", if(subtype ~= "'
+    '(Edit|Change|Update|Modif|Adopt|Detach|Enable|Disable|Rename|Scope Edit)", "modify", "other")))\n'
+    "| alter object_name = coalesce(\n"
+    '    arrayindex(regextract(description, "ClonedPlaybookName: (.+?), ID:"), 0),\n'
+    '    arrayindex(regextract(description, "playbookName: (.+?), ID:"), 0),\n'
+    '    arrayindex(regextract(description, "scriptName: (.+?), (?:removed from|ID):"), 0),\n'
+    '    arrayindex(regextract(description, "aiTaskName: (.+?), "), 0),\n'
+    '    arrayindex(regextract(description, "CredentialsName: (.+?), ID:"), 0),\n'
+    '    arrayindex(regextract(description, "ModuleName: ([^,]+)"), 0),\n'
+    '    arrayindex(regextract(description, "ModuleBrand: (.+?), ID:"), 0),\n'
+    '    arrayindex(regextract(description, "Layout (?:created|edited|deleted) - Name: (.+?), ID:"), 0),\n'
+    '    arrayindex(regextract(description, "CaseField (?:created|edited|deleted) - Name: (.+?), Type:"),'
+    " 0),\n"
+    '    arrayindex(regextract(description, "Name: (.+?), JobID:"), 0),\n'
+    '    arrayindex(regextract(description, "JobID: [^,]+, Name: (.+?), ID:"), 0),\n'
+    '    arrayindex(regextract(description, "^name: (.+?), ID:"), 0),\n'
+    '    arrayindex(regextract(description, "^Name: (.+?), ID:"), 0),\n'
+    "    arrayindex(regextract(description, \"dashboard '(.+?)'\"), 0),\n"
+    '    arrayindex(regextract(description, "(?:BIOC|Correlations? rule|IOC|Analytics BIOC|Attack Surface'
+    ' Rule) [a-z]+ - name: (.+?),? id: "), 0),\n'
+    '    arrayindex(regextract(description, " profile (.+?) was (?:created|edited|deleted)"), 0),\n'
+    '    arrayindex(regextract(description, "policy rule (.+?) (?:with target|updated|scope updated|was d'
+    'eleted|was created|created|was)"), 0),\n'
+    '    arrayindex(regextract(description, "^Rule (.+?) status changed"), 0),\n'
+    '    arrayindex(regextract(description, "Security Control: [^,]+, (.+)$"), 0),\n'
+    "    arrayindex(regextract(description, \"Connector Template '?(.+?)'? (?:created|deleted|modified)\"),"
+    " 0),\n"
+    "    arrayindex(regextract(description, \"Endpoint group '(.+?)'\"), 0),\n"
+    '    arrayindex(regextract(description, "lookup dataset called (\\S+)"), 0),\n'
+    '    arrayindex(regextract(description, "Dataset (\\S+) of type"), 0),\n'
+    "    arrayindex(regextract(description, \"(?:query|macro) '(.+?)'\"), 0),\n"
+    "    arrayindex(regextract(description, \"report template\\(?s?\\)? '(.+?)'\"), 0),\n"
+    "    arrayindex(regextract(description, \"Cloud Security Rule '(.+?)'\"), 0),\n"
+    "    arrayindex(regextract(description, \"installation package '(.+?)'\"), 0),\n"
+    '    arrayindex(regextract(description, "script, name: (.+?), description"), 0),\n'
+    '    arrayindex(regextract(description, "^Edit (.+?), script id"), 0),\n'
+    '    if(object_kind in ("Agent", "Action", "KnowledgeSource", "JobCenter"), arrayindex(regextract(des'
+    'cription, "^(.+?)(?:, ID: .*)?$"), 0), null)\n'
+    "  )\n"
+    '| alter obj_tag = lowercase(arrayindex(regextract(object_name, "^\\s*([A-Za-z0-9]{2,16})\\s*[-_]"), 0)'
+    ")\n"
+    '| alter object_kind = if(object_kind = "RULES", if(description ~= "^Correlations? rule", "Correlatio'
+    'n rule", if(description ~= "^BIOC", "BIOC rule", if(description ~= "^IOC", "IOC rule", "Detection ru'
+    'le"))), if(object_kind = "DISTRIBUTIONS", "Agent installer", if(object_kind = "POLICY_RULES", "Polic'
+    'y rule", if(object_kind = "POLICY_PROFILES", "Policy profile", if(object_kind = "DASHBOARD", "Dashbo'
+    'ard", if(object_kind = "LOOKUPS", "Lookup dataset", if(object_kind = "DATASETS", "Dataset", if(objec'
+    't_kind = "CLOUDSEC_RULE", "Cloud security rule", object_kind))))))))\n'
+    '| join type = left (dataset = ctt_registry | filter owner_email != "" | alter is_adm = if(role = "ad'
+    'min", 1, 0) | comp max(is_adm) as reg_actor_admin by owner_email | alter reg_actor_email = owner_ema'
+    "il | fields reg_actor_email, reg_actor_admin) as ra ra.reg_actor_email = actor_email\n"
+    '| join type = left (dataset = ctt_registry | filter owner_email != "" | alter is_adm = if(role = "ad'
+    'min", 1, 0), reg_name_key = lowercase(owner_name) | comp max(is_adm) as reg_name_admin, max(owner_em'
+    "ail) as reg_name_email by reg_name_key | fields reg_name_key, reg_name_admin, reg_name_email) as rn "
+    "rn.reg_name_key = actor_name\n"
+    "| alter actor = coalesce(reg_actor_email, reg_name_email, actor_email, actor_name), actor_is_admin ="
+    " coalesce(reg_actor_admin, reg_name_admin, 0), actor_registered = if(coalesce(reg_actor_email, reg_n"
+    'ame_email) != null, "yes", "no")\n'
+    '| filter object_kind not in ("AITask", "CaseField", "IssueField", "Credentials", "KnowledgeSource", '
+    '"Investigation", "Indicator", "Entry", "War Room", "Whitelist", "Content", "Execute")\n'
+    '| filter object_name != null and object_name != "" and action in ("create", "modify")\n'
+    '| alter is_create = if(action = "create", 1, 0)\n'
+    "| comp earliest(actor) as first_actor, latest(actor) as last_editor, max(is_create) as has_create, m"
+    "ax(_time) as last_ts by object_kind, object_name\n"
+    '| alter creator = if(has_create = 1, first_actor, ""), last_change = format_timestamp("%Y-%m-%dT%H:%'
+    'M:%SZ", last_ts)\n'
+    "| fields object_kind, object_name, creator, last_editor, last_change"
+)
 # END GENERATED OWNER_QUERY
 
 

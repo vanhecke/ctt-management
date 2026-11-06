@@ -34,27 +34,50 @@ DEFAULTS = {
 }
 
 # BEGIN GENERATED ENDPOINT_OWNER_QUERY (tools/correlation_rules/gen_correlation_rules.py; do not edit)
-ENDPOINT_OWNER_QUERY = r"""dataset = endpoints
-| dedup endpoint_id by desc last_seen
-| alter etags = arrayconcat(json_extract_scalar_array(tags, "$.endpoint_tags"), json_extract_scalar_array(tags, "$.server_tags"))
-| alter etags = if(etags = null or array_length(etags) = 0, arraycreate("-"), etags)
-| alter policy_tag = lowercase(arrayindex(regextract(assigned_prevention_policy, "^\s*([A-Za-z0-9]{2,16})\s*[-_]"), 0)), package_tag = lowercase(arrayindex(regextract(installation_package, "^\s*([A-Za-z0-9]{2,16})\s*[-_]"), 0))
-| alter ip10 = arrayindex(arrayfilter(ip_address, "@element" ~= "^10\."), 0)
-| alter ip_octet = arrayindex(regextract(ip10, "^10\.(\d+)\."), 0)
-| arrayexpand etags
-| alter etag = lowercase(etags)
-| join type = left (dataset = ctt_registry | filter role != "central" | alter etag = ctt_tag, etag_owner = owner_email | fields etag, etag_owner) as te te.etag = etag
-| comp max(etag_owner) as tag_owner by endpoint_id, endpoint_name, ip10, ip_octet, policy_tag, package_tag, assigned_prevention_policy, installation_package
-| join type = left (dataset = ctt_registry | filter role != "central" | alter policy_tag = ctt_tag, policy_owner = owner_email | fields policy_tag, policy_owner) as tp tp.policy_tag = policy_tag
-| join type = left (dataset = ctt_registry | filter role != "central" | alter package_tag = ctt_tag, package_owner = owner_email | fields package_tag, package_owner) as tk tk.package_tag = package_tag
-| join type = left (dataset = ctt_registry | filter lab_octet != "" | comp max(owner_email) as range_owner by lab_octet | alter ip_octet = lab_octet | fields ip_octet, range_owner) as tr tr.ip_octet = ip_octet
-| join type = left (dataset = ctt_object_owners | filter object_kind = "Agent installer" and object_name !~= "^(?i)ctt\s*[-_]" | alter installation_package = object_name, installer_owner = coalesce(creator, last_editor) | fields installation_package, installer_owner) as io io.installation_package = installation_package
-| join type = left (dataset = ctt_object_owners | filter object_kind = "Policy rule" and object_name !~= "^(?i)(ctt\s*[-_]|default)" | alter assigned_prevention_policy = object_name, policy_editor = last_editor | fields assigned_prevention_policy, policy_editor) as po po.assigned_prevention_policy = assigned_prevention_policy
-| alter installer_owner = if(installer_owner = "", null, installer_owner), policy_editor = if(policy_editor = "", null, policy_editor)
-| alter owner = coalesce(tag_owner, policy_owner, package_owner, installer_owner, policy_editor)
-| alter owner_source = if(tag_owner != null, "endpoint tag", if(policy_owner != null, "tag in its policy name", if(package_owner != null, "tag in its installer name", if(installer_owner != null, concat("creator of installer ", installation_package), if(policy_editor != null, concat("last editor of policy ", assigned_prevention_policy), null)))))
-| alter owner_label = coalesce(owner, "unknown"), owner_note = if(owner != null, concat("Owner: ", owner, " (", owner_source, ")."), "No owner found: add your tag to the endpoint.")
-| fields endpoint_id, endpoint_name, ip10, owner, owner_source"""
+ENDPOINT_OWNER_QUERY = (
+    "dataset = endpoints\n"
+    "| dedup endpoint_id by desc last_seen\n"
+    '| alter etags = arrayconcat(json_extract_scalar_array(tags, "$.endpoint_tags"), json_extract_scalar_'
+    'array(tags, "$.server_tags"))\n'
+    '| alter etags = if(etags = null or array_length(etags) = 0, arraycreate("-"), etags)\n'
+    '| alter policy_tag = lowercase(arrayindex(regextract(assigned_prevention_policy, "^\\s*([A-Za-z0-9]{2'
+    ',16})\\s*[-_]"), 0)), package_tag = lowercase(arrayindex(regextract(installation_package, "^\\s*([A-Za'
+    '-z0-9]{2,16})\\s*[-_]"), 0))\n'
+    '| alter ip10 = arrayindex(arrayfilter(ip_address, "@element" ~= "^10\\."), 0)\n'
+    '| alter ip_octet = arrayindex(regextract(ip10, "^10\\.(\\d+)\\."), 0)\n'
+    "| arrayexpand etags\n"
+    "| alter etag = lowercase(etags)\n"
+    '| join type = left (dataset = ctt_registry | filter role != "central" | alter etag = ctt_tag, etag_o'
+    "wner = owner_email | fields etag, etag_owner) as te te.etag = etag\n"
+    "| comp max(etag_owner) as tag_owner by endpoint_id, endpoint_name, ip10, ip_octet, policy_tag, packa"
+    "ge_tag, assigned_prevention_policy, installation_package\n"
+    '| join type = left (dataset = ctt_registry | filter role != "central" | alter policy_tag = ctt_tag, '
+    "policy_owner = owner_email | fields policy_tag, policy_owner) as tp tp.policy_tag = policy_tag\n"
+    '| join type = left (dataset = ctt_registry | filter role != "central" | alter package_tag = ctt_tag,'
+    " package_owner = owner_email | fields package_tag, package_owner) as tk tk.package_tag = package_tag"
+    "\n"
+    '| join type = left (dataset = ctt_registry | filter lab_octet != "" | comp max(owner_email) as range'
+    "_owner by lab_octet | alter ip_octet = lab_octet | fields ip_octet, range_owner) as tr tr.ip_octet ="
+    " ip_octet\n"
+    '| join type = left (dataset = ctt_object_owners | filter object_kind = "Agent installer" and object_'
+    'name !~= "^(?i)ctt\\s*[-_]" | alter installation_package = object_name, installer_owner = coalesce(cr'
+    "eator, last_editor) | fields installation_package, installer_owner) as io io.installation_package = "
+    "installation_package\n"
+    '| join type = left (dataset = ctt_object_owners | filter object_kind = "Policy rule" and object_name'
+    ' !~= "^(?i)(ctt\\s*[-_]|default)" | alter assigned_prevention_policy = object_name, policy_editor = l'
+    "ast_editor | fields assigned_prevention_policy, policy_editor) as po po.assigned_prevention_policy ="
+    " assigned_prevention_policy\n"
+    '| alter installer_owner = if(installer_owner = "", null, installer_owner), policy_editor = if(policy'
+    '_editor = "", null, policy_editor)\n'
+    "| alter owner = coalesce(tag_owner, policy_owner, package_owner, installer_owner, policy_editor)\n"
+    '| alter owner_source = if(tag_owner != null, "endpoint tag", if(policy_owner != null, "tag in its po'
+    'licy name", if(package_owner != null, "tag in its installer name", if(installer_owner != null, conca'
+    't("creator of installer ", installation_package), if(policy_editor != null, concat("last editor of p'
+    'olicy ", assigned_prevention_policy), null)))))\n'
+    '| alter owner_label = coalesce(owner, "unknown"), owner_note = if(owner != null, concat("Owner: ", o'
+    'wner, " (", owner_source, ")."), "No owner found: add your tag to the endpoint.")\n'
+    "| fields endpoint_id, endpoint_name, ip10, owner, owner_source"
+)
 # END GENERATED ENDPOINT_OWNER_QUERY
 
 
