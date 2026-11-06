@@ -96,11 +96,25 @@ def group_findings(findings: list[dict]) -> dict[str, dict]:
     return groups
 
 
-def plan(groups: dict[str, dict], state: dict[str, dict]) -> tuple[list[str], list[str]]:
-    """Returns (keys to raise, keys whose open issue should be resolved)."""
-    raise_keys = [k for k, g in groups.items() if state.get(k, {}).get("fingerprint") != g["fingerprint"]]
-    resolve_keys = [k for k in state if k not in groups or k in raise_keys]
-    return sorted(raise_keys), sorted(resolve_keys)
+def plan(groups: dict[str, dict], state: dict[str, dict]) -> tuple[list[str], list[str], list[str]]:
+    """Returns (keys to raise, keys whose open issue to resolve, keys to update quietly).
+
+    A group raises once and keeps its issue while it only shrinks (things got fixed). It raises a
+    replacement only when new items appear, and its issue is resolved once the group is empty.
+    That keeps a busy tenant from opening a new Health case every day."""
+    raise_keys, resolve_keys, update_keys = [], [], []
+    for key, group in groups.items():
+        prev = state.get(key)
+        if not prev:
+            raise_keys.append(key)
+        elif prev.get("fingerprint") != group["fingerprint"]:
+            if set(group["items"]) - set(prev.get("items") or []):
+                raise_keys.append(key)
+                resolve_keys.append(key)
+            else:
+                update_keys.append(key)
+    resolve_keys += [k for k in state if k not in groups]
+    return sorted(raise_keys), sorted(resolve_keys), sorted(update_keys)
 
 
 def issue_body(group: dict, now_ms: int, max_items: int = 60) -> dict:
@@ -316,7 +330,7 @@ def main():  # pragma: no cover
 
         groups = group_findings(findings)
         state = get_list_json(STATE_LIST, {})
-        raise_keys, resolve_keys = plan(groups, state)
+        raise_keys, resolve_keys, update_keys = plan(groups, state)
         raised, resolved = [], []
         if not dry_run:
             for key in resolve_keys:
@@ -332,11 +346,13 @@ def main():  # pragma: no cover
                     state[key] = {
                         "fingerprint": groups[key]["fingerprint"],
                         "external_id": ext,
-                        "count": len(groups[key]["items"]),
+                        "items": groups[key]["items"],
                     }
                     raised.append(key)
                 except Exception as e:
                     errors.append(f"raise {key}: {e}")
+            for key in update_keys:
+                state[key].update(fingerprint=groups[key]["fingerprint"], items=groups[key]["items"])
             save_list_json(STATE_LIST, state)
 
         rows = [

@@ -72,18 +72,15 @@ def test_group_and_plan():
         {"kind": "Script", "name": "b", "guideline": "CTT-TAG-01", "owner": "u", "detail": "no tag prefix"},
     ]
     groups = group_findings(findings)
-    assert list(groups) == ["CTT-TAG-01|u"]
-    raise_keys, resolve_keys = plan(groups, {})
-    assert raise_keys == ["CTT-TAG-01|u"]
-    assert resolve_keys == []
-    state = {"CTT-TAG-01|u": {"fingerprint": groups["CTT-TAG-01|u"]["fingerprint"]}, "CTT-CASE-01|x": {"fingerprint": "old"}}
-    raise_keys, resolve_keys = plan(groups, state)
-    assert raise_keys == []
-    assert resolve_keys == ["CTT-CASE-01|x"]
-    state["CTT-TAG-01|u"]["fingerprint"] = "changed"
-    raise_keys, resolve_keys = plan(groups, state)
-    assert raise_keys == ["CTT-TAG-01|u"]
-    assert resolve_keys == ["CTT-CASE-01|x", "CTT-TAG-01|u"]
+    key = "CTT-TAG-01|u"
+    assert list(groups) == [key]
+    assert plan(groups, {}) == ([key], [], [])
+    same = {key: {"fingerprint": groups[key]["fingerprint"], "items": groups[key]["items"]}, "CTT-CASE-01|x": {"items": ["old"]}}
+    assert plan(groups, same) == ([], ["CTT-CASE-01|x"], [])
+    shrunk = {key: {"fingerprint": "older", "items": [*groups[key]["items"], "Script 'c': no tag prefix"]}}
+    assert plan(groups, shrunk) == ([], [], [key])
+    grew = {key: {"fingerprint": "older", "items": groups[key]["items"][:1]}}
+    assert plan(groups, grew) == ([key], [key], [])
 
 
 def test_issue_body():

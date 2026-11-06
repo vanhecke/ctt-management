@@ -13,8 +13,9 @@ open Security cases through the tenant API, and checks them against the CTT guid
 
 Findings are grouped per guideline and owner, and each group raises one Medium health issue named
 `CTT - Hygiene - <ID> - <title> (<owner>)`. The `CTT - Sweep State` list remembers what was raised.
-A group whose items are unchanged is not raised again. A group that changed or cleared gets its
-previous issue resolved. The sweep never changes the objects it checks.
+A group keeps its issue while it is unchanged or only shrinks (items were fixed). When new items
+appear, its issue is replaced; when the group is empty, its issue is resolved. The sweep never
+changes the objects it checks.
 
 ## Arguments
 
