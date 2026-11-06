@@ -134,7 +134,6 @@ def issue_body(group: dict, now_ms: int, max_items: int = 60) -> dict:
                 "type": "Unclassified",
                 "severity": "MEDIUM",
                 "remediation": f"Fix the items listed, following guideline {gid} in CTT-Guidelines.",
-                "tags": ["CTT", gid],
             }
         }
     }
