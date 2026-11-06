@@ -18,6 +18,7 @@ TITLES = {
     "CTT-CASE-01": "Stale open Security cases",
 }
 DAY_MS = 86_400_000
+PAGE = 100  # the public API refuses search sizes above 100
 
 
 # ---------- pure helpers (unit tested) ----------
@@ -26,6 +27,14 @@ DAY_MS = 86_400_000
 def parse_tag(name: str) -> str | None:
     m = TAG_RE.match(name or "")
     return m.group(1).lower() if m else None
+
+
+SYSTEM_CREATORS = {"dbot@demisto.com", "dbot", "palo alto networks", "n/a"}
+
+
+def normalize_creator(creator: str | None) -> str:
+    c = (creator or "").strip().lower()
+    return "unknown" if not c or c in SYSTEM_CREATORS else c
 
 
 def registry_index(rows: list[dict]) -> dict[str, dict]:
@@ -40,7 +49,7 @@ def check_object(obj: dict, registry: dict[str, dict]) -> list[dict]:
     base = {"kind": obj["kind"], "name": name}
     if not entry:
         detail = "no tag prefix" if not tag else f"prefix '{tag}' is not a registered tag"
-        return [{**base, "guideline": "CTT-TAG-01", "owner": (obj.get("creator") or "unknown").lower(), "detail": detail}]
+        return [{**base, "guideline": "CTT-TAG-01", "owner": normalize_creator(obj.get("creator")), "detail": detail}]
     findings = []
     owner = entry.get("owner_email") or "central"
     if entry.get("active") == "false":
@@ -57,7 +66,7 @@ def check_object(obj: dict, registry: dict[str, dict]) -> list[dict]:
 def inventory_entry(obj: dict, registry: dict[str, dict]) -> dict:
     tag = parse_tag(obj.get("name") or "")
     entry = registry.get(tag or "")
-    owner = (entry.get("owner_email") or "central") if entry else (obj.get("creator") or "unknown").lower()
+    owner = (entry.get("owner_email") or "central") if entry else normalize_creator(obj.get("creator"))
     return {"kind": obj["kind"], "name": obj.get("name") or "", "tag": tag if entry else None, "owner": owner}
 
 
@@ -195,8 +204,15 @@ def collect_objects(errors: list[str]) -> list[dict]:
         ]
 
     def correlation_rules():
-        res = core_post("/public_api/v1/correlations/get", {"request_data": {"search_from": 0, "search_to": 1000}})
-        rows = res.get("objects", []) if isinstance(res, dict) else []
+        rows: list[dict] = []
+        for start in range(0, 2000, PAGE):
+            res = core_post(
+                "/public_api/v1/correlations/get", {"request_data": {"search_from": start, "search_to": start + PAGE}}
+            )
+            page = res.get("objects", []) if isinstance(res, dict) else []
+            rows.extend(page)
+            if len(page) < PAGE:
+                break
         return [
             {
                 "kind": "Correlation rule",
@@ -227,18 +243,19 @@ def collect_objects(errors: list[str]) -> list[dict]:
 
 
 def collect_open_security_cases(stale_days: int, now_ms: int) -> list[dict]:
-    body = {
-        "request_data": {
-            "filters": [
-                {"field": "status_progress", "operator": "nin", "value": ["Resolved"]},
-                {"field": "case_domain", "operator": "in", "value": ["Security"]},
-                {"field": "modification_time", "operator": "lte", "value": now_ms - stale_days * DAY_MS},
-            ],
-            "search_from": 0,
-            "search_to": 500,
-        }
-    }
-    return core_post("/public_api/v1/case/search", body).get("DATA") or []
+    filters = [
+        {"field": "status_progress", "operator": "nin", "value": ["Resolved"]},
+        {"field": "case_domain", "operator": "in", "value": ["Security"]},
+        {"field": "modification_time", "operator": "lte", "value": now_ms - stale_days * DAY_MS},
+    ]
+    cases: list[dict] = []
+    for start in range(0, 1000, PAGE):
+        body = {"request_data": {"filters": filters, "search_from": start, "search_to": start + PAGE}}
+        page = core_post("/public_api/v1/case/search", body).get("DATA") or []
+        cases.extend(page)
+        if len(page) < PAGE:
+            break
+    return cases
 
 
 def create_issue(group: dict, now_ms: int) -> str:

@@ -104,3 +104,8 @@ def test_inventory_entry():
     }
     assert inventory_entry({"kind": "Job", "name": "CTT - Sync"}, REGISTRY)["owner"] == "central"
     assert inventory_entry({"kind": "Script", "name": "Loose", "creator": "Z@x.com"}, REGISTRY)["owner"] == "z@x.com"
+
+
+def test_system_creators_are_unknown():
+    f = check_object({"kind": "Playbook", "name": "Old", "creator": "DBot@demisto.com", "tags": []}, REGISTRY)
+    assert f[0]["owner"] == "unknown"
