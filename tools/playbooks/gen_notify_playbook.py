@@ -129,6 +129,9 @@ def trigger() -> dict:
         "description": "Runs the CTT - Hygiene - Notify Owner playbook on every CTT hygiene health issue.",
         "trigger_name": NAME,
         "fromVersion": "8.15.0",
+        # Without this the tenant installs the trigger only as a suggested automation rule that
+        # an admin has to accept; with it the rule is enabled on install.
+        "is_auto_enabled": True,
         "alerts_filter": {
             "filter": {
                 "AND": [
