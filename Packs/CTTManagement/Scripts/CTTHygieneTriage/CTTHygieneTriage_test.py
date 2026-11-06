@@ -39,8 +39,7 @@ def test_decide():
     assert decide("b@x.com", REGISTRY[2], "admins_only", 0, 3)[:2] == (True, False)
     assert decide("j@x.com", REGISTRY[1], "admins_only", 0, 3)[:2] == (True, True)
     assert decide("b@x.com", REGISTRY[2], "all", 3, 3)[:2] == (True, False)
-    assert decide("b@x.com", REGISTRY[2], "all", 2, 3) == (True, True, "assigned
-    assert notified")
+    assert decide("b@x.com", REGISTRY[2], "all", 2, 3) == (True, True, "assigned and notified")
     assert decide("b@x.com", REGISTRY[2], "allowlist", 0, 3, ["j@x.com"])[:2] == (True, False)
     assert decide("j@x.com", REGISTRY[1], "allowlist", 0, 3, ["J@x.com"])[:2] == (True, True)
 

@@ -98,8 +98,7 @@ def test_build_digest():
     assert "CLOSE IF DONE (8)" in text
     assert "• #12 Suspicious port scan (2d)" in text
     assert "https://t/incident-view?caseId=12" in text
-    assert "…
-    assert 2 more" in text
+    assert "… and 2 more" in text
     assert all(len(line) <= 46 or line.startswith("  https://") for line in text.splitlines())
 
 
