@@ -26,6 +26,15 @@ def test_newest_links_takes_the_latest_round():
 
 
 def test_newest_links_ignores_other_tasks_and_empty_context():
-    other = {"Task-3": {"0": {"link": "https://t/x", "option": "Fixed", "taskID": "3"}}}
-    assert newest_links(other, "12") == {}
+    assert newest_links({}, "12") == {}
+
+
+def test_newest_links_in_a_sub_playbook_falls_back_to_the_links_present():
+    sub = {
+        "Task-11.3": {
+            "0": {"link": "https://t/f", "option": "Fixed", "taskID": "11.3"},
+            "1": {"link": "https://t/n", "option": "Not a violation", "taskID": "11.3"},
+        }
+    }
+    assert newest_links(sub, "3") == {"fixed_url": "https://t/f", "not_violation_url": "https://t/n"}
     assert newest_links(None, "12") == {}

@@ -11,26 +11,31 @@ OPTIONS = {"Fixed": "fixed_url", "Not a violation": "not_violation_url"}
 
 def newest_links(value: Any, task_id: str) -> dict[str, str]:
     """The newest link per reply option of one Ask task. The task writes Ask.Links.Task-<id> as an
-    object; asking again appends, so the key becomes a list. Later entries win."""
-    found: dict[str, str] = {}
+    object; asking again appends, so the key becomes a list. Later entries win. In a sub-playbook
+    the task ID may carry a prefix; the playbook clears Ask before each round, so when no link
+    matches the task ID the links that are there are used."""
 
-    def walk(node: Any) -> None:
+    def collect(node: Any, match: bool, found: dict[str, str]) -> None:
         if isinstance(node, dict):
             if "link" in node and "option" in node:
-                if not task_id or str(node.get("taskID", task_id)) == str(task_id):
+                tid = str(node.get("taskID", ""))
+                if not match or not task_id or tid == str(task_id) or tid.endswith(f".{task_id}"):
                     key = OPTIONS.get(str(node["option"]))
                     if key:
                         found[key] = str(node["link"])
                 return
             for k in sorted(node, key=lambda k: (not str(k).isdigit(), int(k) if str(k).isdigit() else 0, str(k))):
-                walk(node[k])
+                collect(node[k], match, found)
         elif isinstance(node, list):
             for item in node:
-                walk(item)
+                collect(item, match, found)
 
     if isinstance(value, dict) and task_id and f"Task-{task_id}" in value:
         value = value[f"Task-{task_id}"]
-    walk(value)
+    found: dict[str, str] = {}
+    collect(value, True, found)
+    if not found:
+        collect(value, False, found)
     return found
 
 
