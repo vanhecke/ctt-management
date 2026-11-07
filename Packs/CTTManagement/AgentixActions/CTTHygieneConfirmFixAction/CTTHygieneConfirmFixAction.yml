@@ -8,8 +8,8 @@ tags:
 category: Utilities
 description: >-
   Records that a DC fixed one or more of their open CTT hygiene issues. It checks the fix where the
-  guideline has an automatic check and resolves the issue with a close note ("Confirmed fixed by …
-  and verified: …"); a guideline without a check is resolved on the DC's word. If the check still
+  guideline has an automatic check and resolves the issue with a close note ("Confirmed fixed by ...
+  and verified: ..."); a guideline without a check is resolved on the DC's word. If the check still
   sees the violation the issue stays open and the result says what is still wrong. Use only for the
   user's own issues, after they say they fixed them.
 args:
