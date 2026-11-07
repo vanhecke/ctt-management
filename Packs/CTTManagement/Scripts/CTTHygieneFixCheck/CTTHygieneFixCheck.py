@@ -209,6 +209,7 @@ def parse_issue(issue: dict) -> dict | None:
         "endpoint": endpoint.group("name") if endpoint else "",
         "email": email.group("email").lower() if email else "",
         "created": int(issue.get("_insert_time") or 0),
+        "cases": [str(c) for c in issue.get("case_ids") or []],
     }
 
 
@@ -371,6 +372,15 @@ def resolution_kind(comment: str) -> str:
     if "inventory check" in c.lower() or "sweep" in c.lower():
         return "inventory check"
     return "manual"
+
+
+def case_close_note(issues: list[dict]) -> str | None:
+    """The close note for a hygiene case once all its issues are resolved (None while one is open).
+    It quotes the issues' own close notes, so the case says why too."""
+    if not issues or any(str(i.get("status.progress") or "").lower() != "resolved" for i in issues):
+        return None
+    notes = [f"#{i.get('id')}: {i.get('status.resolution_comment') or 'resolved'}" for i in issues]
+    return "All its CTT hygiene issues are resolved. " + " ".join(notes)
 
 
 # ---------- digest ----------
@@ -565,6 +575,72 @@ def resolve(issue_id: str, reason: str, note: str, state: dict) -> str:
     return reason
 
 
+def close_case(case_id: str, note: str, reason: str, state: dict) -> None:
+    """Resolve a case with a note. An issue's case stays open when the issue is resolved, so the
+    fix check closes it once all its issues are resolved."""
+    if reason == FIXED_REASON and state.get("no_fixed_reason"):
+        reason = FALLBACK_REASON
+    body = {"status_progress": "Resolved", "resolve_reason": reason, "resolve_comment": note[:900]}
+    try:
+        core_post(f"/public_api/v1/case/update/{case_id}", {"request_data": {"update_data": body}})
+    except DemistoException:
+        if reason == FALLBACK_REASON:
+            raise
+        body["resolve_reason"] = FALLBACK_REASON
+        core_post(f"/public_api/v1/case/update/{case_id}", {"request_data": {"update_data": body}})
+
+
+def issues_by_ids(ids: list[str]) -> list[dict]:
+    if not ids:
+        return []
+    body = {"request_data": {"filters": [{"field": "id", "operator": "in", "value": [int(i) for i in ids]}], "search_to": 100}}
+    return core_post("/public_api/v1/issue/search", body).get("DATA") or []
+
+
+def close_finished_cases(case_ids: list[str], reason: str, state: dict, errors: list[str]) -> list[str]:
+    """Close the given cases whose issues are all resolved; returns the closed case IDs."""
+    closed = []
+    if not case_ids:
+        return closed
+    try:
+        body = {
+            "request_data": {
+                "filters": [{"field": "case_id", "operator": "in", "value": [int(c) for c in case_ids]}],
+                "search_to": 100,
+            }
+        }
+        cases = core_post("/public_api/v1/case/search", body).get("DATA") or []
+    except Exception as e:
+        errors.append(f"reading cases {case_ids}: {e}")
+        return closed
+    for case in cases:
+        if str(case.get("status_progress") or "").lower() == "resolved":
+            continue
+        try:
+            note = case_close_note(issues_by_ids([str(i) for i in case.get("issue_ids") or []]))
+            if note:
+                close_case(str(case.get("case_id")), note, reason, state)
+                closed.append(str(case.get("case_id")))
+        except Exception as e:
+            errors.append(f"closing case {case.get('case_id')}: {e}")
+    return closed
+
+
+def open_hygiene_case_ids() -> list[str]:
+    filters = [
+        {"field": "status_progress", "operator": "nin", "value": ["Resolved"]},
+        {"field": "case_domain", "operator": "in", "value": ["Health"]},
+    ]
+    ids: list[str] = []
+    for start in range(0, 2000, PAGE):
+        body = {"request_data": {"filters": filters, "search_from": start, "search_to": start + PAGE}}
+        page = core_post("/public_api/v1/case/search", body).get("DATA") or []
+        ids += [str(c.get("case_id")) for c in page if str(c.get("case_name") or "").startswith(PREFIX)]
+        if len(page) < PAGE:
+            break
+    return ids
+
+
 def post_channel(text: str, errors: list[str]) -> None:
     res = demisto.executeCommand("CTTSlackPost", {"message": text})
     if is_error(res):
@@ -665,9 +741,19 @@ def main():  # pragma: no cover
                         )
                     row["reason"] = resolve(item["id"], plan["reason"], plan["note"], run_state)
                     row["resolved"] = True
+                    row["cases_closed"] = close_finished_cases(item["cases"], row["reason"], run_state, errors)
                 except Exception as e:
                     errors.append(f"resolving #{item['id']}: {e}")
             results.append(row)
+
+        swept: list[str] = []
+        if mode == "check" and not ids and not owner_filter and not dry_run:
+            # Hygiene cases stay open when their issue is resolved (by this check, the inventory
+            # check or a person); close the ones whose issues are all resolved.
+            try:
+                swept = close_finished_cases(open_hygiene_case_ids(), FALLBACK_REASON, run_state, errors)
+            except Exception as e:
+                errors.append(f"open hygiene cases: {e}")
 
         digests = []
         if argToBoolean(args.get("remind") or "false"):
@@ -680,6 +766,9 @@ def main():  # pragma: no cover
             results,
             headers=["issue_id", "guideline", "owner", "object", "verdict", "action", "evidence"],
         )
+        closed_cases = sorted({c for r in results for c in r.get("cases_closed") or []} | set(swept))
+        if closed_cases:
+            md += f"\nClosed cases whose hygiene issues are all resolved: {', '.join(closed_cases)}\n"
         if digests:
             md += "\n" + tableToMarkdown("Daily digests", digests, headers=["owner", "open", "closed", "sent"])
         if errors:

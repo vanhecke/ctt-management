@@ -13,6 +13,11 @@ playbook 'x' no longer exists under that name (renamed or deleted) (checked 07 N
 
 Issues raised by the inventory check are skipped: it resolves them itself.
 
+**Cases.** A hygiene issue opens its own Health case, and the case stays open when the issue is
+resolved. The fix check closes a case once all its issues are resolved: right after it resolves an
+issue, and on every hourly run for all open `CTT - Hygiene - …` cases (whoever resolved the issues).
+The case note quotes the issues' close notes.
+
 ## Modes
 
 - **Check** (default, the hourly `CTT - Hygiene - Fix Check` job): resolves issues the check finds

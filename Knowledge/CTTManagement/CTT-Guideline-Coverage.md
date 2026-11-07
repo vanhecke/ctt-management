@@ -70,6 +70,9 @@ How an open hygiene issue closes. Every close by the pack writes a close note sa
 | Owner presses **Not a violation** | Always; the CTT channel is told so admins can tune the rule | "Marked not a violation by …" (False Positive) |
 | Inventory check (daily) | All objects of the owner's issue are fixed | its own note |
 
+Each hygiene issue has its own Health case, which stays open when the issue is resolved; the fix
+check closes the case once all its issues are resolved, with a note quoting their close notes.
+
 If the owner presses Fixed! but the check still sees the violation, the issue stays open and the
 next DM says what is still wrong. An unanswered issue stays open; the owner gets one daily digest
 (`CTT - Hygiene - Reminders`, 10:00 SGT) with their issues open for more than a day.

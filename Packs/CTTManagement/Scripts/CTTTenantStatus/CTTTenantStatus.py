@@ -169,6 +169,8 @@ def issue_owner(issue: dict) -> str:
 
 
 def duration(hours: float) -> str:
+    if hours < 1:
+        return f"{max(1, round(hours * 60))}m"
     return f"{round(hours)}h" if hours < 48 else f"{round(hours / 24)}d"
 
 
@@ -191,7 +193,7 @@ def fix_metrics(resolved: list[dict], still_open: list[dict], now_ms: int) -> di
             gid = GUIDELINE_RE.search(str(i.get("name") or ""))
             per_gid.setdefault(gid.group(1) if gid else "other", []).append(h)
         owner = issue_owner(i)
-        if owner != "unknown":
+        if owner not in ("unknown", "unassigned"):
             fixers[owner] = fixers.get(owner, 0) + 1
     oldest = min(still_open, key=lambda i: int(i.get("_insert_time") or now_ms), default=None)
     return {
@@ -205,7 +207,7 @@ def fix_metrics(resolved: list[dict], still_open: list[dict], now_ms: int) -> di
         else {
             "id": oldest.get("id"),
             "guideline": (GUIDELINE_RE.search(str(oldest.get("name") or "")) or [None, "?"])[1],
-            "days": max(0, (now_ms - int(oldest.get("_insert_time") or now_ms)) // DAY_MS),
+            "hours": max(0, now_ms - int(oldest.get("_insert_time") or now_ms)) / 3_600_000,
             "owner": issue_owner(oldest),
         },
     }
@@ -222,7 +224,7 @@ def fix_lines(m: dict, days: int) -> list[str]:
         lines.append(f"• Top fixers: {fmt_counts(m['fixers'], 5)}")
     if m.get("oldest"):
         o = m["oldest"]
-        lines.append(f"• Oldest open: #{o['id']} {o['guideline']}, {plural(o['days'], 'day')} ({o['owner']})")
+        lines.append(f"• Oldest open: #{o['id']} {o['guideline']}, open {duration(o['hours'])} ({o['owner']})")
     return lines
 
 

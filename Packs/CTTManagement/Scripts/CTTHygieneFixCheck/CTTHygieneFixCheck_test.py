@@ -1,6 +1,7 @@
 import pytest
 from CTTHygieneFixCheck import (
     build_digest,
+    case_close_note,
     check_builtin,
     check_endpoint,
     check_item,
@@ -171,3 +172,10 @@ def test_build_digest_lists_open_and_closed():
     assert "https://t/issue-view/61001" in text
     assert "(3d)" in text
     assert all(len(line) <= 46 for line in text.splitlines() if not line.strip().startswith("https://"))
+
+
+def test_case_close_note_only_when_all_issues_are_resolved():
+    done = {"id": 1, "status.progress": "Resolved", "status.resolution_comment": "Auto-closed by the CTT fix check: x"}
+    assert case_close_note([done]) == "All its CTT hygiene issues are resolved. #1: Auto-closed by the CTT fix check: x"
+    assert case_close_note([done, {"id": 2, "status.progress": "In Progress"}]) is None
+    assert case_close_note([]) is None

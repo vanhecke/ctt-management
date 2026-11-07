@@ -169,11 +169,17 @@ def test_fix_metrics_and_lines():
     assert m["by_how"] == {"auto check": 1, "owner confirmed": 1, "not a violation": 1}
     assert m["median"] == 37
     assert m["fixers"] == {"a": 1, "b": 1}
-    assert m["oldest"] == {"id": 7, "guideline": "CTT-LAB-01", "days": 5, "owner": "c"}
+    assert m["oldest"] == {"id": 7, "guideline": "CTT-LAB-01", "hours": 120, "owner": "c"}
     lines = fix_lines(m, 7)
     assert lines[0].startswith("• Closed in 7 days: 3 (")
     assert lines[1] == "• Time to fix: median 37h (CTT-TAG-01 2h, CTT-LAB-01 3d)"
-    assert lines[-1] == "• Oldest open: #7 CTT-LAB-01, 5 days (c)"
+    assert lines[-1] == "• Oldest open: #7 CTT-LAB-01, open 5d (c)"
+
+
+def test_duration_formats():
+    from CTTTenantStatus import duration
+
+    assert (duration(0.2), duration(5), duration(72)) == ("12m", "5h", "3d")
 
 
 def test_fix_lines_empty():
