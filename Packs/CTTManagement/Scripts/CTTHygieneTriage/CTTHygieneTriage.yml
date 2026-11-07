@@ -57,6 +57,9 @@ outputs:
 - contextPath: CTT.Triage.use_ai
   description: true when the DM text should be written by CTTHygieneMessagePrompt (notify.use_ai).
   type: String
+- contextPath: CTT.Triage.buttons
+  description: true when the DM should carry Slack buttons (notify.buttons in CTT - Config).
+  type: String
 - contextPath: CTT.Triage.assign
   description: true when the issue can be assigned to a person.
   type: String

@@ -214,6 +214,7 @@ def main():  # pragma: no cover
             "found": found,
             "fix": "\n".join(fix),
             "use_ai": "true" if notify and notify_cfg.get("use_ai") else "false",
+            "buttons": "true" if notify_cfg.get("buttons") else "false",
             "assign": "true" if assign else "false",
             "notify": "true" if notify else "false",
             "reason": reason,

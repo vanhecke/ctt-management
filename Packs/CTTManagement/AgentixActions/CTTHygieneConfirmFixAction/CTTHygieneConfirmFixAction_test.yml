@@ -1,0 +1,11 @@
+tests:
+  - name: confirms a fixed issue
+    prompt: I'm jvanhecke. I renamed the playbook from hygiene issue 61001, please close it.
+    agent_id: ctt-assistant-agent
+    expected_outcomes:
+      - evaluation_mode: any_of
+        actions:
+          - action_name: CTTHygieneConfirmFixAction
+            arguments:
+              issue_id: "61001"
+fixtures: []

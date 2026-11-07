@@ -54,23 +54,47 @@ def template_body(first_name: str, found: str, guideline_id: str, guideline_titl
     return "\n".join(lines)
 
 
-def build_dm(guideline_id: str, body: str, issue_id: str, url: str, prewrapped: bool = False) -> str:
-    """ASCII layout for the code block the CTT workflow puts a DM in: header box, the message, a
-    footer with the issue number and the link (also sent separately when the instance allows)."""
+def build_dm(
+    guideline_id: str,
+    body: str,
+    issue_id: str,
+    url: str,
+    prewrapped: bool = False,
+    note: str = "",
+    links: dict | None = None,
+    buttons: bool = False,
+) -> str:
+    """ASCII layout for the code block the CTT workflow puts a DM in: header box, an optional note
+    (a re-ask after the owner said "fixed"), the message, and a footer. With answer links the footer
+    says how to answer: the Fixed! / Not a violation buttons when the workflow shows them, else the
+    links themselves."""
     url = url or ""
+    links = {k: v for k, v in (links or {}).items() if v}
     body = body.replace(url, "").rstrip() if url else body
-    parts = [
-        header("CTT HYGIENE", guideline_id or "CTT"),
-        "",
-        body if prewrapped else wrap_body(body),
-        "",
-        "─" * WIDTH,
-        "Intended? Reply in the CTT channel.",
-        f"Issue #{issue_id} · assigned to you" if issue_id else "Issue assigned to you",
-    ]
-    if url:
-        parts.append(url)
-    return "\n".join(parts)
+    parts = [header("CTT HYGIENE", guideline_id or "CTT"), ""]
+    if note:
+        parts += [wrap_body(note), ""]
+    parts += [body if prewrapped else wrap_body(body), "", "─" * WIDTH]
+    issue_line = f"Issue #{issue_id} · assigned to you" if issue_id else "Issue assigned to you"
+    if links and buttons:
+        parts += [
+            wrap_body("Fixed it? Press Fixed! below. Intended or wrong? Press Not a violation."),
+            "Checked guidelines also close by themselves.",
+            issue_line,
+        ]
+    elif links:
+        parts += [
+            "Fixed it? Confirm here:",
+            links.get("fixed", ""),
+            "",
+            "Not a violation? Tell us here:",
+            links.get("not_violation", ""),
+            "",
+        ]
+        parts += [issue_line] + ([url] if url else [])
+    else:
+        parts += ["Intended? Reply in the CTT channel.", issue_line] + ([url] if url else [])
+    return "\n".join(p for p in parts if p is not None)
 
 
 def usable_ai_message(message: str) -> bool:
@@ -95,11 +119,16 @@ def main():  # pragma: no cover
             raise DemistoException("No Slack ID to send to.")
         message = args.get("message") or ""
         url = args.get("issue_url", "")
+        note = args.get("note") or ""
+        links = {"fixed": args.get("fixed_url") or "", "not_violation": args.get("not_violation_url") or ""}
+        has_links = all(links.values())
+        buttons = has_links and argToBoolean(args.get("buttons") or "false") and bool(url)
+        layout = {"note": note, "links": links if has_links else None, "buttons": buttons}
         if args.get("content"):
-            # Already laid out by the caller (the case housekeeping digest).
+            # Already laid out by the caller (the case housekeeping and hygiene digests).
             content = args["content"]
         elif usable_ai_message(message):
-            content = build_dm(args.get("guideline_id", ""), message.strip(), args.get("issue_id", ""), url)
+            content = build_dm(args.get("guideline_id", ""), message.strip(), args.get("issue_id", ""), url, **layout)
         else:
             body = template_body(
                 args.get("first_name", ""),
@@ -108,10 +137,16 @@ def main():  # pragma: no cover
                 args.get("guideline_title", ""),
                 args.get("fix", ""),
             )
-            content = build_dm(args.get("guideline_id", ""), body, args.get("issue_id", ""), url, prewrapped=True)
-        res = demisto.executeCommand(
-            "ctt-slack-webhook-send", {"action": "msg_person", "slack_user_id": slack_id, "content": content, "url": url}
-        )
+            content = build_dm(args.get("guideline_id", ""), body, args.get("issue_id", ""), url, prewrapped=True, **layout)
+        send = {"action": "msg_person", "slack_user_id": slack_id, "content": content, "url": url}
+        if buttons:
+            send.update(
+                action="msg_person_health_issue",
+                fixed_url=links["fixed"],
+                not_violation_url=links["not_violation"],
+                issue_url=url,
+            )
+        res = demisto.executeCommand("ctt-slack-webhook-send", send)
         if is_error(res):
             raise DemistoException(f"ctt-slack-webhook-send failed: {get_error(res)}")
         day = datetime.now(UTC).strftime("%Y-%m-%d")

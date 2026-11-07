@@ -1,0 +1,41 @@
+{
+    "id": "CTT - Hygiene - Reminders",
+    "name": "CTT - Hygiene - Reminders",
+    "details": "Sends each owner one Slack digest with their CTT hygiene issues open for more than a day and what closed since yesterday (after a fix check). Run by the job of the same name every day at 10:00 Singapore time.",
+    "playbookId": "CTT - Hygiene - Reminders",
+    "scheduled": true,
+    "recurrent": true,
+    "cronView": false,
+    "humanCron": {
+        "days": [
+            "MON",
+            "TUE",
+            "WED",
+            "THU",
+            "FRI",
+            "SAT",
+            "SUN"
+        ],
+        "atTimeHour": "10",
+        "atTimeMinute": "00",
+        "timePeriodType": "weeks",
+        "timePeriod": 1
+    },
+    "startDate": "2026-11-06T00:00:00Z",
+    "type": "##default##",
+    "timezone": "Asia/Singapore",
+    "timezoneOffset": -480,
+    "shouldTriggerNew": true,
+    "closePrevRun": true,
+    "tags": [
+        "CTT"
+    ],
+    "isFeed": false,
+    "selectedFeeds": [],
+    "isAllFeeds": false,
+    "fromVersion": "8.9.0",
+    "supportedModules": [
+        "xsiam",
+        "agentix"
+    ]
+}

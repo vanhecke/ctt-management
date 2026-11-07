@@ -13,6 +13,7 @@ PACK = Path(__file__).resolve().parent.parent.parent / "Packs" / "CTTManagement"
 NAME = "CTT - Hygiene - Notify Owner"
 NS = uuid.UUID("7a1e3c5d-9b2f-4e6a-8c0d-1f2e3d4c5b6a")
 CTX = "CTT.Triage"
+ASK = "12"  # the question task; CTTHygieneAskLinks reads Ask.Links.Task-<ASK>
 
 
 def tid(key: str) -> str:
@@ -74,13 +75,35 @@ def playbook() -> dict:
     t["4"]["nexttasks"] = {"#default#": ["7"], "yes": ["8"]}
     t["8"] = base("8", "condition", "Write the message with AI?", "notify.use_ai in CTT - Config; otherwise the FOUND / RULE / FIX template is used.", 880, x=250)
     t["8"]["conditions"] = [{"label": "yes", "condition": is_true("use_ai")}]
-    t["8"]["nexttasks"] = {"#default#": ["6"], "yes": ["5"]}
+    t["8"]["nexttasks"] = {"#default#": ["11"], "yes": ["5"]}
     t["5"] = base("5", "aiTask", "Write the Slack message with AI", "CTTHygieneMessagePrompt writes the DM text (only with notify.use_ai).", 1050, x=50,
                   task_extra={"aiTaskId": "CTTHygieneMessagePrompt"})
     t["5"]["scriptarguments"] = {k: arg(k) for k in ("first_name", "owner_tags", "issue_title", "issue_details", "guideline_id", "guideline_title", "guideline_text")}
     t["5"]["continueonerror"] = True
-    t["5"]["nexttasks"] = {"#none#": ["6"]}
-    t["6"] = base("6", "regular", "Send the Slack DM", "Lays out the DM (FOUND / RULE / FIX, or the AI text) and sends it through the CTT Slack Webhook (msg_person).", 1220, x=250,
+    t["5"]["nexttasks"] = {"#none#": ["11"]}
+    # One round: ask the owner (links into the context) and, in parallel, DM them the links.
+    t["11"] = base("11", "title", "Ask the owner", "Asks whether the issue is fixed and DMs the answer links. Runs again after a Fixed! the fix check can't confirm.", 1220, x=250)
+    t["11"]["nexttasks"] = {"#none#": [ASK, "13"]}
+    t[ASK] = base(ASK, "condition", "Did you fix it?", "Asked by Generated link: one link per answer, opened without a Cortex login, behind the Fixed! and Not a violation buttons of the DM. Waits until answered (no timeout); the daily digest reminds the owner.", 1390, x=50)
+    t[ASK]["message"] = {
+        "to": {"simple": f"${{{CTX}.owner_email}}"},
+        "subject": {"simple": f"CTT hygiene issue #${{{CTX}.issue_id}}"},
+        "body": {"simple": f"CTT hygiene issue #${{{CTX}.issue_id}}: ${{{CTX}.issue_title}}. Did you fix it?"},
+        "methods": ["pushLinkToContext"],
+        "format": "",
+        "bcc": None,
+        "cc": None,
+        "timings": {"retriescount": 0, "retriesinterval": 1440, "completeafterreplies": 1, "completeafterv2": True, "completeaftersla": False},
+        "replyOptions": ["Fixed", "Not a violation"],
+    }
+    t[ASK]["nexttasks"] = {"Fixed": ["14"], "Not a violation": ["17"]}
+    t["13"] = base("13", "regular", "Get the answer links", "Waits for the question's links in the context and returns the newest per answer.", 1390, x=450,
+                   task_extra={"scriptName": "CTTHygieneAskLinks"})
+    t["13"]["scriptarguments"] = {"task_id": {"simple": ASK}}
+    # Without links (Generated link unavailable) the DM still goes out, without answer buttons.
+    t["13"]["continueonerror"] = True
+    t["13"]["nexttasks"] = {"#none#": ["6"]}
+    t["6"] = base("6", "regular", "Send the Slack DM", "Lays out the DM (FOUND / RULE / FIX, or the AI text) with the answer links, as Slack buttons when notify.buttons is on, and sends it through the CTT Slack Webhook.", 1560, x=450,
                   task_extra={"scriptName": "CTTHygieneSendDM"})
     t["6"]["scriptarguments"] = {
         "slack_user_id": arg("slack_id"),
@@ -93,19 +116,37 @@ def playbook() -> dict:
         "issue_url": arg("issue_url"),
         "issue_id": arg("issue_id"),
         "guideline_id": arg("guideline_id"),
+        "fixed_url": {"simple": "${CTT.Ask.fixed_url}"},
+        "not_violation_url": {"simple": "${CTT.Ask.not_violation_url}"},
+        "buttons": arg("buttons"),
+        "note": {"simple": "${CTT.FixCheck.note}"},
     }
     t["6"]["nexttasks"] = {"#none#": ["10"]}
-    t["10"] = base("10", "regular", "Set the issue to In Progress", "The owner has been told; the issue now waits for their fix.", 1390, x=250,
+    t["10"] = base("10", "regular", "Set the issue to In Progress", "The owner has been told; the issue now waits for their fix.", 1730, x=450,
                    task_extra={"script": "Cortex Core - Platform|||core-update-issue", "iscommand": True, "brand": "Cortex Core - Platform"})
     t["10"]["scriptarguments"] = {"id": arg("issue_id"), "status": {"simple": "In Progress"}}
     t["10"]["continueonerror"] = True
-    t["10"]["nexttasks"] = {"#none#": ["7"]}
-    t["7"] = base("7", "title", "Done", "", 1560)
+    t["14"] = base("14", "regular", "Check the owner's fix", "CTTHygieneFixCheck confirm=true: resolves the issue with a close note when the check verifies the fix or the guideline has no check; otherwise keeps it open and says what is still wrong.", 1560, x=50,
+                   task_extra={"scriptName": "CTTHygieneFixCheck"})
+    t["14"]["scriptarguments"] = {"issue_id": arg("issue_id"), "confirm": {"simple": "true"}}
+    t["14"]["nexttasks"] = {"#none#": ["15"]}
+    t["15"] = base("15", "condition", "Resolved?", "Resolving the issue also stops this playbook; this branch only runs when it is still open.", 1730, x=50)
+    t["15"]["conditions"] = [{"label": "yes", "condition": [[{"operator": "isTrue", "left": {"value": {"simple": "CTT.FixCheck.resolved"}, "iscontext": True}}]]}]
+    t["15"]["nexttasks"] = {"yes": ["7"], "#default#": ["16"]}
+    t["16"] = base("16", "regular", "Clear the answered question", "Asking again appends links; clear them so the next DM gets the new ones.", 1900, x=-150,
+                   task_extra={"scriptName": "DeleteContext"})
+    t["16"]["scriptarguments"] = {"key": {"simple": "Ask"}}
+    t["16"]["nexttasks"] = {"#none#": ["11"]}
+    t["17"] = base("17", "regular", "Record: not a violation", "CTTHygieneFixCheck false_positive=true: tells the CTT channel, then resolves as False Positive with a close note.", 1560, x=-250,
+                   task_extra={"scriptName": "CTTHygieneFixCheck"})
+    t["17"]["scriptarguments"] = {"issue_id": arg("issue_id"), "false_positive": {"simple": "true"}}
+    t["17"]["nexttasks"] = {"#none#": ["7"]}
+    t["7"] = base("7", "title", "Done", "", 2070, x=50)
     return {
         "id": NAME,
         "version": -1,
         "name": NAME,
-        "description": "Runs on every CTT hygiene health issue: assigns it to the person responsible (from the issue's owner marker and the CTT registry) and sends them a short AI-written Slack DM with the fix and the issue link. DMs follow notify.mode in 'CTT - Config'.",
+        "description": "Runs on every CTT hygiene health issue: assigns it to the person responsible (from the issue's owner marker and the CTT registry), sends them a Slack DM with the fix and the answer buttons Fixed! / Not a violation, and waits for the answer. Fixed! runs the fix check (resolve with a close note, or ask again with what is still wrong); Not a violation resolves as False Positive and tells the CTT channel. DMs follow notify in 'CTT - Config'.",
         "fromversion": "8.15.0",
         "marketplaces": ["marketplacev2", "platform"],
         "tags": ["CTT"],
@@ -114,7 +155,7 @@ def playbook() -> dict:
         "adopted": True,
         "starttaskid": "0",
         "tasks": t,
-        "view": json.dumps({"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 1575, "width": 780, "x": 50, "y": 50}}}),
+        "view": json.dumps({"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 2085, "width": 1080, "x": -250, "y": 50}}}),
         "inputs": [],
         "outputs": [],
         "tests": ["No tests (auto formatted)"],
@@ -150,8 +191,10 @@ def main() -> None:
         "1. `CTTHygieneTriage` finds the owner from the issue's `[owner: ...]` marker, their name, role and Slack ID in the CTT registry, and the guideline.\n"
         "2. `core-update-issue` assigns the issue to the owner's email.\n"
         "3. With `notify.use_ai`, the `CTTHygieneMessagePrompt` AI task writes the DM text; otherwise the FOUND / RULE / FIX template from triage is used.\n"
-        "4. `CTTHygieneSendDM` lays it out for the workflow's code block and sends it through the CTT Slack Webhook integration.\n"
-        "5. The issue is set to In Progress once the owner has been told.\n\n"
+        "4. **Did you fix it?** is asked by Generated link (no timeout). In parallel `CTTHygieneAskLinks` waits for its links and `CTTHygieneSendDM` sends the DM: as Slack buttons **Fixed!**, **Not a violation** and **Open issue** with `notify.buttons`, otherwise with the links in the text. The issue is set to In Progress.\n"
+        "5. **Fixed!** runs `CTTHygieneFixCheck confirm=true`: a verified fix (or a guideline without a check) is resolved with a close note; otherwise the question is asked again and the next DM says what is still wrong.\n"
+        "6. **Not a violation** runs `CTTHygieneFixCheck false_positive=true`: a post in the CTT channel, then Resolved - False Positive with a close note.\n\n"
+        "The hourly `CTT - Hygiene - Fix Check` job also resolves issues it finds fixed; resolving the issue stops this playbook. "
         "Assigning and the AI step continue on error. DMs follow `notify.mode` (`off`, `admins_only`, `all`) and the daily limit in `CTT - Config`.\n"
     )
     (PACK / "Triggers").mkdir(exist_ok=True)

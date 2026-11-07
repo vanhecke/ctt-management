@@ -2,6 +2,8 @@ import demistomock as demisto  # noqa: F401
 from CommonServerPython import *  # noqa: F401
 
 import json
+import re
+import statistics
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -142,6 +144,88 @@ def thousands(n: Any) -> str:
     return f"{n:,}" if isinstance(n, int) else str(n)
 
 
+GUIDELINE_RE = re.compile(r"(CTT-[A-Z]+-\d+)")
+OWNER_MARKER_RE = re.compile(r"\[owner: ([^\]]+)\]|for owner (\S+)")
+
+
+def resolution_kind(comment: str) -> str:
+    """How a hygiene issue was closed, from the close note (same labels as CTTHygieneFixCheck)."""
+    c = comment or ""
+    if c.startswith("Auto-closed by the CTT fix check"):
+        return "auto check"
+    if c.startswith("Confirmed fixed by"):
+        return "owner confirmed"
+    if c.startswith("Marked not a violation"):
+        return "not a violation"
+    if "inventory check" in c.lower() or "sweep" in c.lower():
+        return "inventory check"
+    return "manual"
+
+
+def issue_owner(issue: dict) -> str:
+    m = OWNER_MARKER_RE.search(str(issue.get("description") or ""))
+    owner = (m.group(1) or m.group(2)) if m else ""
+    return owner_label(owner or str(issue.get("assigned_user_mail") or ""))
+
+
+def duration(hours: float) -> str:
+    return f"{round(hours)}h" if hours < 48 else f"{round(hours / 24)}d"
+
+
+def fix_metrics(resolved: list[dict], still_open: list[dict], now_ms: int) -> dict:
+    """Closed hygiene issues by how they closed, median time to fix (overall and per guideline,
+    without 'not a violation'), top fixers, and the oldest open issue."""
+    by_how: dict[str, int] = {}
+    hours: list[float] = []
+    per_gid: dict[str, list[float]] = {}
+    fixers: dict[str, int] = {}
+    for i in resolved:
+        how = resolution_kind(str(i.get("status.resolution_comment") or ""))
+        by_how[how] = by_how.get(how, 0) + 1
+        if how == "not a violation":
+            continue
+        start, end = int(i.get("_insert_time") or 0), int(i.get("resolution_status_modified_ts") or 0)
+        if start and end >= start:
+            h = (end - start) / 3_600_000
+            hours.append(h)
+            gid = GUIDELINE_RE.search(str(i.get("name") or ""))
+            per_gid.setdefault(gid.group(1) if gid else "other", []).append(h)
+        owner = issue_owner(i)
+        if owner != "unknown":
+            fixers[owner] = fixers.get(owner, 0) + 1
+    oldest = min(still_open, key=lambda i: int(i.get("_insert_time") or now_ms), default=None)
+    return {
+        "closed": sum(by_how.values()),
+        "by_how": dict(sorted(by_how.items(), key=lambda kv: -kv[1])),
+        "median": statistics.median(hours) if hours else None,
+        "per_guideline": {g: statistics.median(v) for g, v in sorted(per_gid.items(), key=lambda kv: -len(kv[1]))},
+        "fixers": dict(sorted(fixers.items(), key=lambda kv: -kv[1])),
+        "oldest": None
+        if not oldest
+        else {
+            "id": oldest.get("id"),
+            "guideline": (GUIDELINE_RE.search(str(oldest.get("name") or "")) or [None, "?"])[1],
+            "days": max(0, (now_ms - int(oldest.get("_insert_time") or now_ms)) // DAY_MS),
+            "owner": issue_owner(oldest),
+        },
+    }
+
+
+def fix_lines(m: dict, days: int) -> list[str]:
+    if not m:
+        return []
+    lines = [f"• Closed in {days} days: {m['closed']}" + (f" ({fmt_counts(m['by_how'])})" if m["by_how"] else "")]
+    if m.get("median") is not None:
+        per = ", ".join(f"{g} {duration(h)}" for g, h in list(m["per_guideline"].items())[:4])
+        lines.append(f"• Time to fix: median {duration(m['median'])}" + (f" ({per})" if per else ""))
+    if m.get("fixers"):
+        lines.append(f"• Top fixers: {fmt_counts(m['fixers'], 5)}")
+    if m.get("oldest"):
+        o = m["oldest"]
+        lines.append(f"• Oldest open: #{o['id']} {o['guideline']}, {plural(o['days'], 'day')} ({o['owner']})")
+    return lines
+
+
 def build_canvas(r: dict, days: int, now: datetime, tenant_url: str = "") -> str:
     """Plain text for the 'Tenant Status' canvas: the Slack workflow shows content without
     rendering Markdown, so the layout is emoji headers, short lines and bullets."""
@@ -162,7 +246,8 @@ def build_canvas(r: dict, days: int, now: datetime, tenant_url: str = "") -> str
         f"{health_light(open_issues)} HYGIENE",
         f"• Open hygiene issues: {open_issues} ({fmt_counts(by(hygiene, 'guideline', title=False))})",
         f"• Most to fix: {fmt_counts(owners, 5)}",
-        "• Each issue is assigned to its owner. Fix the object; the inventory check closes its own issues.",
+        *fix_lines(r.get("fix_metrics") or {}, days),
+        "• Fix the object: checked guidelines close by themselves within an hour; otherwise press Fixed! in the DM.",
         "",
         f"📊 LAST {days} DAYS",
         f"• Cases: {total(r['cases'])} new ({fmt_counts(by(r['cases'], 'xdm.case.domain'))}); "
@@ -270,6 +355,33 @@ def run_xql(query: str, days: int, timeout: int = 300) -> list[dict]:
         time.sleep(5)
 
 
+def hygiene_issues(filters: list[dict]) -> list[dict]:
+    issues: list[dict] = []
+    for start in range(0, 3000, 100):
+        body = {"request_data": {"filters": filters, "search_from": start, "search_to": start + 100}}
+        page = core_post("/public_api/v1/issue/search", body).get("DATA") or []
+        issues.extend(i for i in page if str(i.get("name", "")).startswith("CTT - Hygiene - "))
+        if len(page) < 100:
+            break
+    return issues
+
+
+def collect_fix_metrics(days: int) -> dict:
+    now_ms = int(time.time() * 1000)
+    since = now_ms - days * DAY_MS
+    health = {"field": "issue_domain", "operator": "in", "value": ["Health"]}
+    resolved = hygiene_issues(
+        [
+            health,
+            {"field": "status.progress", "operator": "in", "value": ["Resolved"]},
+            {"field": "_insert_time", "operator": "gte", "value": since - 90 * DAY_MS},
+        ]
+    )
+    resolved = [i for i in resolved if int(i.get("resolution_status_modified_ts") or 0) >= since]
+    still_open = hygiene_issues([health, {"field": "status.progress", "operator": "in", "value": ["New", "In Progress"]}])
+    return fix_metrics(resolved, still_open, now_ms)
+
+
 def collect(days: int, errors: list[str]) -> dict:
     stats: dict[str, Any] = {}
     for key, query in QUERIES.items():
@@ -303,6 +415,10 @@ def collect(days: int, errors: list[str]) -> dict:
         stats.setdefault("open_cases", "?")
         stats.setdefault("new_cases_24h", "?")
         errors.append(f"cases: {e}")
+    try:
+        stats["fix_metrics"] = collect_fix_metrics(days)
+    except Exception as e:
+        errors.append(f"time to fix: {e}")
     try:
         res = core_post("/settings/integration/search", {"size": 1000})
         stats["integrations_active"] = active_integrations(res.get("instances") or [] if isinstance(res, dict) else [])

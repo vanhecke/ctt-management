@@ -38,3 +38,15 @@ def test_validate_url():
 def test_build_payload_url_key_only_when_given():
     assert "url" not in build_payload("msg_person", "hi", "U1", default_channel_id="C0")
     assert build_payload("msg_person", "hi", "U1", default_channel_id="C0", url="https://t/1")["url"] == "https://t/1"
+
+
+def test_health_issue_dm_carries_the_three_button_urls():
+    buttons = {"fixed_url": "https://t/f", "not_violation_url": "https://t/n", "issue_url": "https://t/i"}
+    payload = build_payload("msg_person_health_issue", "hi", "U1", default_channel_id="C0", buttons=buttons)
+    assert payload["action"] == "msg_person_health_issue"
+    assert {k: payload[k] for k in buttons} == buttons
+
+
+def test_health_issue_dm_needs_every_button_url():
+    with pytest.raises(DemistoException, match="not_violation_url, issue_url"):
+        build_payload("msg_person_health_issue", "hi", "U1", default_channel_id="C0", buttons={"fixed_url": "https://t/f"})

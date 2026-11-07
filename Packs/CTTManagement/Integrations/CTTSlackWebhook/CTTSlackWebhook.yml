@@ -60,10 +60,11 @@ script:
       auto: PREDEFINED
       predefined:
       - msg_person
+      - msg_person_health_issue
       - msg_channel
       - channel_update_topic
       - canvas_update
-      description: msg_person (DM slack_user_id), msg_channel (post to slack_channel_id), channel_update_topic (set the CTT channel topic to content), canvas_update (replace the 'Tenant Status' canvas with content).
+      description: msg_person (DM slack_user_id), msg_person_health_issue (DM with the buttons Fixed!, Not a violation and Open issue), msg_channel (post to slack_channel_id), channel_update_topic (set the CTT channel topic to content), canvas_update (replace the 'Tenant Status' canvas with content).
     - name: content
       required: true
       description: The message, topic or canvas content. Slack formatting for messages, markdown for the canvas.
@@ -73,6 +74,12 @@ script:
       description: Slack channel ID for msg_channel.
     - name: url
       description: A link to send as the separate url field (only when the instance enables it).
+    - name: fixed_url
+      description: msg_person_health_issue only - the link behind the Fixed! button.
+    - name: not_violation_url
+      description: msg_person_health_issue only - the link behind the Not a violation button.
+    - name: issue_url
+      description: msg_person_health_issue only - the link behind the Open issue button.
     outputs:
     - contextPath: CTTSlackWebhook.Sent.action
       description: The action sent.

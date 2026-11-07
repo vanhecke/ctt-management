@@ -34,6 +34,18 @@ args:
   description: The issue ID, shown in the footer.
 - name: guideline_id
   description: The guideline ID, shown in the header box.
+- name: note
+  description: A note shown above the message, for example what is still wrong after the owner said it was fixed.
+- name: fixed_url
+  description: Link that answers "Fixed" on the issue's question (from CTTHygieneAskLinks).
+- name: not_violation_url
+  description: Link that answers "Not a violation" on the issue's question.
+- name: buttons
+  auto: PREDEFINED
+  predefined:
+  - "true"
+  - "false"
+  description: true sends the links as Slack buttons (webhook action msg_person_health_issue, notify.buttons in CTT - Config); false lists them in the text.
 - name: content
   description: Text that is already laid out for the code block (for example the case housekeeping digest). Sent as is instead of the template or AI message.
 outputs:

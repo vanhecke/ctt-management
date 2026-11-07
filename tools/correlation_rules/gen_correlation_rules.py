@@ -310,11 +310,27 @@ OWNER_INDEX_QUERY = f"""{EXTRACT}
 | fields object_kind, object_name, creator, last_editor, last_change"""
 ENDPOINT_OWNER_QUERY = f"""{ENDPOINT_BASE}
 | fields endpoint_id, endpoint_name, ip10, owner, owner_source"""
+# Rule stages the fix check reuses, so it judges an issue fixed by the rule's own logic.
+SCOPE_STAGES = '| alter scope_target = coalesce(arrayindex(regextract(description, "with target (.+?) created$"), 0), arrayindex(regextract(description, "scope updated to include: (.+)$"), 0))' + "\n" + '| alter scope_tags = arrayindex(regextract(scope_target, "tags (?:=|in) ([^=]+?)(?: and [a-z ]+ (?:=|in) .*)?$"), 0)'
+# "__NAMES__" is replaced at run time by the quoted names of the open issues.
+FIX_POLICY_QUERY = f"""{AUDIT}
+| filter object_kind = "Policy rule" and object_name in ("__NAMES__")
+{SCOPE_STAGES.splitlines()[0]}
+| filter action = "delete" or scope_target != null
+{SCOPE_STAGES.splitlines()[1]}
+| dedup object_name by desc _time
+| fields _time, object_name, action, actor, scope_target, scope_tags"""
+FIX_ENDPOINT_QUERY = f"""{ENDPOINT_BASE}
+| filter endpoint_name in ("__NAMES__")
+| alter violating = if(ip10 != null and (range_owner = null or (owner != null and range_owner != owner)), 1, 0)
+| fields endpoint_name, ip10, owner, range_owner, violating"""
 # Queries that scripts run with the same stages as the rules, so a rule, the owner index and the
 # case housekeeping always agree on object names and endpoint owners.
 GENERATED = [
     (SCRIPTS / "CTTOwnerIndex" / "CTTOwnerIndex.py", "OWNER_QUERY", OWNER_INDEX_QUERY),
     (SCRIPTS / "CTTCaseHousekeeping" / "CTTCaseHousekeeping.py", "ENDPOINT_OWNER_QUERY", ENDPOINT_OWNER_QUERY),
+    (SCRIPTS / "CTTHygieneFixCheck" / "CTTHygieneFixCheck.py", "FIX_POLICY_QUERY", FIX_POLICY_QUERY),
+    (SCRIPTS / "CTTHygieneFixCheck" / "CTTHygieneFixCheck.py", "FIX_ENDPOINT_QUERY", FIX_ENDPOINT_QUERY),
 ]
 
 

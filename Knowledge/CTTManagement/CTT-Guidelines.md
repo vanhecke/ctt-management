@@ -184,13 +184,19 @@ Before you leave the team, delete your objects or hand them over to another DC, 
   `CTT - Hygiene - <guideline ID> - <what happened>`. Each one appears in the Issues table and
   opens its own case, both in the **Health** domain, apart from the Security cases you demo with.
 - The issue is **assigned to you** when it is about something you did or own, and you get a short
-  **Slack DM** from the CTT workflow explaining what was found, the guideline, how to fix it, and a
-  link to the issue. At most three DMs per person per day.
-- Objects are never changed or deleted automatically. You fix the object; the inventory check
-  closes its own issues once things are fixed. The one exception is cases: Security cases are
-  assigned after a day and resolved after 7 days (`CTT-CASE-01`, `CTT-CASE-02`).
-- If something was intended (a test, a demo), reply in the team channel and a CTT admin resolves
-  the issue.
+  **Slack DM** from the CTT workflow explaining what was found, the guideline and how to fix it,
+  with the buttons **Fixed!**, **Not a violation** and **Open issue**.
+- Objects are never changed or deleted automatically. You fix the object, then:
+  - most issues close by themselves within an hour: the pack checks the fix (renamed or deleted
+    objects, registry entries, policy scopes, re-attached built-in content, endpoint ranges);
+  - or press **Fixed!**: the pack checks it where it can and resolves the issue, or tells you what
+    it still sees;
+  - if something was intended or wrong (a test, a demo), press **Not a violation**: the issue is
+    closed as a false positive and the CTT admins are told.
+- Every closed issue carries a note saying why it was closed. An issue you don't answer stays
+  open; you get one daily digest of your issues open for more than a day.
+- The one exception to "never changed automatically" is cases: Security cases are assigned after
+  a day and resolved after 7 days (`CTT-CASE-01`, `CTT-CASE-02`).
 - The **Tenant Status** canvas and the topic of the team channel show the tenant's health every
   morning, and the `CTT - Hygiene` dashboard has the details.
 - `CTT-Guideline-Coverage.md` lists which guidelines are monitored and how.
@@ -224,3 +230,4 @@ Before you leave the team, delete your objects or hand them over to another DC, 
 | 2026-11-05 | First draft: guideline IDs, Active and Proposed guidelines |
 | 2026-11-06 | Your tag: primary tag plus alias, registry sheet layout |
 | 2026-11-06 | How monitoring works: issues are assigned to their owner, Slack DM, Tenant Status canvas |
+| 2026-11-07 | How monitoring works: Fixed! / Not a violation buttons, automatic fix checks with close notes, daily digest |

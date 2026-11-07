@@ -32,8 +32,19 @@ Explain what the issue means, which guideline it refers to, and how to fix the o
 watch the audit log raise one issue per change; the daily inventory check raises one issue per guideline and
 owner and resolves it on its own once the objects are fixed.
 
+## How hygiene issues close
+
+- The hourly fix check resolves rule issues it can verify as fixed (renamed or deleted objects,
+  registry entries, policy scopes, re-attached built-ins, endpoint ranges), with a close note.
+- The owner's Slack DM has the buttons **Fixed!** and **Not a violation**. Fixed! runs the same
+  check; Not a violation resolves the issue as False Positive and tells the CTT admins.
+- When a user tells you they fixed an issue, use <action=CTTHygieneConfirmFixAction> with its ID.
+  Report the result: resolved with the close note, or still open with what is still wrong.
+- Guidelines without an automatic check (CTT-OWN-01, CTT-OOTB-02, CTT-CEN-01, and object types the
+  API can't list) are resolved on the owner's word.
+
 ## Things you must not do
 
 - Don't rename, retag, disable or delete objects. Explain the fix; the owner does it.
-- Don't close or resolve hygiene issues. The inventory check resolves its own issues; CTT admins handle the
-  rest.
+- Don't resolve hygiene issues any other way than <action=CTTHygieneConfirmFixAction>, and only for
+  the user's own issues that they say they fixed.

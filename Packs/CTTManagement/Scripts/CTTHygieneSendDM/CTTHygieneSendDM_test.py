@@ -60,3 +60,21 @@ def test_template_body():
     assert any(line.startswith("RULE    CTT-TAG-01 · Prefix object names") for line in lines)
     assert any(line.startswith("FIX     • Rename it to") for line in lines)
     assert any(line.startswith("        • Or use another of your tags") for line in lines)
+
+
+def test_build_dm_with_buttons_explains_them_and_drops_the_link():
+    links = {"fixed": "https://t/f", "not_violation": "https://t/n"}
+    dm = build_dm("CTT-TAG-01", "Body.", "60900", "https://t/1", links=links, buttons=True)
+    assert "Press Fixed! below" in dm
+    assert "https://t/" not in dm
+
+
+def test_build_dm_without_buttons_lists_the_answer_links():
+    links = {"fixed": "https://t/f", "not_violation": "https://t/n"}
+    dm = build_dm("CTT-TAG-01", "Body.", "60900", "https://t/1", links=links)
+    assert dm.index("https://t/f") < dm.index("https://t/n") < dm.index("https://t/1")
+
+
+def test_build_dm_puts_the_reask_note_first():
+    dm = build_dm("CTT-TAG-01", "Body.", "60900", "", note="You said it was fixed, but playbook x still exists.")
+    assert dm.index("You said it was fixed") < dm.index("Body.")

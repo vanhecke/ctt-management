@@ -135,3 +135,48 @@ def test_most_to_fix_merges_unknown_owners():
 def test_active_integrations():
     instances = [{"enabled": "true"}, {"enabled": "false"}, {"enabled": "true", "isBuiltin": True}, {"enabled": True}]
     assert active_integrations(instances) == 2
+
+
+def test_fix_metrics_and_lines():
+    from CTTTenantStatus import fix_lines, fix_metrics
+
+    h = 3_600_000
+    resolved = [
+        {
+            "name": "CTT - Hygiene - CTT-TAG-01 - x",
+            "description": "[owner: a@x.com]",
+            "_insert_time": 1,
+            "resolution_status_modified_ts": 2 * h + 1,
+            "status.resolution_comment": "Auto-closed by the CTT fix check: gone",
+        },
+        {
+            "name": "CTT - Hygiene - CTT-LAB-01 - y",
+            "description": "[owner: b@x.com]",
+            "_insert_time": 1,
+            "resolution_status_modified_ts": 72 * h + 1,
+            "status.resolution_comment": "Confirmed fixed by b@x.com",
+        },
+        {
+            "name": "CTT - Hygiene - CTT-OWN-01 - z",
+            "description": "[owner: a@x.com]",
+            "_insert_time": 1,
+            "resolution_status_modified_ts": h + 1,
+            "status.resolution_comment": "Marked not a violation by a@x.com",
+        },
+    ]
+    still_open = [{"id": 7, "name": "CTT - Hygiene - CTT-LAB-01 - q", "description": "[owner: c@x.com]", "_insert_time": 1}]
+    m = fix_metrics(resolved, still_open, 5 * 86_400_000 + 1)
+    assert m["by_how"] == {"auto check": 1, "owner confirmed": 1, "not a violation": 1}
+    assert m["median"] == 37
+    assert m["fixers"] == {"a": 1, "b": 1}
+    assert m["oldest"] == {"id": 7, "guideline": "CTT-LAB-01", "days": 5, "owner": "c"}
+    lines = fix_lines(m, 7)
+    assert lines[0].startswith("• Closed in 7 days: 3 (")
+    assert lines[1] == "• Time to fix: median 37h (CTT-TAG-01 2h, CTT-LAB-01 3d)"
+    assert lines[-1] == "• Oldest open: #7 CTT-LAB-01, 5 days (c)"
+
+
+def test_fix_lines_empty():
+    from CTTTenantStatus import fix_lines
+
+    assert fix_lines({}, 7) == []

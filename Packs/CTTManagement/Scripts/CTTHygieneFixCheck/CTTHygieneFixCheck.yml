@@ -1,0 +1,81 @@
+commonfields:
+  id: CTTHygieneFixCheck
+  version: -1
+name: CTTHygieneFixCheck
+comment: Checks whether open CTT hygiene issues from the correlation rules are fixed and resolves the fixed ones with a close note saying why (GEN-01 registry, TAG-01/TAG-04 renamed or deleted objects, TAG-02 policy scope, OOTB-01 re-attached built-ins, LAB-01 endpoint ranges). With confirm=true it handles the owner's "Fixed!" answer (resolve if verified or if no check exists, otherwise report what is still wrong), with false_positive=true their "Not a violation" answer, and with remind=true it sends each owner a daily digest of their open issues.
+script: '-'
+type: python
+subtype: python3
+dockerimage: demisto/python3:3.12.15.14069087
+runas: DBotWeakRole
+enabled: true
+timeout: 900ns
+tags:
+- CTT
+args:
+- name: issue_id
+  description: Issue ID(s), comma-separated. Empty checks every open CTT hygiene issue from the rules.
+  isArray: true
+- name: owner
+  description: Only issues of this owner (email).
+- name: guideline
+  description: Only issues of this guideline ID, for example CTT-TAG-01.
+- name: confirm
+  auto: PREDEFINED
+  predefined:
+  - "true"
+  - "false"
+  defaultValue: "false"
+  description: The owner says it is fixed. Resolves verified issues and issues without an automatic check; keeps the others open with what is still wrong.
+- name: false_positive
+  auto: PREDEFINED
+  predefined:
+  - "true"
+  - "false"
+  defaultValue: "false"
+  description: The owner says it is not a violation. Resolves as False Positive and tells the CTT channel.
+- name: remind
+  auto: PREDEFINED
+  predefined:
+  - "true"
+  - "false"
+  defaultValue: "false"
+  description: After checking, send each owner one digest DM with their open issues older than a day (once a day).
+- name: dry_run
+  auto: PREDEFINED
+  predefined:
+  - "true"
+  - "false"
+  defaultValue: "false"
+  description: Report only; resolve nothing and send nothing.
+outputs:
+- contextPath: CTT.FixCheck.issue_id
+  description: Issue ID.
+  type: String
+- contextPath: CTT.FixCheck.guideline
+  description: Guideline ID.
+  type: String
+- contextPath: CTT.FixCheck.verdict
+  description: fixed, open or unchecked (no automatic check for this guideline or object type).
+  type: String
+- contextPath: CTT.FixCheck.evidence
+  description: What the check found.
+  type: String
+- contextPath: CTT.FixCheck.action
+  description: resolve, keep or none.
+  type: String
+- contextPath: CTT.FixCheck.note
+  description: The close note, or for a kept issue the message for the owner.
+  type: String
+- contextPath: CTT.FixCheck.resolved
+  description: True when the issue was resolved.
+  type: Boolean
+dependson:
+  must:
+  - core-api-post
+fromversion: 8.9.0
+marketplaces:
+- marketplacev2
+- platform
+tests:
+- No tests (auto formatted)

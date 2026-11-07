@@ -1,0 +1,30 @@
+{
+    "id": "CTT - Hygiene - Fix Check",
+    "name": "CTT - Hygiene - Fix Check",
+    "details": "Checks every open CTT hygiene issue from the correlation rules and resolves the ones that are fixed, with a close note saying why (renamed or deleted objects, registry entries, policy scopes, re-attached built-ins, endpoint ranges). Run by the job of the same name every hour.",
+    "playbookId": "CTT - Hygiene - Fix Check",
+    "scheduled": true,
+    "recurrent": true,
+    "cronView": false,
+    "humanCron": {
+        "timePeriodType": "hours",
+        "timePeriod": 1
+    },
+    "startDate": "2026-11-06T00:00:00Z",
+    "type": "##default##",
+    "timezone": "Asia/Singapore",
+    "timezoneOffset": -480,
+    "shouldTriggerNew": true,
+    "closePrevRun": true,
+    "tags": [
+        "CTT"
+    ],
+    "isFeed": false,
+    "selectedFeeds": [],
+    "isAllFeeds": false,
+    "fromVersion": "8.9.0",
+    "supportedModules": [
+        "xsiam",
+        "agentix"
+    ]
+}

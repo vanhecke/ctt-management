@@ -1,0 +1,59 @@
+commonfields:
+  id: CTTHygieneConfirmFixAction
+  version: -1
+display: CTT Confirm Hygiene Fix
+name: CTTHygieneConfirmFixAction
+tags:
+  - CTT
+category: Utilities
+description: >-
+  Records that a DC fixed one or more of their open CTT hygiene issues. It checks the fix where the
+  guideline has an automatic check and resolves the issue with a close note ("Confirmed fixed by …
+  and verified: …"); a guideline without a check is resolved on the DC's word. If the check still
+  sees the violation the issue stays open and the result says what is still wrong. Use only for the
+  user's own issues, after they say they fixed them.
+args:
+  - name: issue_id
+    description: The hygiene issue ID(s), comma-separated. Find them with the open-issues query of the CTT Hygiene skill.
+    type: string
+    required: true
+    underlyingargname: issue_id
+  - name: confirm
+    description: Always true for this action.
+    type: string
+    required: false
+    defaultvalue: "true"
+    hidden: true
+    underlyingargname: confirm
+outputs:
+  - name: verdict
+    description: fixed, open or unchecked per issue.
+    type: unknown
+    underlyingoutputcontextpath: CTT.FixCheck.verdict
+  - name: resolved
+    description: True per issue that was resolved.
+    type: unknown
+    underlyingoutputcontextpath: CTT.FixCheck.resolved
+  - name: note
+    description: The close note, or what is still wrong for an issue that stays open.
+    type: unknown
+    underlyingoutputcontextpath: CTT.FixCheck.note
+underlyingcontentitem:
+  id: CTTHygieneFixCheck
+  name: CTTHygieneFixCheck
+  type: script
+  version: -1
+requiresuserapproval: true
+fewshots:
+  - >-
+    "I renamed my playbook, issue 61001 can be closed." Run issue_id="61001", then report the
+    result: resolved with its note, or still open with what is still wrong.
+  - >-
+    "I fixed all my hygiene issues." First list their open hygiene issues, show them, then run with
+    their IDs once the user confirms.
+  - >-
+    WRONG: confirming someone else's issues, or issues the user did not say they fixed.
+marketplaces:
+  - platform
+supportedModules:
+  - agentix

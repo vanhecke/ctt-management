@@ -53,6 +53,23 @@ JOBS = [
         "cron": {"days": ALL_DAYS, "atTimeHour": "09", "atTimeMinute": "00", "timePeriodType": "weeks", "timePeriod": 1},
     },
     {
+        "name": "CTT - Hygiene - Fix Check",
+        "description": "Checks every open CTT hygiene issue from the correlation rules and resolves the ones that are fixed, with a close note saying why (renamed or deleted objects, registry entries, policy scopes, re-attached built-ins, endpoint ranges). Run by the job of the same name every hour.",
+        "steps": [{"script": "CTTHygieneFixCheck", "task": "Resolve fixed hygiene issues", "args": ["dry_run"]}],
+        "inputs": {"dry_run": ("false", "true only reports which issues are fixed.")},
+        "cron": {"timePeriodType": "hours", "timePeriod": 1},
+    },
+    {
+        "name": "CTT - Hygiene - Reminders",
+        "description": "Sends each owner one Slack digest with their CTT hygiene issues open for more than a day and what closed since yesterday (after a fix check). Run by the job of the same name every day at 10:00 Singapore time.",
+        "steps": [{"script": "CTTHygieneFixCheck", "task": "Check and send the daily digests", "args": ["remind", "dry_run"]}],
+        "inputs": {
+            "remind": ("true", "Send the digests."),
+            "dry_run": ("false", "true only shows the digests in the War Room."),
+        },
+        "cron": {"days": ALL_DAYS, "atTimeHour": "10", "atTimeMinute": "00", "timePeriodType": "weeks", "timePeriod": 1},
+    },
+    {
         # Its playbooks come from tools/playbooks/gen_marketplace_playbooks.py, not from steps.
         "name": "CTT - Marketplace Updates",
         "description": "Jev-reviewed Marketplace updates: TypeSafe Jev reviews each newer pack release against the enabled integrations, approved updates are installed and verified, held or failed ones get a review case, and a summary goes to the CTT Slack channel. Run by the job of the same name Monday to Thursday at 05:00 Singapore time.",
