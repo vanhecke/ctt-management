@@ -130,7 +130,13 @@ def ask_playbook() -> dict:
     t["1"]["scriptarguments"] = {"key": {"simple": "Ask"}}
     t["1"]["nexttasks"] = {"#none#": ["2"]}
     t["2"] = at("2", "title", "Ask and DM", "", 330)
-    t["2"]["nexttasks"] = {"#none#": [ASK, "4"]}
+    t["2"]["nexttasks"] = {"#none#": [ASK, "10"]}
+    # The links reach the context a few seconds after the question starts; a script started later
+    # gets them in its starting context (the only way to read them in a run started by an
+    # automation rule, whose context the context API can't see).
+    t["10"] = at("10", "regular", "Wait for the question's links", "Gives the question time to write its answer links to the context.", 400, x=450, extra={"scriptName": "Sleep"})
+    t["10"]["scriptarguments"] = {"seconds": {"simple": "20"}}
+    t["10"]["nexttasks"] = {"#none#": ["4"]}
     t[ASK] = at(ASK, "condition", "Did you fix it?", "Asked by Generated link: one link per answer, opened without a Cortex login, behind the Fixed! and Not a violation buttons of the DM. Waits until answered (no timeout); the daily digest reminds the owner.", 480, x=50)
     t[ASK]["message"] = {
         "to": {"simple": f"${{{CTX}.owner_email}}"},
@@ -144,7 +150,7 @@ def ask_playbook() -> dict:
         "replyOptions": ["Fixed", "Not a violation"],
     }
     t[ASK]["nexttasks"] = {"Fixed": ["5"], "Not a violation": ["6"]}
-    t["4"] = at("4", "regular", "Get the answer links", "Waits for the question's links in the context and returns the newest per answer.", 480, x=450, extra={"scriptName": "CTTHygieneAskLinks"})
+    t["4"] = at("4", "regular", "Get the answer links", "Returns the newest link per answer from the context.", 530, x=450, extra={"scriptName": "CTTHygieneAskLinks"})
     t["4"]["scriptarguments"] = {"task_id": {"simple": ASK}}
     # Without links (Generated link unavailable) the DM still goes out, without answer buttons.
     t["4"]["continueonerror"] = True

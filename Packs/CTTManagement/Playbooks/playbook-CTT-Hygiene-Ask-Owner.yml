@@ -84,6 +84,33 @@ tasks:
     nexttasks:
       '#none#':
       - '3'
+      - '10'
+  '10':
+    id: '10'
+    taskid: a51b575a-33b9-553b-a4b6-3fac6062fe84
+    type: regular
+    task:
+      id: a51b575a-33b9-553b-a4b6-3fac6062fe84
+      version: -1
+      name: Wait for the question's links
+      description: Gives the question time to write its answer links to the context.
+      type: regular
+      iscommand: false
+      brand: ''
+      scriptName: Sleep
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 450, "y": 400}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    scriptarguments:
+      seconds:
+        simple: '20'
+    nexttasks:
+      '#none#':
       - '4'
   '3':
     id: '3'
@@ -139,14 +166,14 @@ tasks:
       id: 7a136d7d-acf9-5db9-b66d-dd21ad3b6bc1
       version: -1
       name: Get the answer links
-      description: Waits for the question's links in the context and returns the newest per answer.
+      description: Returns the newest link per answer from the context.
       type: regular
       iscommand: false
       brand: ''
       scriptName: CTTHygieneAskLinks
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 480}}'
+    view: '{"position": {"x": 450, "y": 530}}'
     note: false
     timertriggers: []
     ignoreworker: false

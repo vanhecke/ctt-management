@@ -65,9 +65,15 @@ def main():  # pragma: no cover
         timeout = int(args.get("timeout") or 90)
         investigation_id = str(demisto.investigation().get("id"))
         deadline = time.time() + timeout
-        links: dict[str, str] = {}
-        while True:
-            links = newest_links(live_links(investigation_id), task_id)
+        # The context this script started with: the playbook waits before this task, so the links
+        # are usually there. Runs started by an automation rule keep their context where the
+        # context API can't read it, so this is the main source; the API poll covers the rest.
+        links = newest_links((demisto.context() or {}).get("Ask", {}).get("Links"), task_id)
+        while len(links) < len(OPTIONS):
+            try:
+                links = newest_links(live_links(investigation_id), task_id) or links
+            except Exception as e:
+                demisto.debug(f"context API: {e}")
             if len(links) == len(OPTIONS) or time.time() >= deadline:
                 break
             time.sleep(3)
