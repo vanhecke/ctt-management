@@ -17,7 +17,7 @@ ENDPOINT_RE = re.compile(r"^Endpoint (?P<name>.+?): ")
 EMAIL_RE = re.compile(r"^(?P<email>[^\s@]+@[^\s@]+) signed in")
 TAG_RE = re.compile(r"^\s*([A-Za-z0-9]{2,16})\s*[-_]")
 # Issues of the inventory check resolve themselves through its own plan().
-INVENTORY_MARKERS = ("The inventory check found", "The sweep found")
+INVENTORY_MARKERS = ("The inventory check found", "The sweep found", "Daily sweep found")
 NO_OWNER = {"", "unknown", "null", "none", "unassigned"}
 # Audit-log object kinds whose objects the API can list by name (audit kind -> listed kind).
 LISTED_KINDS = {
@@ -315,7 +315,9 @@ def check_item(item: dict, ctx: dict) -> tuple[str, str]:
         return check_endpoint(item, ctx["endpoints"].get(item["endpoint"], []))
     if gid in NO_CHECK:
         return "unchecked", f"there is no automatic check for {gid}: {NO_CHECK[gid]}"
-    return "unchecked", f"there is no automatic check for {gid} on a {kind.lower() or 'this kind of object'}"
+    if kind:
+        return "unchecked", f"there is no automatic check for {gid} on this object type ({kind})"
+    return "unchecked", f"there is no automatic check for this {gid} issue"
 
 
 # ---------- decisions ----------

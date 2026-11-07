@@ -51,6 +51,8 @@ def test_parse_issue_reads_guideline_object_and_owner():
 def test_parse_issue_skips_inventory_issues_and_others():
     inv = issue("CTT - Hygiene - CTT-TAG-01 - Objects without a registered owner tag (x)", "The inventory check found 3 item(s)")
     assert parse_issue(inv) is None
+    old_sweep = issue("CTT - Hygiene - CTT-CASE-01 - Stale open Security cases (unassigned)", "Daily sweep found 1000 item(s)")
+    assert parse_issue(old_sweep) is None
     assert parse_issue(issue("Collection error in the instance X", "boom")) is None
 
 
