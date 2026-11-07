@@ -5,21 +5,22 @@ import json
 import re
 
 REGISTRY_LIST = "CTT - Registry"
-IP_RE = re.compile(r"^10\.(\d{1,3})\.\d{1,3}\.\d{1,3}$")
+# A lab octet covers 10.<octet>.0.0/16 and 172.16.<octet>.0/24 (CTT-LAB-01).
+IP_RE = re.compile(r"^(?:10\.(\d{1,3})\.\d{1,3}\.\d{1,3}|172\.16\.(\d{1,3})\.\d{1,3})$")
 
 
 def lab_range(octet: str) -> str:
-    return f"10.{octet}.0.0/16" if octet else ""
+    return f"10.{octet}.0.0/16, 172.16.{octet}.0/24" if octet else ""
 
 
 def lookup(rows: list[dict], query: str) -> tuple[str, list[dict]]:
-    """Match a tag, email, name, lab octet or 10.x.y.z address. Returns (match type, rows)."""
+    """Match a tag, email, name, lab octet or lab address (10.x.y.z, 172.16.x.y). Returns (match type, rows)."""
     q = (query or "").strip().lower()
     if not q:
         return "all", rows
     m = IP_RE.match(q)
     if m or q.isdigit():
-        octet = m.group(1) if m else q
+        octet = (m.group(1) or m.group(2)) if m else q
         return "lab range", [r for r in rows if r.get("lab_octet") == octet]
     by_tag = [r for r in rows if r.get("tag") == q]
     if by_tag:

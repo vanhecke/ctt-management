@@ -18,7 +18,8 @@ DAY_MS = 86_400_000
 PAGE = 100  # the public API refuses search sizes above 100
 WIDTH = 46  # same box width as the hygiene DMs
 TAG_RE = re.compile(r"^\s*([A-Za-z0-9]{2,16})\s*[-_]")
-IP10_RE = re.compile(r"\b10\.(\d{1,3})\.\d{1,3}\.\d{1,3}\b")
+# A lab octet covers 10.<octet>.0.0/16 and 172.16.<octet>.0/24 (CTT-LAB-01).
+LAB_IP_RE = re.compile(r"\b(?:10\.(\d{1,3})\.\d{1,3}\.\d{1,3}|172\.16\.(\d{1,3})\.\d{1,3})\b")
 NO_OWNER = {"", "unknown", "unassigned", "central", "null", "none"}
 DEFAULTS = {
     "domains": ["Security"],
@@ -43,14 +44,16 @@ ENDPOINT_OWNER_QUERY = (
     '| alter policy_tag = lowercase(arrayindex(regextract(assigned_prevention_policy, "^\\s*([A-Za-z0-9]{2'
     ',16})\\s*[-_]"), 0)), package_tag = lowercase(arrayindex(regextract(installation_package, "^\\s*([A-Za'
     '-z0-9]{2,16})\\s*[-_]"), 0))\n'
-    '| alter ip10 = arrayindex(arrayfilter(ip_address, "@element" ~= "^10\\."), 0)\n'
-    '| alter ip_octet = arrayindex(regextract(ip10, "^10\\.(\\d+)\\."), 0)\n'
+    '| alter lab_ip = coalesce(arrayindex(arrayfilter(ip_address, "@element" ~= "^10\\."), 0), arrayindex('
+    'arrayfilter(ip_address, "@element" ~= "^172\\.16\\."), 0))\n'
+    '| alter ip_octet = coalesce(arrayindex(regextract(lab_ip, "^10\\.(\\d+)\\."), 0), arrayindex(regextract'
+    '(lab_ip, "^172\\.16\\.(\\d+)\\."), 0))\n'
     "| arrayexpand etags\n"
     "| alter etag = lowercase(etags)\n"
     '| join type = left (dataset = ctt_registry | filter role != "central" | alter etag = ctt_tag, etag_o'
     "wner = owner_email | fields etag, etag_owner) as te te.etag = etag\n"
-    "| comp max(etag_owner) as tag_owner by endpoint_id, endpoint_name, ip10, ip_octet, policy_tag, packa"
-    "ge_tag, assigned_prevention_policy, installation_package\n"
+    "| comp max(etag_owner) as tag_owner by endpoint_id, endpoint_name, lab_ip, ip_octet, policy_tag, pac"
+    "kage_tag, assigned_prevention_policy, installation_package\n"
     '| join type = left (dataset = ctt_registry | filter role != "central" | alter policy_tag = ctt_tag, '
     "policy_owner = owner_email | fields policy_tag, policy_owner) as tp tp.policy_tag = policy_tag\n"
     '| join type = left (dataset = ctt_registry | filter role != "central" | alter package_tag = ctt_tag,'
@@ -76,7 +79,7 @@ ENDPOINT_OWNER_QUERY = (
     'olicy ", assigned_prevention_policy), null)))))\n'
     '| alter owner_label = coalesce(owner, "unknown"), owner_note = if(owner != null, concat("Owner: ", o'
     'wner, " (", owner_source, ")."), "No owner found: add your tag to the endpoint.")\n'
-    "| fields endpoint_id, endpoint_name, ip10, owner, owner_source"
+    "| fields endpoint_id, endpoint_name, lab_ip, owner, owner_source"
 )
 # END GENERATED ENDPOINT_OWNER_QUERY
 
@@ -100,9 +103,10 @@ def host_endpoint_ids(case: dict) -> list[str]:
 
 
 def lab_octets(case: dict) -> list[str]:
-    """The x of every 10.x.y.z address in the case's hosts and description, in order."""
+    """The lab octet of every 10.<octet>.y.z and 172.16.<octet>.z address in the case's hosts and
+    description, in order."""
     text = " ".join([*(str(h).split(":")[0] for h in case.get("hosts") or []), str(case.get("description") or "")])
-    return IP10_RE.findall(text)
+    return [a or b for a, b in LAB_IP_RE.findall(text)]
 
 
 def registry_maps(rows: list[dict]) -> tuple[dict[str, str], dict[str, str], dict[str, dict]]:
@@ -129,7 +133,7 @@ def pick_owner(
     octet_owner: dict[str, str],
 ) -> tuple[str, str]:
     """(owner email, how it was found). The tag of the rule behind the case's issues wins, then the
-    owner of an endpoint in the case, then the lab range of a 10.x address. Within one source the
+    owner of an endpoint in the case, then the lab range of a lab address (10.x or 172.16.x). Within one source the
     most frequent owner wins."""
     candidates = [
         ("correlation rule tag", [tag_owner.get(parse_tag(n) or "", "") for n in rule_names]),

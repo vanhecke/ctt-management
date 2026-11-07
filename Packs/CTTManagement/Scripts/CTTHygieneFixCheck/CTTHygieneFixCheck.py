@@ -149,14 +149,16 @@ FIX_ENDPOINT_QUERY = (
     '| alter policy_tag = lowercase(arrayindex(regextract(assigned_prevention_policy, "^\\s*([A-Za-z0-9]{2'
     ',16})\\s*[-_]"), 0)), package_tag = lowercase(arrayindex(regextract(installation_package, "^\\s*([A-Za'
     '-z0-9]{2,16})\\s*[-_]"), 0))\n'
-    '| alter ip10 = arrayindex(arrayfilter(ip_address, "@element" ~= "^10\\."), 0)\n'
-    '| alter ip_octet = arrayindex(regextract(ip10, "^10\\.(\\d+)\\."), 0)\n'
+    '| alter lab_ip = coalesce(arrayindex(arrayfilter(ip_address, "@element" ~= "^10\\."), 0), arrayindex('
+    'arrayfilter(ip_address, "@element" ~= "^172\\.16\\."), 0))\n'
+    '| alter ip_octet = coalesce(arrayindex(regextract(lab_ip, "^10\\.(\\d+)\\."), 0), arrayindex(regextract'
+    '(lab_ip, "^172\\.16\\.(\\d+)\\."), 0))\n'
     "| arrayexpand etags\n"
     "| alter etag = lowercase(etags)\n"
     '| join type = left (dataset = ctt_registry | filter role != "central" | alter etag = ctt_tag, etag_o'
     "wner = owner_email | fields etag, etag_owner) as te te.etag = etag\n"
-    "| comp max(etag_owner) as tag_owner by endpoint_id, endpoint_name, ip10, ip_octet, policy_tag, packa"
-    "ge_tag, assigned_prevention_policy, installation_package\n"
+    "| comp max(etag_owner) as tag_owner by endpoint_id, endpoint_name, lab_ip, ip_octet, policy_tag, pac"
+    "kage_tag, assigned_prevention_policy, installation_package\n"
     '| join type = left (dataset = ctt_registry | filter role != "central" | alter policy_tag = ctt_tag, '
     "policy_owner = owner_email | fields policy_tag, policy_owner) as tp tp.policy_tag = policy_tag\n"
     '| join type = left (dataset = ctt_registry | filter role != "central" | alter package_tag = ctt_tag,'
@@ -183,9 +185,9 @@ FIX_ENDPOINT_QUERY = (
     '| alter owner_label = coalesce(owner, "unknown"), owner_note = if(owner != null, concat("Owner: ", o'
     'wner, " (", owner_source, ")."), "No owner found: add your tag to the endpoint.")\n'
     '| filter endpoint_name in ("__NAMES__")\n'
-    "| alter violating = if(ip10 != null and (range_owner = null or (owner != null and range_owner != own"
-    "er)), 1, 0)\n"
-    "| fields endpoint_name, ip10, owner, range_owner, violating"
+    "| alter violating = if(lab_ip != null and (range_owner = null or (owner != null and range_owner != o"
+    "wner)), 1, 0)\n"
+    "| fields endpoint_name, lab_ip, owner, range_owner, violating"
 )
 # END GENERATED FIX_ENDPOINT_QUERY
 
@@ -300,12 +302,14 @@ def check_endpoint(item: dict, rows: list[dict]) -> tuple[str, str]:
         return "fixed", f"{what(item)} no longer reports to the tenant"
     bad = [r for r in rows if str(r.get("violating")) == "1"]
     if not bad:
-        ip = next((r.get("ip10") for r in rows if r.get("ip10")), None)
-        return "fixed", f"{what(item)} now has " + (f"{ip}, in its owner's lab range" if ip else "no 10.x address")
+        ip = next((r.get("lab_ip") for r in rows if r.get("lab_ip")), None)
+        return "fixed", f"{what(item)} now has " + (
+            f"{ip}, in its owner's lab range" if ip else "no lab address (10.x or 172.16.x)"
+        )
     r = bad[0]
     if r.get("range_owner"):
-        return "open", f"{what(item)} still has {r.get('ip10')}, in the lab range of {r.get('range_owner')}"
-    return "open", f"{what(item)} still has {r.get('ip10')}, in an unassigned lab range"
+        return "open", f"{what(item)} still has {r.get('lab_ip')}, in the lab range of {r.get('range_owner')}"
+    return "open", f"{what(item)} still has {r.get('lab_ip')}, in an unassigned lab range"
 
 
 def check_item(item: dict, ctx: dict) -> tuple[str, str]:

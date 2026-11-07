@@ -24,9 +24,9 @@ them who to ask (CTT-OWN-01).
 1. Get the user's lab range with <action=CTTRegistryLookupAction>.
 2. List endpoints with <action=CortexListEndpoints>: ip_list for addresses they give you, or
    hostname for their machines.
-3. For each endpoint, say whether its 10.x address is inside their range, whether it carries
+3. For each endpoint, say whether its lab address (10.x or 172.16.x) is inside their range, whether it carries
    their tag, and which prevention policy it uses. An address in someone else's range breaks
-   CTT-LAB-01. Endpoints outside 10.0.0.0/8 (home networks) are only checked for the tag.
+   CTT-LAB-01. Endpoints outside 10.0.0.0/8 and 172.16.0.0/16 (home networks) are only checked for the tag.
 
 ## Who else is around?
 

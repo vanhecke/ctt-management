@@ -112,11 +112,11 @@ def test_check_policy():
 def test_check_endpoint():
     item = parse_issue(LAB01)
     assert check_endpoint(item, [])[0] == "fixed"
-    assert check_endpoint(item, [{"violating": "0", "ip10": "10.23.1.2"}]) == (
+    assert check_endpoint(item, [{"violating": "0", "lab_ip": "10.23.1.2"}]) == (
         "fixed",
         "endpoint lnx-2 now has 10.23.1.2, in its owner's lab range",
     )
-    assert check_endpoint(item, [{"violating": 1, "ip10": "10.9.1.2", "range_owner": None}])[0] == "open"
+    assert check_endpoint(item, [{"violating": 1, "lab_ip": "10.9.1.2", "range_owner": None}])[0] == "open"
 
 
 def test_owner_tags_adds_ctt_for_admins():

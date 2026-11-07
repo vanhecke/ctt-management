@@ -8,7 +8,7 @@ tags:
 category: Utilities
 description: >-
   Look up the CTT registry: who owns a tag or alias, what a person's tags and lab range
-  10.x.0.0/16 are, who owns a lab octet or a 10.x.y.z address, and who the CTT admins are.
+  10.x.0.0/16 and 172.16.x.0/24 are, who owns a lab octet or a 10.x.y.z or 172.16.x.y address, and who the CTT admins are.
   Returns one row per person with all their tags. An empty result means not registered.
 args:
   - name: query
@@ -30,7 +30,7 @@ outputs:
     type: unknown
     underlyingoutputcontextpath: CTT.RegistryLookup.tags
   - name: lab_range
-    description: The owner's lab range, 10.x.0.0/16.
+    description: The owner's lab ranges, 10.x.0.0/16 and 172.16.x.0/24.
     type: string
     underlyingoutputcontextpath: CTT.RegistryLookup.lab_range
   - name: role

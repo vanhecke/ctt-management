@@ -32,7 +32,7 @@ Active:
 - CTT-OOTB-02 Don't edit the built-in AI agents.
 - CTT-CEN-01 Leave CIE, VirusTotal, tenant settings, the marketplace, SSO/RBAC, the Slack bot,
   XTI/TIM rules and `CTT` content to the CTT admins.
-- CTT-LAB-01 Build your lab in your own range 10.<x>.0.0/16 (x = your lab octet).
+- CTT-LAB-01 Build your lab in your own range 10.<x>.0.0/16 or 172.16.<x>.0/24 (x = your lab octet).
 - CTT-CASE-01 Close Security Testing cases (resolve reason security_testing) when your attack
   chain is done.
 

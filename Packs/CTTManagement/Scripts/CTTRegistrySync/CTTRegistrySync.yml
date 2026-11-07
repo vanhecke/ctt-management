@@ -46,7 +46,7 @@ outputs:
   description: admin, dc or central.
   type: String
 - contextPath: CTT.Registry.lab_octet
-  description: The x in the owner's lab range 10.x.0.0/16.
+  description: The x in the owner's lab ranges 10.x.0.0/16 and 172.16.x.0/24.
   type: String
 - contextPath: CTT.Registry.active
   description: true or false.

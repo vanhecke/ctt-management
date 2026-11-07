@@ -41,12 +41,12 @@ ENDPOINT_BASE = """dataset = endpoints
 | alter etags = arrayconcat(json_extract_scalar_array(tags, "$.endpoint_tags"), json_extract_scalar_array(tags, "$.server_tags"))
 | alter etags = if(etags = null or array_length(etags) = 0, arraycreate("-"), etags)
 | alter policy_tag = lowercase(arrayindex(regextract(assigned_prevention_policy, "^\\s*([A-Za-z0-9]{2,16})\\s*[-_]"), 0)), package_tag = lowercase(arrayindex(regextract(installation_package, "^\\s*([A-Za-z0-9]{2,16})\\s*[-_]"), 0))
-| alter ip10 = arrayindex(arrayfilter(ip_address, "@element" ~= "^10\\."), 0)
-| alter ip_octet = arrayindex(regextract(ip10, "^10\\.(\\d+)\\."), 0)
+| alter lab_ip = coalesce(arrayindex(arrayfilter(ip_address, "@element" ~= "^10\\."), 0), arrayindex(arrayfilter(ip_address, "@element" ~= "^172\\.16\\."), 0))
+| alter ip_octet = coalesce(arrayindex(regextract(lab_ip, "^10\\.(\\d+)\\."), 0), arrayindex(regextract(lab_ip, "^172\\.16\\.(\\d+)\\."), 0))
 | arrayexpand etags
 | alter etag = lowercase(etags)
 | join type = left (dataset = ctt_registry | filter role != "central" | alter etag = ctt_tag, etag_owner = owner_email | fields etag, etag_owner) as te te.etag = etag
-| comp max(etag_owner) as tag_owner by endpoint_id, endpoint_name, ip10, ip_octet, policy_tag, package_tag, assigned_prevention_policy, installation_package
+| comp max(etag_owner) as tag_owner by endpoint_id, endpoint_name, lab_ip, ip_octet, policy_tag, package_tag, assigned_prevention_policy, installation_package
 | join type = left (dataset = ctt_registry | filter role != "central" | alter policy_tag = ctt_tag, policy_owner = owner_email | fields policy_tag, policy_owner) as tp tp.policy_tag = policy_tag
 | join type = left (dataset = ctt_registry | filter role != "central" | alter package_tag = ctt_tag, package_owner = owner_email | fields package_tag, package_owner) as tk tk.package_tag = package_tag
 | join type = left (dataset = ctt_registry | filter lab_octet != "" | comp max(owner_email) as range_owner by lab_octet | alter ip_octet = lab_octet | fields ip_octet, range_owner) as tr tr.ip_octet = ip_octet
@@ -56,7 +56,7 @@ ENDPOINT_BASE = """dataset = endpoints
 | alter owner = coalesce(tag_owner, policy_owner, package_owner, installer_owner, policy_editor)
 | alter owner_source = if(tag_owner != null, "endpoint tag", if(policy_owner != null, "tag in its policy name", if(package_owner != null, "tag in its installer name", if(installer_owner != null, concat("creator of installer ", installation_package), if(policy_editor != null, concat("last editor of policy ", assigned_prevention_policy), null)))))
 | alter owner_label = coalesce(owner, "unknown"), owner_note = if(owner != null, concat("Owner: ", owner, " (", owner_source, ")."), "No owner found: add your tag to the endpoint.")"""
-ENDPOINT_FIELDS = "| fields endpoint_id, endpoint_name, ip10, owner, owner_label, owner_source, owner_note, tag_owner, range_owner, assigned_prevention_policy, installation_package, finding, guideline_id, title"
+ENDPOINT_FIELDS = "| fields endpoint_id, endpoint_name, lab_ip, owner, owner_label, owner_source, owner_note, tag_owner, range_owner, assigned_prevention_policy, installation_package, finding, guideline_id, title"
 ENDPOINT_LINK = 'dataset = endpoints | filter endpoint_name = "$endpoint_name" | dedup endpoint_id by desc last_seen'
 
 RULES = [
@@ -183,13 +183,13 @@ RULES = [
         "file": "Endpoint_outside_owners_lab_range",
         "name": "CTT - Hygiene - Endpoint outside owner's lab range",
         "guideline": "CTT-LAB-01",
-        "description": "An endpoint has a 10.x.y.z address in a lab range that is unassigned or belongs to someone other than the endpoint's owner. The owner is found through its endpoint tag, the tag in its policy or installer name, the creator of its installer, or the last editor of its policy rule (CTT-LAB-01).",
+        "description": "An endpoint has a lab address (10.<octet>.y.z or 172.16.<octet>.z) in a lab range that is unassigned or belongs to someone other than the endpoint's owner. The owner is found through its endpoint tag, the tag in its policy or installer name, the creator of its installer, or the last editor of its policy rule (CTT-LAB-01).",
         "xql": f"""{ENDPOINT_BASE}
-| filter ip10 != null and (range_owner = null or (owner != null and range_owner != owner))
+| filter lab_ip != null and (range_owner = null or (owner != null and range_owner != owner))
 | alter guideline_id = "CTT-LAB-01", title = "Endpoint outside owner's lab range"
-| alter finding = if(range_owner = null, concat("IP ", ip10, " is in an unassigned lab range"), concat("IP ", ip10, " is in the lab range of ", range_owner, " but the endpoint belongs to ", owner))
+| alter finding = if(range_owner = null, concat("IP ", lab_ip, " is in an unassigned lab range"), concat("IP ", lab_ip, " is in the lab range of ", range_owner, " but the endpoint belongs to ", owner))
 {ENDPOINT_FIELDS}""",
-        "alert_description": "Endpoint $endpoint_name: $finding. $owner_note Move it into your own 10.x.0.0/16 range (guideline $guideline_id).",
+        "alert_description": "Endpoint $endpoint_name: $finding. $owner_note Move it into your own lab range, 10.<octet>.0.0/16 or 172.16.<octet>.0/24 (guideline $guideline_id).",
         "crontab": "0 2 * * *",
         "window": "7 days",
         "suppress": ["endpoint_id"],
@@ -309,7 +309,7 @@ OWNER_INDEX_QUERY = f"""{EXTRACT}
 | alter creator = if(has_create = 1, first_actor, ""), last_change = format_timestamp("%Y-%m-%dT%H:%M:%SZ", last_ts)
 | fields object_kind, object_name, creator, last_editor, last_change"""
 ENDPOINT_OWNER_QUERY = f"""{ENDPOINT_BASE}
-| fields endpoint_id, endpoint_name, ip10, owner, owner_source"""
+| fields endpoint_id, endpoint_name, lab_ip, owner, owner_source"""
 # Rule stages the fix check reuses, so it judges an issue fixed by the rule's own logic.
 SCOPE_STAGES = '| alter scope_target = coalesce(arrayindex(regextract(description, "with target (.+?) created$"), 0), arrayindex(regextract(description, "scope updated to include: (.+)$"), 0))' + "\n" + '| alter scope_tags = arrayindex(regextract(scope_target, "tags (?:=|in) ([^=]+?)(?: and [a-z ]+ (?:=|in) .*)?$"), 0)'
 # "__NAMES__" is replaced at run time by the quoted names of the open issues.
@@ -322,8 +322,8 @@ FIX_POLICY_QUERY = f"""{AUDIT}
 | fields _time, object_name, action, actor, scope_target, scope_tags"""
 FIX_ENDPOINT_QUERY = f"""{ENDPOINT_BASE}
 | filter endpoint_name in ("__NAMES__")
-| alter violating = if(ip10 != null and (range_owner = null or (owner != null and range_owner != owner)), 1, 0)
-| fields endpoint_name, ip10, owner, range_owner, violating"""
+| alter violating = if(lab_ip != null and (range_owner = null or (owner != null and range_owner != owner)), 1, 0)
+| fields endpoint_name, lab_ip, owner, range_owner, violating"""
 # Queries that scripts run with the same stages as the rules, so a rule, the owner index and the
 # case housekeeping always agree on object names and endpoint owners.
 GENERATED = [

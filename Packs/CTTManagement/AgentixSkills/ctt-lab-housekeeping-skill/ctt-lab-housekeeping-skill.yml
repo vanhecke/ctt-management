@@ -5,7 +5,7 @@ name: CTT Lab Housekeeping
 description: >-
   Helps a DC tidy up after a demo or lab on the shared tenant: listing their open Security cases,
   resolving the finished ones as Security Testing after explicit confirmation, finding stale cases,
-  and checking that their endpoints sit in their own lab range 10.x.0.0/16 and carry their tag. Use it
+  and checking that their endpoints sit in their own lab range (10.x.0.0/16 or 172.16.x.0/24) and carry their tag. Use it
   when someone says their attack chain or demo is done, asks to close their test cases, or asks which
   of their endpoints or cases still need attention.
 content: ""

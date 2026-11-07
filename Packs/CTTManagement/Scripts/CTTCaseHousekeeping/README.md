@@ -11,7 +11,7 @@ The owner of a case is, in this order:
 
 1. The tag of the correlation rule behind its latest issues (`jva - my rule` belongs to the owner of `jva`).
 2. The owner of an endpoint in the case: its endpoint tag, the tag in its policy or installer name, the creator of its installer or the last editor of its policy rule (the same chain as the CTT-LAB-01 rule, using the `ctt_object_owners` lookup).
-3. The owner of the lab range of a `10.x` address in the case.
+3. The owner of the lab range of a `10.x` or `172.16.x` address in the case.
 
 Each owner gets one Slack DM per run listing the cases assigned to them, the ones to consider
 closing and the ones closed. DMs follow `notify.mode`, the allowlist and the daily limit in

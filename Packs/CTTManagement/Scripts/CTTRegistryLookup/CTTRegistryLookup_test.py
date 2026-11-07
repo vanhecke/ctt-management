@@ -50,6 +50,8 @@ def test_lookup_by_ip_and_octet():
     assert lookup(ROWS, "10.2.14.7")[1][0]["tag"] == "bob"
     assert lookup(ROWS, "2")[0] == "lab range"
     assert lookup(ROWS, "10.99.0.1")[1] == []
+    assert lookup(ROWS, "172.16.2.40")[1][0]["tag"] == "bob"
+    assert lookup(ROWS, "172.17.2.40")[0] != "lab range"
 
 
 def test_lookup_by_email_and_name():
@@ -68,4 +70,4 @@ def test_summarise_groups_by_person():
     people = summarise(lookup(ROWS, "ali")[1])
     assert len(people) == 1
     assert people[0]["tags"] == ["ali", "alice"]
-    assert people[0]["lab_range"] == "10.1.0.0/16"
+    assert people[0]["lab_range"] == "10.1.0.0/16, 172.16.1.0/24"

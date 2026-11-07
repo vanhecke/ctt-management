@@ -133,7 +133,9 @@ def compose(gid: str, title: str, details: str, tags: list[str], lab_octet: str)
     if gid == "CTT-LAB-01":
         found = details.split(" Move it", 1)[0] if details else title
         return found, [
-            f"Move it into your lab range 10.{lab_octet}.0.0/16" if lab_octet else "Ask a CTT admin for your lab range"
+            f"Move it into your lab range 10.{lab_octet}.0.0/16 or 172.16.{lab_octet}.0/24"
+            if lab_octet
+            else "Ask a CTT admin for your lab range"
         ]
     first = (details or title).split(". ")[0].rstrip(".")
     return f"{first}.", [f"Follow guideline {gid}"]

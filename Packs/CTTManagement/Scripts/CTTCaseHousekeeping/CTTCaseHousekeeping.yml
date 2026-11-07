@@ -2,7 +2,7 @@ commonfields:
   id: CTTCaseHousekeeping
   version: -1
 name: CTTCaseHousekeeping
-comment: Keeps open Security cases tidy (CTT-CASE-01, CTT-CASE-02). Assigns cases that have been unassigned for a day to their owner (the tag of the correlation rule behind their issues, the owner of an endpoint in the case, or the lab range of a 10.x address), suggests closing cases without new issues for a day, and resolves cases open for 7 days as Security Testing. Starred cases are left alone. Owners get one Slack DM per run. Settings come from the cases block in "CTT - Config"; actions taken are remembered in the "CTT - Case State" list.
+comment: Keeps open Security cases tidy (CTT-CASE-01, CTT-CASE-02). Assigns cases that have been unassigned for a day to their owner (the tag of the correlation rule behind their issues, the owner of an endpoint in the case, or the lab range of a 10.x or 172.16.x address), suggests closing cases without new issues for a day, and resolves cases open for 7 days as Security Testing. Starred cases are left alone. Owners get one Slack DM per run. Settings come from the cases block in "CTT - Config"; actions taken are remembered in the "CTT - Case State" list.
 script: '-'
 type: python
 subtype: python3

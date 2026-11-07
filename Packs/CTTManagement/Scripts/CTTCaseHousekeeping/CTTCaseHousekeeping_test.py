@@ -104,3 +104,8 @@ def test_build_digest():
 
 def test_prune_state():
     assert prune_state({"1": {}, "2": {}}, {"2"}) == {"2": {}}
+
+
+def test_lab_octets_include_172_16_addresses():
+    case = {"hosts": ["172.16.21.9:172.16.21.9"], "description": "10.20.1.2 to 172.16.33.4, not 172.17.1.1 or 192.168.1.1"}
+    assert lab_octets(case) == ["21", "20", "33"]

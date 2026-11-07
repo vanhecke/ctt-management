@@ -36,7 +36,8 @@ synced into the tenant every hour.
   whichever you like.
 - Tags are not case sensitive. `JVA` and `jva` are the same tag.
 - `CTT` is reserved for central content owned by the CTT admins.
-- Your **lab range** is `10.<octet>.0.0/16`, where the octet is your number in the registry.
+- Your **lab range** is `10.<octet>.0.0/16` and `172.16.<octet>.0/24`, where the octet is your number
+  in the registry.
 - The registry also records your Slack member ID and whether you are a CTT admin.
 
 The registry sheet has two tabs: `ctt_asean_users` (tag, octet, owner_email, owner_name,
@@ -141,8 +142,8 @@ comment. Delete it when you are done.
 ### LAB: Lab network and endpoints
 
 **CTT-LAB-01: Build your lab in your own IP range.** *Active*
-Put the machines, broker VMs and collectors of your lab in `10.<x>.0.0/16`, where `x` is your
-`lab_octet` in the registry. Never use another DC's range.
+Put the machines, broker VMs and collectors of your lab in `10.<x>.0.0/16` or `172.16.<x>.0/24`,
+where `x` is your `lab_octet` in the registry. Never use another DC's range.
 
 **CTT-LAB-02: Tag your endpoints.** *Proposed*
 Add your tag as an endpoint tag on every agent you install, so endpoints, policies and cases can be
@@ -164,7 +165,7 @@ automatically. Star a case to keep it open longer.
 While you are testing, assign the cases your lab creates to yourself so others can see who is
 working on them. A Security case still unassigned after a day is assigned to its owner
 automatically: the owner of the tag in the name of the correlation rule behind it, the owner of an
-endpoint in it, or the owner of the lab range of a 10.x address in it. You get a Slack DM when
+endpoint in it, or the owner of the lab range of a lab address (10.x or 172.16.x) in it. You get a Slack DM when
 that happens.
 
 ### LIFE: Lifecycle
@@ -231,3 +232,4 @@ Before you leave the team, delete your objects or hand them over to another DC, 
 | 2026-11-06 | Your tag: primary tag plus alias, registry sheet layout |
 | 2026-11-06 | How monitoring works: issues are assigned to their owner, Slack DM, Tenant Status canvas |
 | 2026-11-07 | How monitoring works: Mark as Fixed / Mark as False Positive buttons, automatic fix checks with close notes, daily digest |
+| 2026-11-07 | CTT-LAB-01: a lab octet also covers `172.16.<octet>.0/24` |

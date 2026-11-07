@@ -98,7 +98,7 @@ def test_compose_sweep_and_lab():
         "20",
     )
     assert found == "Endpoint PC1: IP 10.9.1.2 is in an unassigned lab range."
-    assert fix == ["Move it into your lab range 10.20.0.0/16"]
+    assert fix == ["Move it into your lab range 10.20.0.0/16 or 172.16.20.0/24"]
 
 
 def test_compose_policy_scope():

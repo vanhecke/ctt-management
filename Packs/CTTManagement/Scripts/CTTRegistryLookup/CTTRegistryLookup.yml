@@ -2,7 +2,7 @@ commonfields:
   id: CTTRegistryLookup
   version: -1
 name: CTTRegistryLookup
-comment: Looks up the CTT registry (the "CTT - Registry" list written by CTTRegistrySync) by tag, email, name, lab octet or a 10.x.y.z address, and returns each matching person with all their tags, lab range, role and active flag. Backs the CTT Assistant agent.
+comment: Looks up the CTT registry (the "CTT - Registry" list written by CTTRegistrySync) by tag, email, name, lab octet or a lab address (10.x.y.z, 172.16.x.y), and returns each matching person with all their tags, lab range, role and active flag. Backs the CTT Assistant agent.
 script: '-'
 type: python
 subtype: python3
@@ -25,7 +25,7 @@ outputs:
   description: All tags of the owner.
   type: Unknown
 - contextPath: CTT.RegistryLookup.lab_range
-  description: The owner's lab range, 10.x.0.0/16.
+  description: The owner's lab ranges, 10.x.0.0/16 and 172.16.x.0/24.
   type: String
 - contextPath: CTT.RegistryLookup.role
   description: admin, dc or central.

@@ -8,7 +8,7 @@ tests:
           - action_name: CTTRegistryLookupAction
             arguments:
               query: jva
-        expected_output: 10.1.0.0/16
+        expected_output: 172.16.1.0/24
 
   - name: resolves an IP to the owner of its lab range
     prompt: Whose lab is 10.17.3.4?
