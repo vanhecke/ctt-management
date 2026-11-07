@@ -118,7 +118,7 @@ tasks:
               simple: 'true'
     nexttasks:
       '#default#':
-      - '7'
+      - '50'
       'yes':
       - '3'
   '3':
@@ -184,7 +184,7 @@ tasks:
               simple: 'true'
     nexttasks:
       '#default#':
-      - '7'
+      - '50'
       'yes':
       - '8'
   '8':
@@ -1093,26 +1093,6 @@ tasks:
         simple: ${CTT.FixWatch.reason}
       closeNotes:
         simple: ${CTT.FixWatch.note}
-  '7':
-    id: '7'
-    taskid: 769da36d-dc89-5ae4-b197-784b5c726f57
-    type: title
-    task:
-      id: 769da36d-dc89-5ae4-b197-784b5c726f57
-      version: -1
-      name: Done
-      description: ''
-      type: title
-      iscommand: false
-      brand: ''
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": 250, "y": 3100}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
 view: '{"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 3115, "width": 1080, "x": -150, "y": 50}}}'
 inputs: []
 outputs: []

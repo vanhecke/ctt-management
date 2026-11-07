@@ -66,7 +66,7 @@ def playbook() -> dict:
     t["1"]["nexttasks"] = {"#none#": ["2"]}
     t["2"] = base("2", "condition", "Can the issue be assigned to a person?", "", 370)
     t["2"]["conditions"] = [{"label": "yes", "condition": is_true("assign")}]
-    t["2"]["nexttasks"] = {"#default#": ["7"], "yes": ["3"]}
+    t["2"]["nexttasks"] = {"#default#": [WATCH["watch"]], "yes": ["3"]}
     t["3"] = base("3", "regular", "Assign the issue to its owner", "Sets the issue assignee to the owner's email.", 540, x=250,
                   task_extra={"script": "Cortex Core - Platform|||core-update-issue", "iscommand": True, "brand": "Cortex Core - Platform"})
     t["3"]["scriptarguments"] = {"id": arg("issue_id"), "assigned_user_mail": arg("owner_email")}
@@ -74,7 +74,7 @@ def playbook() -> dict:
     t["3"]["nexttasks"] = {"#none#": ["4"]}
     t["4"] = base("4", "condition", "Should the owner get a Slack DM?", "", 710, x=250)
     t["4"]["conditions"] = [{"label": "yes", "condition": is_true("notify")}]
-    t["4"]["nexttasks"] = {"#default#": ["7"], "yes": ["8"]}
+    t["4"]["nexttasks"] = {"#default#": [WATCH["watch"]], "yes": ["8"]}
     t["8"] = base("8", "condition", "Write the message with AI?", "notify.use_ai in CTT - Config; otherwise the FOUND / RULE / FIX template is used.", 880, x=250)
     t["8"]["conditions"] = [{"label": "yes", "condition": is_true("use_ai")}]
     t["8"]["nexttasks"] = {"#default#": [ROUND1["title"]], "yes": ["5"]}
@@ -90,7 +90,6 @@ def playbook() -> dict:
     add_round(t, ROUND1, 1220, second=False)
     add_round(t, ROUND2, 2080, second=True)
     add_watch(t, 1380)
-    t["7"] = base("7", "title", "Done", "", 3100, x=250)
     return {
         "id": NAME,
         "version": -1,
@@ -141,8 +140,9 @@ def add_close(t: dict, key: str, name: str, ctx: str, y: int, x: int) -> None:
 
 
 def add_watch(t: dict, y: int) -> None:
-    """Runs next to the question rounds: checks the fix every hour (polling) and closes the issue
-    when the check sees it fixed. Guidelines without a check end this branch at once."""
+    """Runs next to the question rounds, or alone when no DM goes out (no owner, DMs off, daily
+    limit): checks the fix every hour (polling) and closes the issue when the check sees it fixed.
+    Guidelines without a check end this branch at once."""
     t[WATCH["watch"]] = base(WATCH["watch"], "regular", "Watch for the fix", "CTTHygieneFixCheck watch=true: checks every hour until the check sees the issue fixed. Ends at once for guidelines without an automatic check.", y, x=650,
                              task_extra={"scriptName": "CTTHygieneFixCheck"})
     t[WATCH["watch"]]["scriptarguments"] = {"issue_id": arg("issue_id"), "watch": {"simple": "true"}}
@@ -256,7 +256,7 @@ def main() -> None:
         "5. **Watch** (parallel): `CTTHygieneFixCheck watch=true` checks every hour and closes the issue once the check sees it fixed (guidelines with an automatic check).\n"
         "6. **Mark as Fixed** runs `CTTHygieneFixCheck confirm=true resolve=false`: a verified fix (or a guideline without a check) closes the issue; otherwise **round 2** asks once more with a DM that says what is still wrong, and after a second unconfirmed answer a last DM says the issue closes by itself once fixed.\n"
         "7. **Mark as False Positive** runs `CTTHygieneFixCheck false_positive=true resolve=false` (a post in the CTT channel) and closes the issue as False Positive.\n\n"
-        "The issue is always closed by the last task of a branch (`closeInvestigation` with the close note), never halfway. "
+        "Without a DM (no owner, DMs off or the daily limit) only the watch runs. The issue is always closed by the last task of a branch (`closeInvestigation` with the close note), never halfway. "
         "Assigning and the AI step continue on error. DMs follow `notify.mode` (`off`, `admins_only`, `all`) and the daily limit in `CTT - Config`.\n"
     )
     (PACK / "Triggers").mkdir(exist_ok=True)
