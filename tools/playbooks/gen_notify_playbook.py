@@ -13,8 +13,8 @@ PACK = Path(__file__).resolve().parent.parent.parent / "Packs" / "CTTManagement"
 NAME = "CTT - Hygiene - Notify Owner"
 NS = uuid.UUID("7a1e3c5d-9b2f-4e6a-8c0d-1f2e3d4c5b6a")
 CTX = "CTT.Triage"
-ROUND1 = {"title": "20", "ask": "21", "wait": "22", "links": "23", "dm": "24", "progress": "25", "check": "26", "resolved": "27", "fp": "28", "close": "29", "fpclose": "40"}
-ROUND2 = {"clear": "30", "title": "31", "ask": "32", "wait": "33", "links": "34", "dm": "35", "check": "36", "resolved": "37", "fp": "38", "last": "39", "close": "41", "fpclose": "42"}
+ROUND1 = {"title": "20", "ask": "21", "wait": "22", "links": "23", "dm": "24", "progress": "25", "check": "26", "resolved": "27", "fp": "28", "close": "29", "fpclose": "40", "gate": "43"}
+ROUND2 = {"clear": "30", "title": "31", "ask": "32", "wait": "33", "links": "34", "dm": "35", "check": "36", "resolved": "37", "fp": "38", "last": "39", "close": "41", "fpclose": "42", "gate": "44", "lastgate": "45"}
 WATCH = {"watch": "50", "fixed": "51", "close": "52"}
 
 
@@ -71,10 +71,7 @@ def playbook() -> dict:
                   task_extra={"script": "Cortex Core - Platform|||core-update-issue", "iscommand": True, "brand": "Cortex Core - Platform"})
     t["3"]["scriptarguments"] = {"id": arg("issue_id"), "assigned_user_mail": arg("owner_email")}
     t["3"]["continueonerror"] = True
-    t["3"]["nexttasks"] = {"#none#": ["4"]}
-    t["4"] = base("4", "condition", "Should the owner get a Slack DM?", "", 710, x=250)
-    t["4"]["conditions"] = [{"label": "yes", "condition": is_true("notify")}]
-    t["4"]["nexttasks"] = {"#default#": [WATCH["watch"]], "yes": ["8"]}
+    t["3"]["nexttasks"] = {"#none#": ["8"]}
     t["8"] = base("8", "condition", "Write the message with AI?", "notify.use_ai in CTT - Config; otherwise the FOUND / RULE / FIX template is used.", 880, x=250)
     t["8"]["conditions"] = [{"label": "yes", "condition": is_true("use_ai")}]
     t["8"]["nexttasks"] = {"#default#": [ROUND1["title"]], "yes": ["5"]}
@@ -129,6 +126,14 @@ def dm_args(note: str = "", links: bool = True) -> dict:
     if note:
         args["note"] = {"simple": note}
     return args
+
+
+def add_gate(t: dict, key: str, y: int, yes: list[str], no: list[str]) -> None:
+    """"Should the owner get a Slack DM?" in front of a DM: no (DMs off, not on the allowlist, no
+    Slack ID or the daily limit reached) skips only the DM."""
+    t[key] = base(key, "condition", "Should the owner get a Slack DM?", "notify from triage: DMs follow notify in CTT - Config (mode, allowlist, daily limit). No skips only the DM.", y, x=450)
+    t[key]["conditions"] = [{"label": "yes", "condition": is_true("notify")}]
+    t[key]["nexttasks"] = {"yes": yes, **({"#default#": no} if no else {})}
 
 
 def add_close(t: dict, key: str, name: str, ctx: str, y: int, x: int) -> None:
@@ -189,14 +194,17 @@ def add_round(t: dict, r: dict, y: int, second: bool) -> None:
     t[r["links"]]["scriptarguments"] = {"task_id": {"simple": r["ask"]}}
     # Without links (Generated link unavailable) the DM still goes out, without answer buttons.
     t[r["links"]]["continueonerror"] = True
-    t[r["links"]]["nexttasks"] = {"#none#": [r["dm"]]}
+    t[r["links"]]["nexttasks"] = {"#none#": [r["gate"]]}
+    # Only the DM depends on notify (mode, allowlist, Slack ID, daily limit); the rest of the round
+    # runs either way.
+    add_gate(t, r["gate"], y + 400, [r["dm"]], [] if second else [r["progress"]])
     t[r["dm"]] = base(r["dm"], "regular", "Send the Slack DM" if not second else "Send the second DM",
                       "Lays out the DM (FOUND / RULE / FIX, or the AI text) with the answer links, as Slack buttons when notify.buttons is on, and sends it through the CTT Slack Webhook."
-                      + (" Starts with what the check still sees." if second else ""), y + 480, x=450, task_extra={"scriptName": "CTTHygieneSendDM"})
+                      + (" Starts with what the check still sees." if second else ""), y + 560, x=450, task_extra={"scriptName": "CTTHygieneSendDM"})
     t[r["dm"]]["scriptarguments"] = dm_args("${CTT.FixCheck.note}" if second else "")
     if not second:
         t[r["dm"]]["nexttasks"] = {"#none#": [r["progress"]]}
-        t[r["progress"]] = base(r["progress"], "regular", "Set the issue to In Progress", "The owner has been told; the issue now waits for their fix.", y + 640, x=450,
+        t[r["progress"]] = base(r["progress"], "regular", "Set the issue to In Progress", "The issue now waits for the owner's fix.", y + 720, x=450,
                                 task_extra={"script": "Cortex Core - Platform|||core-update-issue", "iscommand": True, "brand": "Cortex Core - Platform"})
         t[r["progress"]]["scriptarguments"] = {"id": arg("issue_id"), "status": {"simple": "In Progress"}}
         t[r["progress"]]["continueonerror"] = True
@@ -206,7 +214,7 @@ def add_round(t: dict, r: dict, y: int, second: bool) -> None:
     t[r["check"]]["nexttasks"] = {"#none#": [r["resolved"]]}
     t[r["resolved"]] = base(r["resolved"], "condition", "Close the issue?", "Yes when the check verified the fix or the guideline has no check.", y + 480, x=50)
     t[r["resolved"]]["conditions"] = [{"label": "yes", "condition": [[{"operator": "isTrue", "left": {"value": {"simple": "CTT.FixCheck.close"}, "iscontext": True}}]]}]
-    t[r["resolved"]]["nexttasks"] = {"yes": [r["close"]], "#default#": [r["last"] if second else ROUND2["clear"]]}
+    t[r["resolved"]]["nexttasks"] = {"yes": [r["close"]], "#default#": [r["lastgate"] if second else ROUND2["clear"]]}
     add_close(t, r["close"], "Close the issue: fixed", "CTT.FixCheck", y + 640, x=-50)
     t[r["fp"]] = base(r["fp"], "regular", "Record: false positive", "CTTHygieneFixCheck false_positive=true: tells the CTT channel and writes the False Positive close note.", y + 320, x=-250,
                       task_extra={"scriptName": "CTTHygieneFixCheck"})
@@ -214,7 +222,8 @@ def add_round(t: dict, r: dict, y: int, second: bool) -> None:
     t[r["fp"]]["nexttasks"] = {"#none#": [r["fpclose"]]}
     add_close(t, r["fpclose"], "Close the issue: false positive", "CTT.FixCheck", y + 480, x=-250)
     if second:
-        t[r["last"]] = base(r["last"], "regular", "Tell the owner it closes by itself", "Last DM: what the check still sees, and that the hourly fix check closes the issue once it's fixed. No more questions.", y + 640, x=50,
+        add_gate(t, r["lastgate"], y + 640, [r["last"]], [])
+        t[r["last"]] = base(r["last"], "regular", "Tell the owner it closes by itself", "Last DM: what the check still sees, and that the hourly fix check closes the issue once it's fixed. No more questions.", y + 800, x=50,
                             task_extra={"scriptName": "CTTHygieneSendDM"})
         t[r["last"]]["scriptarguments"] = dm_args(
             "You said this is fixed, but the check still sees it: ${CTT.FixCheck.evidence}. The issue closes by itself within an hour once it is fixed.",
@@ -256,7 +265,7 @@ def main() -> None:
         "5. **Watch** (parallel): `CTTHygieneFixCheck watch=true` checks every hour and closes the issue once the check sees it fixed (guidelines with an automatic check).\n"
         "6. **Mark as Fixed** runs `CTTHygieneFixCheck confirm=true resolve=false`: a verified fix (or a guideline without a check) closes the issue; otherwise **round 2** asks once more with a DM that says what is still wrong, and after a second unconfirmed answer a last DM says the issue closes by itself once fixed.\n"
         "7. **Mark as False Positive** runs `CTTHygieneFixCheck false_positive=true resolve=false` (a post in the CTT channel) and closes the issue as False Positive.\n\n"
-        "Without a DM (no owner, DMs off or the daily limit) only the watch runs. The issue is always closed by the last task of a branch (`closeInvestigation` with the close note), never halfway. "
+        "Without a DM (DMs off, not on the allowlist, no Slack ID or the daily limit) the rounds run without the DM; an issue without an owner only gets the watch. The issue is always closed by the last task of a branch (`closeInvestigation` with the close note), never halfway. "
         "Assigning and the AI step continue on error. DMs follow `notify.mode` (`off`, `admins_only`, `all`) and the daily limit in `CTT - Config`.\n"
     )
     (PACK / "Triggers").mkdir(exist_ok=True)

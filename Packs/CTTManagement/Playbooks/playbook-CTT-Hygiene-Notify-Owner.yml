@@ -150,42 +150,6 @@ tasks:
     continueonerror: true
     nexttasks:
       '#none#':
-      - '4'
-  '4':
-    id: '4'
-    taskid: aac97799-4178-5d70-847d-f1d923bdd1a1
-    type: condition
-    task:
-      id: aac97799-4178-5d70-847d-f1d923bdd1a1
-      version: -1
-      name: Should the owner get a Slack DM?
-      description: ''
-      type: condition
-      iscommand: false
-      brand: ''
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": 250, "y": 710}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    conditions:
-    - label: 'yes'
-      condition:
-      - - operator: isEqualString
-          left:
-            value:
-              simple: CTT.Triage.notify
-            iscontext: true
-          right:
-            value:
-              simple: 'true'
-    nexttasks:
-      '#default#':
-      - '50'
-      'yes':
       - '8'
   '8':
     id: '8'
@@ -386,7 +350,43 @@ tasks:
     continueonerror: true
     nexttasks:
       '#none#':
+      - '43'
+  '43':
+    id: '43'
+    taskid: 7dfd31b8-c918-52af-8a2d-623efdaef169
+    type: condition
+    task:
+      id: 7dfd31b8-c918-52af-8a2d-623efdaef169
+      version: -1
+      name: Should the owner get a Slack DM?
+      description: 'notify from triage: DMs follow notify in CTT - Config (mode, allowlist, daily limit). No skips only the DM.'
+      type: condition
+      iscommand: false
+      brand: ''
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 450, "y": 1620}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    conditions:
+    - label: 'yes'
+      condition:
+      - - operator: isEqualString
+          left:
+            value:
+              simple: CTT.Triage.notify
+            iscontext: true
+          right:
+            value:
+              simple: 'true'
+    nexttasks:
+      'yes':
       - '24'
+      '#default#':
+      - '25'
   '24':
     id: '24'
     taskid: 1169fbb4-eea8-5497-a265-2bdc77e477e0
@@ -402,7 +402,7 @@ tasks:
       scriptName: CTTHygieneSendDM
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 1700}}'
+    view: '{"position": {"x": 450, "y": 1780}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -446,14 +446,14 @@ tasks:
       id: 8d040131-d12f-5225-b959-a02bf22363d1
       version: -1
       name: Set the issue to In Progress
-      description: The owner has been told; the issue now waits for their fix.
+      description: The issue now waits for the owner's fix.
       type: regular
       iscommand: true
       brand: Cortex Core - Platform
       script: Cortex Core - Platform|||core-update-issue
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 1860}}'
+    view: '{"position": {"x": 450, "y": 1940}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -763,6 +763,40 @@ tasks:
     continueonerror: true
     nexttasks:
       '#none#':
+      - '44'
+  '44':
+    id: '44'
+    taskid: a4bac187-4760-5d8f-b49c-f09e7954807e
+    type: condition
+    task:
+      id: a4bac187-4760-5d8f-b49c-f09e7954807e
+      version: -1
+      name: Should the owner get a Slack DM?
+      description: 'notify from triage: DMs follow notify in CTT - Config (mode, allowlist, daily limit). No skips only the DM.'
+      type: condition
+      iscommand: false
+      brand: ''
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 450, "y": 2620}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    conditions:
+    - label: 'yes'
+      condition:
+      - - operator: isEqualString
+          left:
+            value:
+              simple: CTT.Triage.notify
+            iscontext: true
+          right:
+            value:
+              simple: 'true'
+    nexttasks:
+      'yes':
       - '35'
   '35':
     id: '35'
@@ -779,7 +813,7 @@ tasks:
       scriptName: CTTHygieneSendDM
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 2700}}'
+    view: '{"position": {"x": 450, "y": 2780}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -877,7 +911,7 @@ tasks:
       'yes':
       - '41'
       '#default#':
-      - '39'
+      - '45'
   '41':
     id: '41'
     taskid: 1ed4bdd6-ea1c-58e5-b609-911224ce494c
@@ -961,6 +995,40 @@ tasks:
         simple: ${CTT.FixCheck.reason}
       closeNotes:
         simple: ${CTT.FixCheck.note}
+  '45':
+    id: '45'
+    taskid: b8c02c27-ef84-5c6c-8d66-6b5c26b25b4b
+    type: condition
+    task:
+      id: b8c02c27-ef84-5c6c-8d66-6b5c26b25b4b
+      version: -1
+      name: Should the owner get a Slack DM?
+      description: 'notify from triage: DMs follow notify in CTT - Config (mode, allowlist, daily limit). No skips only the DM.'
+      type: condition
+      iscommand: false
+      brand: ''
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 450, "y": 2860}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    conditions:
+    - label: 'yes'
+      condition:
+      - - operator: isEqualString
+          left:
+            value:
+              simple: CTT.Triage.notify
+            iscontext: true
+          right:
+            value:
+              simple: 'true'
+    nexttasks:
+      'yes':
+      - '39'
   '39':
     id: '39'
     taskid: 07d8ec6a-8447-5dde-8b08-7978730292d2
@@ -976,7 +1044,7 @@ tasks:
       scriptName: CTTHygieneSendDM
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 50, "y": 2860}}'
+    view: '{"position": {"x": 50, "y": 3020}}'
     note: false
     timertriggers: []
     ignoreworker: false
