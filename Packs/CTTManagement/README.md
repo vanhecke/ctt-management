@@ -64,7 +64,7 @@ join both.
 - A `CTT Slack Webhook` instance: the Slack workflow trigger URL, the CTT channel ID and a placeholder member ID.
 - A `TypeSafe Jev` instance (pack TypeSafeJev, command `jev-evaluate`) for `CTT - Marketplace Updates`. It is not a
   pack dependency, so the pack installs without it; the job then closes each run without changes.
-- `notify.mode` in `CTT - Config`: `allowlist` (default, DMs only to `notify.allowlist`), `admins_only`, `all` or `off`. `notify.use_ai` switches the DM text from the template to the AI prompt. `notify.buttons` (default `false`) sends the answer links as Slack buttons through the webhook action `msg_person_health_issue`; turn it on once the Slack workflow has that branch (see the CTT Slack Webhook README).
+- `notify.mode` in `CTT - Config`: `allowlist` (default, DMs only to `notify.allowlist`), `admins_only`, `all` or `off`. `notify.use_ai` switches the DM text from the template to the AI prompt. `notify.buttons` (default `true`) sends the answer links as Slack buttons through the webhook action `msg_person_health_issue` (see the CTT Slack Webhook README); `false` lists them in the DM text.
 - Install the pack fresh (uninstall first) when upgrading from a version before 1.1.3: `adopted: true` only takes effect when a playbook is first installed, and playbooks must be adopted to run on issues.
 - `cases.dry_run` in `CTT - Config` ships as `true`: case housekeeping only reports until you set it to `false`.
 - XSIAM 4.0 for the agent's knowledge documents. On 8.15 the agent installs, but its knowledge is
@@ -82,8 +82,8 @@ join both.
 5. Check the `CTT - Hygiene` dashboard's registry widget.
 6. Run `!CTTInventoryCheck dry_run=true`, `!CTTCaseHousekeeping dry_run=true` and
    `!CTTHygieneFixCheck dry_run=true` once to preview what the first real runs will do.
-7. For the DM buttons: add the `msg_person_health_issue` branch to the Slack workflow (CTT Slack
-   Webhook README), then set `notify.buttons` to `true` in `CTT - Config`.
+7. The DM buttons need the `msg_person_health_issue` branch in the Slack workflow (CTT Slack Webhook
+   README); without it, set `notify.buttons` to `false` in `CTT - Config`.
 
 ## Source
 

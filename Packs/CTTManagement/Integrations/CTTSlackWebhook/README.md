@@ -1,6 +1,6 @@
 Sends one-way messages from the tenant to the CTT Slack channel through a Slack workflow webhook.
 
-The workflow accepts JSON with `action`, `slack_user_id`, `slack_channel_id` and `content`, and supports five actions:
+The workflow accepts JSON with `action`, `slack_user_id`, `slack_channel_id`, `content`, `fixed_url`, `not_violation_url` and `issue_url`; every call sends all seven (actions without buttons send `-` for the button links). It supports five actions:
 
 | Action | Effect |
 | --- | --- |
@@ -28,9 +28,9 @@ Create one instance with the workflow trigger URL (stored encrypted), the CTT ch
 
 ## Workflow branch for msg_person_health_issue
 
-The CTT hygiene DMs use this action once `notify.buttons` is `true` in `CTT - Config`. The Slack
-workflow needs a branch for it that sends `content` to `slack_user_id` (like msg_person) with three
-link buttons, labels fixed in the workflow:
+The CTT hygiene DMs use this action while `notify.buttons` is `true` in `CTT - Config` (the default).
+The workflow branch sends `content` to `slack_user_id` (like msg_person) with three link buttons,
+labels fixed in the workflow:
 
 | Input | Button | Opens |
 | --- | --- | --- |

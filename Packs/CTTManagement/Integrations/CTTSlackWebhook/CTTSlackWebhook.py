@@ -5,6 +5,7 @@ ACTIONS = ("msg_person", "msg_person_health_issue", "msg_channel", "channel_upda
 # msg_person_health_issue: a DM with three buttons whose labels are fixed in the Slack workflow:
 # Fixed! (fixed_url), Not a violation (not_violation_url) and Open issue (issue_url).
 BUTTON_KEYS = ("fixed_url", "not_violation_url", "issue_url")
+UNUSED = "-"  # value of a button input the action does not use
 URL_PREFIX = "https://hooks.slack.com/"
 
 
@@ -36,8 +37,9 @@ def build_payload(
     if not user or not channel:
         raise DemistoException("Set the instance's channel ID and placeholder user ID: the workflow needs both on every call.")
     payload = {"action": action, "slack_user_id": user, "slack_channel_id": channel, "content": content}
-    if action == "msg_person_health_issue":
-        payload.update({k: buttons[k] for k in BUTTON_KEYS})  # type: ignore[index]
+    # The workflow's webhook declares the button inputs for every call, and typed inputs reject an
+    # empty value, so actions without buttons send a placeholder.
+    payload.update({k: (buttons or {}).get(k) or UNUSED for k in BUTTON_KEYS})
     if url:
         payload["url"] = url
     return payload

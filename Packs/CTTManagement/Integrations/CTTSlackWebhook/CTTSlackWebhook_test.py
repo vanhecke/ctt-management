@@ -9,6 +9,9 @@ def test_build_payload_fills_all_variables():
         "slack_user_id": "U1",
         "slack_channel_id": "C0",
         "content": "hi",
+        "fixed_url": "-",
+        "not_violation_url": "-",
+        "issue_url": "-",
     }
     canvas = build_payload("canvas_update", "# Status", default_user_id="U0", default_channel_id="C0")
     assert canvas["slack_user_id"] == "U0"
