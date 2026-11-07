@@ -39,11 +39,18 @@ def newest_links(value: Any, task_id: str) -> dict[str, str]:
     return found
 
 
+def context_query_body(path: str) -> str:
+    """The body for POST /investigation/<id>/context. The platform resolves ${...} in command
+    arguments against this script's starting snapshot of the context (before the links exist), so
+    the dollar sign goes out as the JSON escape \\u0024: core-api-post decodes it and the API
+    receives ${path}, which it resolves against the live context."""
+    return json.dumps({"query": "${" + path + "}"}).replace("$", "\\u0024")
+
+
 def live_links(investigation_id: str) -> Any:
-    """The investigation's context as it is now (demisto.context() is a snapshot from the start of
-    this script, and the Ask task writes its links while this script waits)."""
+    """The investigation's Ask.Links as they are now; the Ask task writes them while this script waits."""
     res = demisto.executeCommand(
-        "core-api-post", {"uri": f"/investigation/{investigation_id}/context", "body": json.dumps({"query": "${Ask.Links}"})}
+        "core-api-post", {"uri": f"/investigation/{investigation_id}/context", "body": context_query_body("Ask.Links")}
     )
     if is_error(res):
         raise DemistoException(get_error(res))

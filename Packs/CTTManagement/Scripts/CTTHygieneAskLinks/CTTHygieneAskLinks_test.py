@@ -1,4 +1,6 @@
-from CTTHygieneAskLinks import newest_links
+import json
+
+from CTTHygieneAskLinks import context_query_body, newest_links
 
 ONE = {
     "Task-12": {
@@ -38,3 +40,9 @@ def test_newest_links_in_a_sub_playbook_falls_back_to_the_links_present():
     }
     assert newest_links(sub, "3") == {"fixed_url": "https://t/f", "not_violation_url": "https://t/n"}
     assert newest_links(None, "12") == {}
+
+
+def test_context_query_body_hides_the_dt_marker():
+    body = context_query_body("Ask.Links")
+    assert "${" not in body
+    assert json.loads(body) == {"query": "${Ask.Links}"}
