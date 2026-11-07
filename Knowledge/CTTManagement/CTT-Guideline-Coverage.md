@@ -61,11 +61,12 @@ to In Progress.
 
 ## Remediation
 
-How an open hygiene issue closes. Every close by the pack writes a close note saying why.
+How an open hygiene issue closes. Every close by the pack writes a close note saying why, and an
+issue with a running Notify Owner playbook is closed by that playbook's last task, never halfway.
 
 | Way | When | Close note starts with |
 |---|---|---|
-| Fix check (`CTT - Hygiene - Fix Check`, hourly) | The check verifies the fix | "Auto-closed by the CTT fix check: …" |
+| Fix check, hourly: the Notify Owner playbook's watch, or the `CTT - Hygiene - Fix Check` job for issues without a running playbook | The check verifies the fix | "Auto-closed by the CTT fix check: …" |
 | Owner presses **Mark as Fixed** in the DM (or tells the CTT Assistant) | The check verifies it, or the guideline has no check | "Confirmed fixed by …" |
 | Owner presses **Mark as False Positive** | Always; the CTT channel is told so admins can tune the rule | "Marked as false positive by …" (False Positive) |
 | Inventory check (daily) | All objects of the owner's issue are fixed | its own note |
@@ -73,8 +74,9 @@ How an open hygiene issue closes. Every close by the pack writes a close note sa
 Each hygiene issue has its own Health case, which stays open when the issue is resolved; the fix
 check closes the case once all its issues are resolved, with a note quoting their close notes.
 
-If the owner presses Mark as Fixed but the check still sees the violation, the issue stays open and the
-next DM says what is still wrong. An unanswered issue stays open; the owner gets one daily digest
+If the owner presses Mark as Fixed but the check still sees the violation, the issue stays open and a
+second DM says what is still wrong; after a second unconfirmed answer the hourly check closes it once
+it's fixed. An unanswered issue stays open; the owner gets one daily digest
 (`CTT - Hygiene - Reminders`, 10:00 SGT) with their issues open for more than a day.
 
 What each fix check verifies:

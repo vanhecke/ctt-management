@@ -10,6 +10,7 @@ dockerimage: demisto/python3:3.12.15.14069087
 runas: DBotWeakRole
 enabled: true
 timeout: 900ns
+polling: true
 tags:
 - CTT
 args:
@@ -34,6 +35,20 @@ args:
   - "false"
   defaultValue: "false"
   description: The owner says it is a false positive. Resolves as False Positive and tells the CTT channel.
+- name: resolve
+  auto: PREDEFINED
+  predefined:
+  - "true"
+  - "false"
+  defaultValue: "true"
+  description: false only decides (CTT.FixCheck.close, reason, note) and leaves closing to the playbook's last task. The job (true) resolves issues without a running playbook.
+- name: watch
+  auto: PREDEFINED
+  predefined:
+  - "true"
+  - "false"
+  defaultValue: "false"
+  description: Polling for one issue (the Notify Owner playbook's watch branch) - checks every hour until the check sees it fixed, then outputs CTT.FixWatch.close. Never resolves.
 - name: remind
   auto: PREDEFINED
   predefined:
@@ -66,6 +81,21 @@ outputs:
   type: String
 - contextPath: CTT.FixCheck.note
   description: The close note, or for a kept issue the message for the owner.
+  type: String
+- contextPath: CTT.FixCheck.close
+  description: True when the playbook should close the issue (resolve=false).
+  type: Boolean
+- contextPath: CTT.FixCheck.reason
+  description: Close reason for the playbook's closeInvestigation task.
+  type: String
+- contextPath: CTT.FixWatch.close
+  description: True once the watch sees the issue fixed.
+  type: Boolean
+- contextPath: CTT.FixWatch.reason
+  description: Close reason (watch).
+  type: String
+- contextPath: CTT.FixWatch.note
+  description: Close note (watch).
   type: String
 - contextPath: CTT.FixCheck.resolved
   description: True when the issue was resolved.

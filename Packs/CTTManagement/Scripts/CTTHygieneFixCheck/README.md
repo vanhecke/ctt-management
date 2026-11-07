@@ -20,13 +20,18 @@ The case note quotes the issues' close notes.
 
 ## Modes
 
-- **Check** (default, the hourly `CTT - Hygiene - Fix Check` job): resolves issues the check finds
-  fixed (`Resolved - Fixed`, or `Resolved - Other` where the tenant doesn't offer Fixed).
-- **confirm=true** (the owner pressed **Mark as Fixed**, or told the CTT Assistant): verified issues and
-  issues without a check are resolved; an issue the check still sees stays open, and `note` says
-  what is still wrong (the Notify Owner playbook puts it in the next DM).
-- **false_positive=true** (the owner pressed **Mark as False Positive**): posts it to the CTT channel for
-  the admins, then resolves as `Resolved - False Positive`.
+- **Job** (default, the hourly `CTT - Hygiene - Fix Check` job): resolves issues the check finds
+  fixed (`Resolved - Fixed`, or `Resolved - Other` where the tenant doesn't offer Fixed), **except
+  issues whose Notify Owner playbook is still running**: that playbook closes them in its last task,
+  so an issue is never closed halfway through its playbook.
+- **In the Notify Owner playbook** (`resolve=false`): only decides and writes `CTT.FixCheck.close`,
+  `reason` and `note`; the playbook's last task (`closeInvestigation`) closes the issue.
+  - `confirm=true`: the owner pressed **Mark as Fixed** (or told the CTT Assistant). Close when the
+    check verifies it or the guideline has no check; otherwise `note` says what is still wrong.
+  - `false_positive=true`: the owner pressed **Mark as False Positive**. Posts to the CTT channel and
+    writes the False Positive close note.
+  - `watch=true`: polling. Checks the issue every hour (up to 90 days) until the check sees it fixed,
+    then writes `CTT.FixWatch.close`, `reason` and `note`. Ends at once for guidelines without a check.
 - **remind=true** (the daily `CTT - Hygiene - Reminders` job): after checking, one digest DM per
   owner with their open issues older than a day and what closed since yesterday, at most once a day
   (state in the `CTT - Fix State` list). DMs follow `notify` in `CTT - Config`.

@@ -11,6 +11,7 @@ from CTTHygieneFixCheck import (
     decide,
     owner_tags,
     parse_issue,
+    playbook_close,
     registry_people,
     resolution_kind,
 )
@@ -179,3 +180,16 @@ def test_case_close_note_only_when_all_issues_are_resolved():
     assert case_close_note([done]) == "All its CTT hygiene issues are resolved. #1: Auto-closed by the CTT fix check: x"
     assert case_close_note([done, {"id": 2, "status.progress": "In Progress"}]) is None
     assert case_close_note([]) is None
+
+
+def test_playbook_close_uses_an_allowed_reason():
+    assert playbook_close({"reason": "Resolved - Fixed", "note": "n"}) == {
+        "close": True,
+        "reason": "Resolved - Other",
+        "note": "n",
+    }
+    assert playbook_close({"reason": "Resolved - False Positive", "note": "n"})["reason"] == "Resolved - False Positive"
+
+
+def test_parse_issue_keeps_the_playbook_state():
+    assert parse_issue({**TAG01, "playbook_run_status": "Waiting"})["playbook"] == "waiting"

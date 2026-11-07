@@ -49,6 +49,11 @@ SGT = timezone(timedelta(hours=8))
 FIXED_REASON = "Resolved - Fixed"
 FALLBACK_REASON = "Resolved - Other"
 FALSE_POSITIVE_REASON = "Resolved - False Positive"
+# An issue whose Notify Owner playbook is in one of these states is closed by that playbook (its
+# last task), never by the job: closing an issue stops its playbook halfway.
+ACTIVE_PLAYBOOK = {"running", "waiting", "pending", "inprogress", "in_progress"}
+WATCH_SECONDS = 3600
+WATCH_TIMEOUT = 90 * 86_400
 
 # BEGIN GENERATED FIX_POLICY_QUERY (tools/correlation_rules/gen_correlation_rules.py; do not edit)
 FIX_POLICY_QUERY = (
@@ -210,6 +215,7 @@ def parse_issue(issue: dict) -> dict | None:
         "email": email.group("email").lower() if email else "",
         "created": int(issue.get("_insert_time") or 0),
         "cases": [str(c) for c in issue.get("case_ids") or []],
+        "playbook": str(issue.get("playbook_run_status") or "").lower(),
     }
 
 
@@ -381,6 +387,13 @@ def case_close_note(issues: list[dict]) -> str | None:
         return None
     notes = [f"#{i.get('id')}: {i.get('status.resolution_comment') or 'resolved'}" for i in issues]
     return "All its CTT hygiene issues are resolved. " + " ".join(notes)
+
+
+def playbook_close(plan: dict) -> dict:
+    """What the playbook's closing task needs: closeInvestigation takes any allowed reason, but it
+    can't fall back when 'Resolved - Fixed' isn't licensed, so fixes close as 'Resolved - Other'."""
+    reason = plan.get("reason") or FALLBACK_REASON
+    return {"close": True, "reason": FALLBACK_REASON if reason == FIXED_REASON else reason, "note": plan["note"]}
 
 
 # ---------- digest ----------
@@ -698,6 +711,10 @@ def main():  # pragma: no cover
     try:
         now_ms = int(time.time() * 1000)
         dry_run = argToBoolean(args.get("dry_run") or "false")
+        watch = argToBoolean(args.get("watch") or "false")
+        # In the Notify Owner playbook the script only decides; the playbook closes the issue in its
+        # last task. The job (resolve=true) closes issues that have no running playbook.
+        resolve_now = argToBoolean(args.get("resolve") or "true") and not watch
         mode = (
             "false_positive"
             if argToBoolean(args.get("false_positive") or "false")
@@ -705,8 +722,8 @@ def main():  # pragma: no cover
         )
         ids = [i.strip() for i in str(args.get("issue_id") or "").split(",") if i.strip()]
         owner_filter = str(args.get("owner") or "").strip().lower()
-        if mode != "check" and not ids and not owner_filter:
-            raise DemistoException("confirm and false_positive need issue_id (or owner).")
+        if (mode != "check" or watch) and not ids and not owner_filter:
+            raise DemistoException("confirm, false_positive and watch need issue_id (or owner).")
         cfg = get_list_json(CONFIG_LIST, {})
         registry = get_list_json(cfg.get("registry", {}).get("output_list", "CTT - Registry"), [])
         errors: list[str] = []
@@ -731,16 +748,20 @@ def main():  # pragma: no cover
                 "action": plan["action"],
                 "note": plan["note"],
                 "resolved": False,
+                "close": False,
             }
-            if plan["action"] == "resolve" and not dry_run:
+            if plan["action"] == "resolve" and mode == "false_positive" and not dry_run:
+                post_channel(
+                    f"CTT hygiene: {item['owner'] or 'the owner'} marked issue #{item['id']} ({item['guideline']}, "
+                    f"{what(item)}) as a false positive. CTT admins: check whether the rule needs tuning.",
+                    errors,
+                )
+            if plan["action"] == "resolve" and not resolve_now:
+                row.update(playbook_close(plan))
+            elif plan["action"] == "resolve" and mode == "check" and item["playbook"] in ACTIVE_PLAYBOOK:
+                row["action"] = "left to its playbook"
+            elif plan["action"] == "resolve" and not dry_run:
                 try:
-                    if mode == "false_positive":
-                        # Before resolving: resolving stops the playbook this script may run in.
-                        post_channel(
-                            f"CTT hygiene: {item['owner'] or 'the owner'} marked issue #{item['id']} ({item['guideline']}, "
-                            f"{what(item)}) as a false positive. CTT admins: check whether the rule needs tuning.",
-                            errors,
-                        )
                     row["reason"] = resolve(item["id"], plan["reason"], plan["note"], run_state)
                     row["resolved"] = True
                     row["cases_closed"] = close_finished_cases(item["cases"], row["reason"], run_state, errors)
@@ -749,9 +770,9 @@ def main():  # pragma: no cover
             results.append(row)
 
         swept: list[str] = []
-        if mode == "check" and not ids and not owner_filter and not dry_run:
-            # Hygiene cases stay open when their issue is resolved (by this check, the inventory
-            # check or a person); close the ones whose issues are all resolved.
+        if mode == "check" and resolve_now and not ids and not owner_filter and not dry_run:
+            # Hygiene cases stay open when their issue is resolved (by a playbook, this check, the
+            # inventory check or a person); close the ones whose issues are all resolved.
             try:
                 swept = close_finished_cases(open_hygiene_case_ids(), FALLBACK_REASON, run_state, errors)
             except Exception as e:
@@ -763,8 +784,8 @@ def main():  # pragma: no cover
 
         resolved = [r for r in results if r["resolved"] or (dry_run and r["action"] == "resolve")]
         md = tableToMarkdown(
-            f"CTT fix check ({mode}{', dry run' if dry_run else ''}): {len(items)} issue(s), {len(resolved)} "
-            f"{'would be ' if dry_run else ''}resolved",
+            f"CTT fix check ({'watch' if watch else mode}{', dry run' if dry_run else ''}): {len(items)} issue(s), "
+            f"{len(resolved)} {'would be ' if dry_run else ''}resolved",
             results,
             headers=["issue_id", "guideline", "owner", "object", "verdict", "action", "evidence"],
         )
@@ -775,14 +796,27 @@ def main():  # pragma: no cover
             md += "\n" + tableToMarkdown("Daily digests", digests, headers=["owner", "open", "closed", "sent"])
         if errors:
             md += "\n**Errors**\n" + "\n".join(f"- {e}" for e in errors)
+        scheduled = None
+        if watch and results and results[0]["verdict"] == "open":
+            # Polling: run again in an hour until the check sees it fixed (or the issue closes).
+            md += f"\nStill open; checking again in {WATCH_SECONDS // 60} minutes."
+            scheduled = ScheduledCommand(
+                command="CTTHygieneFixCheck",
+                next_run_in_seconds=WATCH_SECONDS,
+                args={"issue_id": ids[0] if ids else results[0]["issue_id"], "watch": "true"},
+                timeout_in_seconds=WATCH_TIMEOUT,
+            )
         return_results(
             CommandResults(
                 readable_output=md,
-                outputs_prefix="CTT.FixCheck",
+                # The watch branch runs next to the question rounds; its own key keeps their
+                # results apart.
+                outputs_prefix="CTT.FixWatch" if watch else "CTT.FixCheck",
                 outputs_key_field="issue_id",
-                # One object for one issue, so the playbook's condition on CTT.FixCheck.resolved
-                # reads a boolean rather than a one-item list.
-                outputs=results[0] if len(results) == 1 else results,
+                # One object for one issue, so the playbook's conditions read booleans rather than
+                # one-item lists.
+                outputs=None if scheduled else (results[0] if len(results) == 1 else results),
+                scheduled_command=scheduled,
             )
         )
     except Exception as e:

@@ -27,12 +27,12 @@ after a day and resolved as Security Testing after 7 days.
 | (not shipped) | CTT - Hygiene - API key created without expiry | Spec in tools/, ships once CTT-CEN-02 is accepted |
 | Job + playbook | CTT - Registry Sync | Every hour: Google Sheet registry to the `ctt_registry` lookup and the `CTT - Registry` list, then the audit log to the `ctt_object_owners` lookup |
 | Job + playbook | CTT - Hygiene - Inventory Check | 08:30 SGT: objects that already exist without a tag, playbook Tags fields, inactive owners; one issue per guideline and owner |
-| Job + playbook | CTT - Hygiene - Fix Check | Every hour: resolves open rule issues whose fix it can verify, with a close note saying why |
+| Job + playbook | CTT - Hygiene - Fix Check | Every hour: resolves open rule issues whose fix it can verify and that have no running playbook, with a close note saying why; closes hygiene cases whose issues are all resolved |
 | Job + playbook | CTT - Hygiene - Reminders | Daily 10:00 SGT: one Slack digest per owner with their hygiene issues open for more than a day |
 | Job + playbook | CTT - Case Housekeeping | Every 4 h: assigns Security cases unassigned for a day, reminds owners to close quiet cases, resolves cases open for 7 days (starred cases are skipped) |
 | Job + playbook | CTT - Tenant Status | Daily 09:00 SGT: replaces the Tenant Status canvas and sets the CTT channel topic |
 | Job + playbooks | CTT - Marketplace Updates (+ sub-playbook CTT - Marketplace Release Analysis) | Mon-Thu 05:00 SGT: TypeSafe Jev reviews newer pack releases, approved updates are installed and verified, held or failed ones get a review case, and a summary goes to the CTT channel |
-| Playbook | CTT - Hygiene - Notify Owner | Per CTT hygiene issue: assign it to its owner, send a Slack DM (FOUND / RULE / FIX template, or AI text with `notify.use_ai`) with the buttons Mark as Fixed / Mark as False Positive / View Issue, set it to In Progress, and wait for the answer: Mark as Fixed runs the fix check, Mark as False Positive closes it as False Positive |
+| Playbook | CTT - Hygiene - Notify Owner | Per CTT hygiene issue: assign it to its owner, send a Slack DM (FOUND / RULE / FIX template, or AI text with `notify.use_ai`) with the buttons Mark as Fixed / Mark as False Positive / View Issue, set it to In Progress, and wait: Mark as Fixed runs the fix check (one re-ask), Mark as False Positive closes it as False Positive, and an hourly watch closes it once fixed. The playbook closes the issue in its last task |
 | Automation rule | CTT - Hygiene - Notify Owner | Runs the playbook on every Medium or higher health issue named `CTT - Hygiene - …`; enabled on install (`is_auto_enabled`) |
 | Script | CTTRegistrySync, CTTOwnerIndex, CTTInventoryCheck, CTTCaseHousekeeping, CTTTenantStatus, CTTMarketplaceUpdates (JavaScript) | Backing scripts for the jobs |
 | Script | CTTSlackPost | Posts a message to the CTT Slack channel (used for the marketplace summary) |
