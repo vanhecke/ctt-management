@@ -60,7 +60,7 @@ join both.
   `CTT - Registry Source` list).
 - A `CTT Slack Webhook` instance: the Slack workflow trigger URL, the CTT channel ID and a placeholder member ID.
 - A `TypeSafe Jev` instance (pack TypeSafeJev, command `jev-evaluate`) for `CTT - Marketplace Updates`. It is not a
-  pack dependency, so the pack installs without it; the job then fails at the Jev review whenever updates are pending.
+  pack dependency, so the pack installs without it; the job then closes each run without changes.
 - `notify.mode` in `CTT - Config`: `allowlist` (default, DMs only to `notify.allowlist`), `admins_only`, `all` or `off`. `notify.use_ai` switches the DM text from the template to the AI prompt.
 - Install the pack fresh (uninstall first) when upgrading from a version before 1.1.3: `adopted: true` only takes effect when a playbook is first installed, and playbooks must be adopted to run on issues.
 - `cases.dry_run` in `CTT - Config` ships as `true`: case housekeeping only reports until you set it to `false`.

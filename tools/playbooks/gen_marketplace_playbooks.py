@@ -92,19 +92,32 @@ def playbook(name: str, description: str, tasks: list[dict], height: int, inputs
 def main_playbook() -> dict:
     pb, core = MAIN, "${inputs.CoreInstance}"
     tasks = [
-        task(pb, "0", "start", "", 50, 50, go("1")),
+        task(pb, "0", "start", "", 50, 50, go("12")),
+        task(
+            pb, "12", "condition", "Is TypeSafe Jev configured?", 50, 220,
+            {"yes": ["1"], "#default#": ["13"]},
+            description="Runs only on tenants with an enabled TypeSafe Jev instance; elsewhere the run closes without changes.",
+            task={"scriptName": "IsIntegrationAvailable"},
+            scriptarguments={"brandname": simple("TypeSafe Jev")},
+        ),
+        task(
+            pb, "13", "regular", "Close: TypeSafe Jev is not configured", 500, 400,
+            description="Closes the run without changes: this tenant has no enabled TypeSafe Jev instance.",
+            task={"script": "Builtin|||closeInvestigation", "iscommand": True, "brand": "Builtin"},
+            scriptarguments={"closeNotes": simple("Skipped: no enabled TypeSafe Jev instance on this tenant, so no Marketplace updates were reviewed.")},
+        ),
         step(
             pb, "1", "Collect installed packs and enabled integrations",
             "Lists installed packs, their newer Marketplace releases and the enabled integration instances.",
-            "collect", {"core_instance": core}, 220, go("2"),
+            "collect", {"core_instance": core}, 400, go("2"),
         ),
         step(
             pb, "2", "Prepare release evidence for Jev",
             "Batches the newer releases with their notes and the observed integrations for Jev.",
-            "prepare_ai", {"core_instance": core, "snapshot": f"${{{CTX}.Snapshot}}"}, 400, go("3"),
+            "prepare_ai", {"core_instance": core, "snapshot": f"${{{CTX}.Snapshot}}"}, 580, go("3"),
         ),
         task(
-            pb, "3", "condition", "Are there newer releases to review?", 50, 580,
+            pb, "3", "condition", "Are there newer releases to review?", 50, 760,
             {"#default#": ["5"], "yes": ["4"]},
             description="Continue to Jev analysis only when the collected Marketplace inventory contains newer releases requiring review.",
             conditions=[
@@ -115,7 +128,7 @@ def main_playbook() -> dict:
             ],
         ),
         task(
-            pb, "4", "playbook", "Review pending releases with Jev", 280, 760, go("5"),
+            pb, "4", "playbook", "Review pending releases with Jev", 280, 940, go("5"),
             description="Runs TypeSafe Jev for every evidence batch. Each returned question ID stays tied to its source release.",
             task={"playbookName": ANALYSIS},
             scriptarguments={"BatchJSON": simple(f"${{{CTX}.ReviewPlan.BatchJSON}}")},
@@ -127,13 +140,13 @@ def main_playbook() -> dict:
             "Validates all Jev answers in one run: rejects conflicting answers and keeps missing or uncertain judgments as unresolved.",
             "apply_ai",
             {"analysis_response": f"${{{CTX}.AnalystBatch}}", "core_instance": core, "review_plan": f"${{{CTX}.ReviewPlan}}"},
-            940, go("6"),
+            1120, go("6"),
         ),
         step(
             pb, "6", "Create validation issues for affected breaking changes",
             "One deduplicated issue per breaking change that affects an enabled integration.",
             "publish", {"assessment": f"${{{CTX}.Assessment}}", "core_instance": core, "dry_run": "${inputs.DryRun}"},
-            1120, go("7"),
+            1300, go("7"),
         ),
         step(
             pb, "7", "Install approved updates and verify versions",
@@ -145,7 +158,7 @@ def main_playbook() -> dict:
                 "dry_run": "${inputs.DryRun}",
                 "snapshot": f"${{{CTX}.Snapshot}}",
             },
-            1300, {"#none#": ["8"], "#error#": ["8"]},
+            1480, {"#none#": ["8"], "#error#": ["8"]},
             continueonerror=True, continueonerrortype="errorPath",
         ),
         step(
@@ -159,7 +172,7 @@ def main_playbook() -> dict:
                 "installation": f"${{{CTX}.Installation}}",
                 "snapshot": f"${{{CTX}.Snapshot}}",
             },
-            1480, go("9"),
+            1660, go("9"),
         ),
         step(
             pb, "9", "Summarize the run",
@@ -171,17 +184,17 @@ def main_playbook() -> dict:
                 "review": f"${{{CTX}.Review}}",
                 "routing": f"${{{CTX}.Routing}}",
             },
-            1660, go("10"),
+            1840, go("10"),
         ),
         task(
-            pb, "10", "regular", "Post the summary to the CTT Slack channel", 50, 1840, go("11"),
+            pb, "10", "regular", "Post the summary to the CTT Slack channel", 50, 2020, go("11"),
             description="Posts the run summary with CTTSlackPost. A Slack failure does not stop the run.",
             task={"scriptName": "CTTSlackPost"},
             scriptarguments={"message": simple(f"${{{CTX}.Summary.text}}")},
             continueonerror=True,
         ),
         task(
-            pb, "11", "regular", "Close the completed Marketplace run", 50, 2020,
+            pb, "11", "regular", "Close the completed Marketplace run", 50, 2200,
             description="Closes only this run's investigation. Review cases stay open until resolved.",
             task={"script": "Builtin|||closeInvestigation", "iscommand": True, "brand": "Builtin"},
             scriptarguments={
@@ -210,9 +223,9 @@ def main_playbook() -> dict:
     ]
     return playbook(
         MAIN,
-        "Jev-reviewed Marketplace updates: collects newer pack releases, has TypeSafe Jev review each one against the enabled integrations, installs approved updates with their mandatory dependencies and verifies the versions. Held, unresolved or failed updates get one deduplicated review case each, breaking changes that affect an enabled integration get a validation issue, and a summary goes to the CTT Slack channel. Run by the job of the same name (Monday to Thursday, 05:00 Singapore time). Needs the TypeSafe Jev and Core REST API integrations.",
+        "Jev-reviewed Marketplace updates: collects newer pack releases, has TypeSafe Jev review each one against the enabled integrations, installs approved updates with their mandatory dependencies and verifies the versions. Held, unresolved or failed updates get one deduplicated review case each, breaking changes that affect an enabled integration get a validation issue, and a summary goes to the CTT Slack channel. Run by the job of the same name (Monday to Thursday, 05:00 Singapore time). Needs the Core REST API integration and a TypeSafe Jev instance; without Jev the run closes without changes.",
         tasks,
-        2045,
+        2225,
         inputs,
         [],
     )
