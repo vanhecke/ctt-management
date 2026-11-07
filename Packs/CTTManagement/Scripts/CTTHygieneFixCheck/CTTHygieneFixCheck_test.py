@@ -145,10 +145,10 @@ def test_decide_closes_with_a_note_saying_why():
     assert confirmed["note"].startswith("Confirmed fixed by jvanhecke@x.com")
     assert decide(item, "open", "still there", "confirm", 0) == {
         "action": "keep",
-        "note": "You said this is fixed, but the check still sees it: still there. Fix it, then press Fixed! again.",
+        "note": "You said this is fixed, but the check still sees it: still there. Fix it, then press Mark as Fixed again.",
     }
     fp = decide(item, "unchecked", "", "false_positive", 0)
-    assert (fp["reason"], fp["note"].startswith("Marked not a violation by jvanhecke@x.com")) == (
+    assert (fp["reason"], fp["note"].startswith("Marked as false positive by jvanhecke@x.com")) == (
         "Resolved - False Positive",
         True,
     )
@@ -157,7 +157,7 @@ def test_decide_closes_with_a_note_saying_why():
 def test_resolution_kind_reads_the_close_note():
     assert resolution_kind("Auto-closed by the CTT fix check: x") == "auto check"
     assert resolution_kind("Confirmed fixed by a@b") == "owner confirmed"
-    assert resolution_kind("Marked not a violation by a@b") == "not a violation"
+    assert resolution_kind("Marked as false positive by a@b") == "false positive"
     assert resolution_kind("Resolved by the CTT inventory check: fixed") == "inventory check"
     assert resolution_kind("") == "manual"
 

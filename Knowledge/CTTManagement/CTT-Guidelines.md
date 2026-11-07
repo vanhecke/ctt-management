@@ -185,13 +185,13 @@ Before you leave the team, delete your objects or hand them over to another DC, 
   opens its own case, both in the **Health** domain, apart from the Security cases you demo with.
 - The issue is **assigned to you** when it is about something you did or own, and you get a short
   **Slack DM** from the CTT workflow explaining what was found, the guideline and how to fix it,
-  with the buttons **Fixed!**, **Not a violation** and **Open issue**.
+  with the buttons **Mark as Fixed**, **Mark as False Positive** and **View Issue**.
 - Objects are never changed or deleted automatically. You fix the object, then:
   - most issues close by themselves within an hour: the pack checks the fix (renamed or deleted
     objects, registry entries, policy scopes, re-attached built-in content, endpoint ranges);
-  - or press **Fixed!**: the pack checks it where it can and resolves the issue, or tells you what
+  - or press **Mark as Fixed**: the pack checks it where it can and resolves the issue, or tells you what
     it still sees;
-  - if something was intended or wrong (a test, a demo), press **Not a violation**: the issue is
+  - if something was intended or wrong (a test, a demo), press **Mark as False Positive**: the issue is
     closed as a false positive and the CTT admins are told.
 - Every closed issue carries a note saying why it was closed. An issue you don't answer stays
   open; you get one daily digest of your issues open for more than a day.
@@ -230,4 +230,4 @@ Before you leave the team, delete your objects or hand them over to another DC, 
 | 2026-11-05 | First draft: guideline IDs, Active and Proposed guidelines |
 | 2026-11-06 | Your tag: primary tag plus alias, registry sheet layout |
 | 2026-11-06 | How monitoring works: issues are assigned to their owner, Slack DM, Tenant Status canvas |
-| 2026-11-07 | How monitoring works: Fixed! / Not a violation buttons, automatic fix checks with close notes, daily digest |
+| 2026-11-07 | How monitoring works: Mark as Fixed / Mark as False Positive buttons, automatic fix checks with close notes, daily digest |

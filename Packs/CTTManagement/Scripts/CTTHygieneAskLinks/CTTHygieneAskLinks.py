@@ -6,7 +6,9 @@ import time
 from typing import Any
 
 # Reply options of the "Did you fix it?" question in CTT - Hygiene - Notify Owner.
-OPTIONS = {"Fixed": "fixed_url", "Not a violation": "not_violation_url"}
+# "Not a violation" was the option name before 1.4.0 shipped; kept for questions already asked.
+OPTIONS = {"Fixed": "fixed_url", "False positive": "not_violation_url", "Not a violation": "not_violation_url"}
+NEEDED = {"fixed_url", "not_violation_url"}
 
 
 def newest_links(value: Any, task_id: str) -> dict[str, str]:
@@ -69,15 +71,15 @@ def main():  # pragma: no cover
         # are usually there. Runs started by an automation rule keep their context where the
         # context API can't read it, so this is the main source; the API poll covers the rest.
         links = newest_links((demisto.context() or {}).get("Ask", {}).get("Links"), task_id)
-        while len(links) < len(OPTIONS):
+        while len(links) < len(NEEDED):
             try:
                 links = newest_links(live_links(investigation_id), task_id) or links
             except Exception as e:
                 demisto.debug(f"context API: {e}")
-            if len(links) == len(OPTIONS) or time.time() >= deadline:
+            if len(links) == len(NEEDED) or time.time() >= deadline:
                 break
             time.sleep(3)
-        if len(links) < len(OPTIONS):
+        if len(links) < len(NEEDED):
             raise DemistoException(
                 f"No answer links for task {task_id} after {timeout} s: is the question asked by Generated link?"
             )

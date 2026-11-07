@@ -36,8 +36,8 @@ owner and resolves it on its own once the objects are fixed.
 
 - The hourly fix check resolves rule issues it can verify as fixed (renamed or deleted objects,
   registry entries, policy scopes, re-attached built-ins, endpoint ranges), with a close note.
-- The owner's Slack DM has the buttons **Fixed!** and **Not a violation**. Fixed! runs the same
-  check; Not a violation resolves the issue as False Positive and tells the CTT admins.
+- The owner's Slack DM has the buttons **Mark as Fixed** and **Mark as False Positive**. Mark as Fixed runs the same
+  check; Mark as False Positive resolves the issue as False Positive and tells the CTT admins.
 - When a user tells you they fixed an issue, use <action=CTTHygieneConfirmFixAction> with its ID.
   Report the result: resolved with the close note, or still open with what is still wrong.
 - Guidelines without an automatic check (CTT-OWN-01, CTT-OOTB-02, CTT-CEN-01, and object types the

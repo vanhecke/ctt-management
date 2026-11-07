@@ -39,7 +39,7 @@ args:
 - name: fixed_url
   description: Link that answers "Fixed" on the issue's question (from CTTHygieneAskLinks).
 - name: not_violation_url
-  description: Link that answers "Not a violation" on the issue's question.
+  description: Link that answers "False positive" on the issue's question.
 - name: buttons
   auto: PREDEFINED
   predefined:

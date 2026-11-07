@@ -46,3 +46,13 @@ def test_context_query_body_hides_the_dt_marker():
     body = context_query_body("Ask.Links")
     assert "${" not in body
     assert json.loads(body) == {"query": "${Ask.Links}"}
+
+
+def test_newest_links_reads_the_false_positive_option():
+    links = {
+        "Task-3": {
+            "0": {"link": "https://t/f", "option": "Fixed", "taskID": "3"},
+            "1": {"link": "https://t/p", "option": "False positive", "taskID": "3"},
+        }
+    }
+    assert newest_links(links, "3") == {"fixed_url": "https://t/f", "not_violation_url": "https://t/p"}

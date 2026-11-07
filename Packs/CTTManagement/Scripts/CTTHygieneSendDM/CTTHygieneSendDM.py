@@ -66,7 +66,7 @@ def build_dm(
 ) -> str:
     """ASCII layout for the code block the CTT workflow puts a DM in: header box, an optional note
     (a re-ask after the owner said "fixed"), the message, and a footer. With answer links the footer
-    says how to answer: the Fixed! / Not a violation buttons when the workflow shows them, else the
+    says how to answer: the Mark as Fixed / Mark as False Positive buttons when the workflow shows them, else the
     links themselves."""
     url = url or ""
     links = {k: v for k, v in (links or {}).items() if v}
@@ -78,7 +78,7 @@ def build_dm(
     issue_line = f"Issue #{issue_id} · assigned to you" if issue_id else "Issue assigned to you"
     if links and buttons:
         parts += [
-            wrap_body("Fixed it? Press Fixed! below. Intended or wrong? Press Not a violation."),
+            wrap_body("Fixed it? Press Mark as Fixed. Intended or wrong? Press Mark as False Positive."),
             "Checked guidelines also close by themselves.",
             issue_line,
         ]
@@ -87,7 +87,7 @@ def build_dm(
             "Fixed it? Confirm here:",
             links.get("fixed", ""),
             "",
-            "Not a violation? Tell us here:",
+            "False positive? Tell us here:",
             links.get("not_violation", ""),
             "",
         ]

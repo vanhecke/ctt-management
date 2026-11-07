@@ -18,7 +18,7 @@ commit as any change to a rule, a playbook check or a guideline.
 - **Auto**: the hourly fix check verifies the fix and resolves the issue.
 - **Partial**: auto for some object types, owner confirmation for the rest.
 - **Confirm**: the issue records something that already happened; it closes when the owner presses
-  Fixed! (or tells the CTT Assistant).
+  Mark as Fixed (or tells the CTT Assistant).
 - **Inventory**: the inventory check resolves its own issues once the objects are fixed.
 - **—**: no issue is raised.
 
@@ -66,14 +66,14 @@ How an open hygiene issue closes. Every close by the pack writes a close note sa
 | Way | When | Close note starts with |
 |---|---|---|
 | Fix check (`CTT - Hygiene - Fix Check`, hourly) | The check verifies the fix | "Auto-closed by the CTT fix check: …" |
-| Owner presses **Fixed!** in the DM (or tells the CTT Assistant) | The check verifies it, or the guideline has no check | "Confirmed fixed by …" |
-| Owner presses **Not a violation** | Always; the CTT channel is told so admins can tune the rule | "Marked not a violation by …" (False Positive) |
+| Owner presses **Mark as Fixed** in the DM (or tells the CTT Assistant) | The check verifies it, or the guideline has no check | "Confirmed fixed by …" |
+| Owner presses **Mark as False Positive** | Always; the CTT channel is told so admins can tune the rule | "Marked as false positive by …" (False Positive) |
 | Inventory check (daily) | All objects of the owner's issue are fixed | its own note |
 
 Each hygiene issue has its own Health case, which stays open when the issue is resolved; the fix
 check closes the case once all its issues are resolved, with a note quoting their close notes.
 
-If the owner presses Fixed! but the check still sees the violation, the issue stays open and the
+If the owner presses Mark as Fixed but the check still sees the violation, the issue stays open and the
 next DM says what is still wrong. An unanswered issue stays open; the owner gets one daily digest
 (`CTT - Hygiene - Reminders`, 10:00 SGT) with their issues open for more than a day.
 
@@ -128,4 +128,4 @@ These jobs support the rules but check nothing themselves:
 | 2026-11-06 | Rules, sweep and agent built in the CTTManagement pack |
 | 2026-11-06 | CTT-CEN-02 and CTT-LAB-02 rules kept out of the pack until accepted (pack installs ignore is_enabled: false); tested end to end on joris (1.0.8) |
 | 2026-11-06 | 1.2.0: Type column (CR/PB). New rule for policy scope (TAG-02); OOTB applies to CTT admins; LAB-01 owners from installer creators and policy editors. The daily sweep became the inventory check (existing objects, Tags field, inactive owners); case checks moved to case housekeeping, which assigns, reminds and resolves cases (CASE-01, CASE-02 now Active) |
-| 2026-11-07 | 1.4.0: remediation loop. Fix check column; hourly fix check with close notes; Fixed! / Not a violation buttons in the DM (answer links by Generated link); daily digest; time-to-fix metrics |
+| 2026-11-07 | 1.4.0: remediation loop. Fix check column; hourly fix check with close notes; Mark as Fixed / Mark as False Positive buttons in the DM (answer links by Generated link); daily digest; time-to-fix metrics |

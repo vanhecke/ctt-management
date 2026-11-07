@@ -329,14 +329,14 @@ def sgt(now_ms: int) -> str:
 
 
 def decide(item: dict, verdict: str, text: str, mode: str, now_ms: int) -> dict:
-    """What to do with one issue. mode: check (job), confirm (owner pressed Fixed!) or
-    false_positive (owner pressed Not a violation). Every close carries a note saying why."""
+    """What to do with one issue. mode: check (job), confirm (owner pressed Mark as Fixed) or
+    false_positive (owner pressed Mark as False Positive). Every close carries a note saying why."""
     owner = item["owner"] or "the owner"
     if mode == "false_positive":
         return {
             "action": "resolve",
             "reason": FALSE_POSITIVE_REASON,
-            "note": f"Marked not a violation by {owner} on {sgt(now_ms)}.",
+            "note": f"Marked as false positive by {owner} on {sgt(now_ms)}.",
         }
     if mode == "confirm":
         if verdict == "fixed":
@@ -349,7 +349,7 @@ def decide(item: dict, verdict: str, text: str, mode: str, now_ms: int) -> dict:
             return {"action": "resolve", "reason": FIXED_REASON, "note": f"Confirmed fixed by {owner} on {sgt(now_ms)} ({text})."}
         return {
             "action": "keep",
-            "note": f"You said this is fixed, but the check still sees it: {text}. Fix it, then press Fixed! again.",
+            "note": f"You said this is fixed, but the check still sees it: {text}. Fix it, then press Mark as Fixed again.",
         }
     if verdict == "fixed":
         return {
@@ -367,8 +367,8 @@ def resolution_kind(comment: str) -> str:
         return "auto check"
     if c.startswith("Confirmed fixed by"):
         return "owner confirmed"
-    if c.startswith("Marked not a violation"):
-        return "not a violation"
+    if c.startswith(("Marked as false positive", "Marked not a violation")):
+        return "false positive"
     if "inventory check" in c.lower() or "sweep" in c.lower():
         return "inventory check"
     return "manual"
@@ -421,7 +421,9 @@ def build_digest(first_name: str, still_open: list[dict], fixed: list[dict], now
     out = [*_header("CTT HYGIENE", "DAILY"), "", f"Hi {first_name or 'there'},"]
     if still_open:
         out += ["", f"STILL OPEN ({len(still_open)})"]
-        out += textwrap.wrap("Fix them, then press Fixed! in the issue's DM. Wrong or intended? Press Not a violation.", WIDTH)
+        out += textwrap.wrap(
+            "Fix them, then press Mark as Fixed in the issue's DM. Wrong or intended? Press Mark as False Positive.", WIDTH
+        )
         for item in still_open[:max_items]:
             out += _line(item, now_ms, server)
         if len(still_open) > max_items:
@@ -736,7 +738,7 @@ def main():  # pragma: no cover
                         # Before resolving: resolving stops the playbook this script may run in.
                         post_channel(
                             f"CTT hygiene: {item['owner'] or 'the owner'} marked issue #{item['id']} ({item['guideline']}, "
-                            f"{what(item)}) as not a violation. CTT admins: check whether the rule needs tuning.",
+                            f"{what(item)}) as a false positive. CTT admins: check whether the rule needs tuning.",
                             errors,
                         )
                     row["reason"] = resolve(item["id"], plan["reason"], plan["note"], run_state)

@@ -84,7 +84,7 @@ def playbook() -> dict:
     t["5"]["nexttasks"] = {"#none#": ["11"]}
     # The question loop runs as a sub-playbook: a link back into task 11 would make 11 wait for that
     # link's task too (all incoming tasks must finish first), so the playbook stopped after task 8.
-    t["11"] = base("11", "playbook", "Ask the owner until fixed", "Runs CTT - Hygiene - Ask Owner (DM with the Fixed! / Not a violation answers, then the fix check) again until the issue is resolved. Resolving the issue also stops this playbook.", 1220, x=250,
+    t["11"] = base("11", "playbook", "Ask the owner until fixed", "Runs CTT - Hygiene - Ask Owner (DM with the Mark as Fixed / Mark as False Positive answers, then the fix check) again until the issue is resolved. Resolving the issue also stops this playbook.", 1220, x=250,
                    task_extra={"playbookName": ASK_PLAYBOOK})
     t["11"]["loop"] = {
         "iscommand": False,
@@ -99,7 +99,7 @@ def playbook() -> dict:
         "id": NAME,
         "version": -1,
         "name": NAME,
-        "description": "Runs on every CTT hygiene health issue: assigns it to the person responsible (from the issue's owner marker and the CTT registry), sends them a Slack DM with the fix and the answer buttons Fixed! / Not a violation, and waits for the answer. Fixed! runs the fix check (resolve with a close note, or ask again with what is still wrong); Not a violation resolves as False Positive and tells the CTT channel. DMs follow notify in 'CTT - Config'.",
+        "description": "Runs on every CTT hygiene health issue: assigns it to the person responsible (from the issue's owner marker and the CTT registry), sends them a Slack DM with the fix and the answer buttons Mark as Fixed / Mark as False Positive, and waits for the answer. Mark as Fixed runs the fix check (resolve with a close note, or ask again with what is still wrong); Mark as False Positive resolves it as False Positive and tells the CTT channel. DMs follow notify in 'CTT - Config'.",
         "fromversion": "8.15.0",
         "marketplaces": ["marketplacev2", "platform"],
         "tags": ["CTT"],
@@ -137,7 +137,7 @@ def ask_playbook() -> dict:
     t["10"] = at("10", "regular", "Wait for the question's links", "Gives the question time to write its answer links to the context.", 400, x=450, extra={"scriptName": "Sleep"})
     t["10"]["scriptarguments"] = {"seconds": {"simple": "20"}}
     t["10"]["nexttasks"] = {"#none#": ["4"]}
-    t[ASK] = at(ASK, "condition", "Did you fix it?", "Asked by Generated link: one link per answer, opened without a Cortex login, behind the Fixed! and Not a violation buttons of the DM. Waits until answered (no timeout); the daily digest reminds the owner.", 480, x=50)
+    t[ASK] = at(ASK, "condition", "Did you fix it?", "Asked by Generated link: one link per answer, opened without a Cortex login, behind the Mark as Fixed and Mark as False Positive buttons of the DM. Waits until answered (no timeout); the daily digest reminds the owner.", 480, x=50)
     t[ASK]["message"] = {
         "to": {"simple": f"${{{CTX}.owner_email}}"},
         "subject": {"simple": f"CTT hygiene issue #${{{CTX}.issue_id}}"},
@@ -147,15 +147,15 @@ def ask_playbook() -> dict:
         "bcc": None,
         "cc": None,
         "timings": {"retriescount": 0, "retriesinterval": 1440, "completeafterreplies": 1, "completeafterv2": True, "completeaftersla": False},
-        "replyOptions": ["Fixed", "Not a violation"],
+        "replyOptions": ["Fixed", "False positive"],
     }
-    t[ASK]["nexttasks"] = {"Fixed": ["5"], "Not a violation": ["6"]}
+    t[ASK]["nexttasks"] = {"Fixed": ["5"], "False positive": ["6"]}
     t["4"] = at("4", "regular", "Get the answer links", "Returns the newest link per answer from the context.", 530, x=450, extra={"scriptName": "CTTHygieneAskLinks"})
     t["4"]["scriptarguments"] = {"task_id": {"simple": ASK}}
     # Without links (Generated link unavailable) the DM still goes out, without answer buttons.
     t["4"]["continueonerror"] = True
     t["4"]["nexttasks"] = {"#none#": ["7"]}
-    t["7"] = at("7", "regular", "Send the Slack DM", "Lays out the DM (FOUND / RULE / FIX, or the AI text) with the answer links, as Slack buttons when notify.buttons is on, and sends it through the CTT Slack Webhook. After a Fixed! the check couldn't confirm, it starts with what is still wrong.", 650, x=450, extra={"scriptName": "CTTHygieneSendDM"})
+    t["7"] = at("7", "regular", "Send the Slack DM", "Lays out the DM (FOUND / RULE / FIX, or the AI text) with the answer links, as Slack buttons when notify.buttons is on, and sends it through the CTT Slack Webhook. After a Mark as Fixed the check couldn't confirm, it starts with what is still wrong.", 650, x=450, extra={"scriptName": "CTTHygieneSendDM"})
     t["7"]["scriptarguments"] = {
         "slack_user_id": arg("slack_id"),
         "owner_email": arg("owner_email"),
@@ -182,7 +182,7 @@ def ask_playbook() -> dict:
                 extra={"scriptName": "CTTHygieneFixCheck"})
     t["5"]["scriptarguments"] = {"issue_id": arg("issue_id"), "confirm": {"simple": "true"}}
     t["5"]["nexttasks"] = {"#none#": ["9"]}
-    t["6"] = at("6", "regular", "Record: not a violation", "CTTHygieneFixCheck false_positive=true: tells the CTT channel, then resolves as False Positive with a close note.", 650, x=-150,
+    t["6"] = at("6", "regular", "Record: false positive", "CTTHygieneFixCheck false_positive=true: tells the CTT channel, then resolves as False Positive with a close note.", 650, x=-150,
                 extra={"scriptName": "CTTHygieneFixCheck"})
     t["6"]["scriptarguments"] = {"issue_id": arg("issue_id"), "false_positive": {"simple": "true"}}
     t["6"]["nexttasks"] = {"#none#": ["9"]}
@@ -191,7 +191,7 @@ def ask_playbook() -> dict:
         "id": ASK_PLAYBOOK,
         "version": -1,
         "name": ASK_PLAYBOOK,
-        "description": "Sub-playbook of CTT - Hygiene - Notify Owner, run in a loop until the issue is resolved: asks the owner \"Did you fix it?\" by Generated link, DMs them the Fixed! / Not a violation answers, and runs CTTHygieneFixCheck on the answer.",
+        "description": "Sub-playbook of CTT - Hygiene - Notify Owner, run in a loop until the issue is resolved: asks the owner \"Did you fix it?\" by Generated link, DMs them the Mark as Fixed / Mark as False Positive answers, and runs CTTHygieneFixCheck on the answer.",
         "fromversion": "8.15.0",
         "marketplaces": ["marketplacev2", "platform"],
         "tags": ["CTT"],
@@ -234,7 +234,7 @@ def main() -> None:
         "Sub-playbook of `CTT - Hygiene - Notify Owner`, looped until the issue is resolved.\n\n"
         "1. Clears the previous answer links (`Ask`).\n"
         "2. Asks **Did you fix it?** by Generated link; in parallel `CTTHygieneAskLinks` waits for the links, `CTTHygieneSendDM` sends the DM with them (Slack buttons with `notify.buttons`) and the issue is set to In Progress.\n"
-        "3. **Fixed** runs `CTTHygieneFixCheck confirm=true`; **Not a violation** runs `CTTHygieneFixCheck false_positive=true`.\n\n"
+        "3. **Fixed** runs `CTTHygieneFixCheck confirm=true`; **Mark as False Positive** runs `CTTHygieneFixCheck false_positive=true`.\n\n"
         "An unconfirmed fix leaves `CTT.FixCheck.resolved` false, so the parent loop runs another round whose DM starts with what is still wrong.\n"
     )
     (PACK / "Playbooks" / "playbook-CTT-Hygiene-Notify-Owner_README.md").write_text(
@@ -242,9 +242,9 @@ def main() -> None:
         "1. `CTTHygieneTriage` finds the owner from the issue's `[owner: ...]` marker, their name, role and Slack ID in the CTT registry, and the guideline.\n"
         "2. `core-update-issue` assigns the issue to the owner's email.\n"
         "3. With `notify.use_ai`, the `CTTHygieneMessagePrompt` AI task writes the DM text; otherwise the FOUND / RULE / FIX template from triage is used.\n"
-        "4. The `CTT - Hygiene - Ask Owner` sub-playbook runs in a loop until the issue is resolved: **Did you fix it?** is asked by Generated link (no timeout), and `CTTHygieneSendDM` sends the DM with the answers as Slack buttons **Fixed!**, **Not a violation** and **Open issue** (`notify.buttons`), otherwise with the links in the text. The issue is set to In Progress.\n"
-        "5. **Fixed!** runs `CTTHygieneFixCheck confirm=true`: a verified fix (or a guideline without a check) is resolved with a close note; otherwise the question is asked again and the next DM says what is still wrong.\n"
-        "6. **Not a violation** runs `CTTHygieneFixCheck false_positive=true`: a post in the CTT channel, then Resolved - False Positive with a close note.\n\n"
+        "4. The `CTT - Hygiene - Ask Owner` sub-playbook runs in a loop until the issue is resolved: **Did you fix it?** is asked by Generated link (no timeout), and `CTTHygieneSendDM` sends the DM with the answers as Slack buttons **Mark as Fixed**, **Mark as False Positive** and **View Issue** (`notify.buttons`), otherwise with the links in the text. The issue is set to In Progress.\n"
+        "5. **Mark as Fixed** runs `CTTHygieneFixCheck confirm=true`: a verified fix (or a guideline without a check) is resolved with a close note; otherwise the question is asked again and the next DM says what is still wrong.\n"
+        "6. **Mark as False Positive** runs `CTTHygieneFixCheck false_positive=true`: a post in the CTT channel, then Resolved - False Positive with a close note.\n\n"
         "The hourly `CTT - Hygiene - Fix Check` job also resolves issues it finds fixed; resolving the issue stops this playbook. "
         "Assigning and the AI step continue on error. DMs follow `notify.mode` (`off`, `admins_only`, `all`) and the daily limit in `CTT - Config`.\n"
     )

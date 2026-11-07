@@ -22,10 +22,10 @@ The case note quotes the issues' close notes.
 
 - **Check** (default, the hourly `CTT - Hygiene - Fix Check` job): resolves issues the check finds
   fixed (`Resolved - Fixed`, or `Resolved - Other` where the tenant doesn't offer Fixed).
-- **confirm=true** (the owner pressed **Fixed!**, or told the CTT Assistant): verified issues and
+- **confirm=true** (the owner pressed **Mark as Fixed**, or told the CTT Assistant): verified issues and
   issues without a check are resolved; an issue the check still sees stays open, and `note` says
   what is still wrong (the Notify Owner playbook puts it in the next DM).
-- **false_positive=true** (the owner pressed **Not a violation**): posts it to the CTT channel for
+- **false_positive=true** (the owner pressed **Mark as False Positive**): posts it to the CTT channel for
   the admins, then resolves as `Resolved - False Positive`.
 - **remind=true** (the daily `CTT - Hygiene - Reminders` job): after checking, one digest DM per
   owner with their open issues older than a day and what closed since yesterday, at most once a day

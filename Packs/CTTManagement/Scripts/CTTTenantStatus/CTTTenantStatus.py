@@ -155,8 +155,8 @@ def resolution_kind(comment: str) -> str:
         return "auto check"
     if c.startswith("Confirmed fixed by"):
         return "owner confirmed"
-    if c.startswith("Marked not a violation"):
-        return "not a violation"
+    if c.startswith(("Marked as false positive", "Marked not a violation")):
+        return "false positive"
     if "inventory check" in c.lower() or "sweep" in c.lower():
         return "inventory check"
     return "manual"
@@ -176,7 +176,7 @@ def duration(hours: float) -> str:
 
 def fix_metrics(resolved: list[dict], still_open: list[dict], now_ms: int) -> dict:
     """Closed hygiene issues by how they closed, median time to fix (overall and per guideline,
-    without 'not a violation'), top fixers, and the oldest open issue."""
+    without false positives), top fixers, and the oldest open issue."""
     by_how: dict[str, int] = {}
     hours: list[float] = []
     per_gid: dict[str, list[float]] = {}
@@ -184,7 +184,7 @@ def fix_metrics(resolved: list[dict], still_open: list[dict], now_ms: int) -> di
     for i in resolved:
         how = resolution_kind(str(i.get("status.resolution_comment") or ""))
         by_how[how] = by_how.get(how, 0) + 1
-        if how == "not a violation":
+        if how == "false positive":
             continue
         start, end = int(i.get("_insert_time") or 0), int(i.get("resolution_status_modified_ts") or 0)
         if start and end >= start:
@@ -249,7 +249,7 @@ def build_canvas(r: dict, days: int, now: datetime, tenant_url: str = "") -> str
         f"• Open hygiene issues: {open_issues} ({fmt_counts(by(hygiene, 'guideline', title=False))})",
         f"• Most to fix: {fmt_counts(owners, 5)}",
         *fix_lines(r.get("fix_metrics") or {}, days),
-        "• Fix the object: checked guidelines close by themselves within an hour; otherwise press Fixed! in the DM.",
+        "• Fix the object: checked guidelines close by themselves within an hour; otherwise press Mark as Fixed in the DM.",
         "",
         f"📊 LAST {days} DAYS",
         f"• Cases: {total(r['cases'])} new ({fmt_counts(by(r['cases'], 'xdm.case.domain'))}); "

@@ -65,7 +65,7 @@ def test_template_body():
 def test_build_dm_with_buttons_explains_them_and_drops_the_link():
     links = {"fixed": "https://t/f", "not_violation": "https://t/n"}
     dm = build_dm("CTT-TAG-01", "Body.", "60900", "https://t/1", links=links, buttons=True)
-    assert "Press Fixed! below" in dm
+    assert "Press Mark as Fixed." in dm
     assert "https://t/" not in dm
 
 

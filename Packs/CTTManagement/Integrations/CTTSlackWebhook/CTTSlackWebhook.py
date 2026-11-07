@@ -3,7 +3,7 @@ from CommonServerPython import *  # noqa: F401
 
 ACTIONS = ("msg_person", "msg_person_health_issue", "msg_channel", "channel_update_topic", "canvas_update")
 # msg_person_health_issue: a DM with three buttons whose labels are fixed in the Slack workflow:
-# Fixed! (fixed_url), Not a violation (not_violation_url) and Open issue (issue_url).
+# Mark as Fixed (fixed_url), Mark as False Positive (not_violation_url) and View Issue (issue_url).
 BUTTON_KEYS = ("fixed_url", "not_violation_url", "issue_url")
 UNUSED = "-"  # value of a button input the action does not use
 URL_PREFIX = "https://hooks.slack.com/"

@@ -161,12 +161,12 @@ def test_fix_metrics_and_lines():
             "description": "[owner: a@x.com]",
             "_insert_time": 1,
             "resolution_status_modified_ts": h + 1,
-            "status.resolution_comment": "Marked not a violation by a@x.com",
+            "status.resolution_comment": "Marked as false positive by a@x.com",
         },
     ]
     still_open = [{"id": 7, "name": "CTT - Hygiene - CTT-LAB-01 - q", "description": "[owner: c@x.com]", "_insert_time": 1}]
     m = fix_metrics(resolved, still_open, 5 * 86_400_000 + 1)
-    assert m["by_how"] == {"auto check": 1, "owner confirmed": 1, "not a violation": 1}
+    assert m["by_how"] == {"auto check": 1, "owner confirmed": 1, "false positive": 1}
     assert m["median"] == 37
     assert m["fixers"] == {"a": 1, "b": 1}
     assert m["oldest"] == {"id": 7, "guideline": "CTT-LAB-01", "hours": 120, "owner": "c"}

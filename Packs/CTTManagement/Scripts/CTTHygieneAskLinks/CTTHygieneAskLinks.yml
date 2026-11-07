@@ -2,7 +2,7 @@ commonfields:
   id: CTTHygieneAskLinks
   version: -1
 name: CTTHygieneAskLinks
-comment: Waits until the "Did you fix it?" question of the CTT - Hygiene - Notify Owner playbook has written its answer links (Ask by Generated link) and returns the newest link per answer, for the Fixed! and Not a violation buttons of the owner's Slack DM.
+comment: Waits until the "Did you fix it?" question of the CTT - Hygiene - Notify Owner playbook has written its answer links (Ask by Generated link) and returns the newest link per answer, for the Mark as Fixed and Mark as False Positive buttons of the owner's Slack DM.
 script: '-'
 type: python
 subtype: python3
@@ -26,7 +26,7 @@ outputs:
   description: Link that answers "Fixed".
   type: String
 - contextPath: CTT.Ask.not_violation_url
-  description: Link that answers "Not a violation".
+  description: Link that answers "False positive".
   type: String
 dependson:
   must:

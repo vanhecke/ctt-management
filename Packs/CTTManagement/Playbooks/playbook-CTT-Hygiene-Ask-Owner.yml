@@ -1,7 +1,7 @@
 id: CTT - Hygiene - Ask Owner
 version: -1
 name: CTT - Hygiene - Ask Owner
-description: 'Sub-playbook of CTT - Hygiene - Notify Owner, run in a loop until the issue is resolved: asks the owner "Did you fix it?" by Generated link, DMs them the Fixed! / Not a violation answers, and runs CTTHygieneFixCheck on the answer.'
+description: 'Sub-playbook of CTT - Hygiene - Notify Owner, run in a loop until the issue is resolved: asks the owner "Did you fix it?" by Generated link, DMs them the Mark as Fixed / Mark as False Positive answers, and runs CTTHygieneFixCheck on the answer.'
 fromversion: 8.15.0
 marketplaces:
 - marketplacev2
@@ -120,7 +120,7 @@ tasks:
       id: d0e887cd-b6d1-5705-9d6c-bf711483f265
       version: -1
       name: Did you fix it?
-      description: 'Asked by Generated link: one link per answer, opened without a Cortex login, behind the Fixed! and Not a violation buttons of the DM. Waits until answered (no timeout); the daily digest reminds the owner.'
+      description: 'Asked by Generated link: one link per answer, opened without a Cortex login, behind the Mark as Fixed and Mark as False Positive buttons of the DM. Waits until answered (no timeout); the daily digest reminds the owner.'
       type: condition
       iscommand: false
       brand: ''
@@ -152,11 +152,11 @@ tasks:
         completeaftersla: false
       replyOptions:
       - Fixed
-      - Not a violation
+      - False positive
     nexttasks:
       Fixed:
       - '5'
-      Not a violation:
+      False positive:
       - '6'
   '4':
     id: '4'
@@ -194,7 +194,7 @@ tasks:
       id: d87fab73-79e7-5a31-84ef-f1abe2dd707f
       version: -1
       name: Send the Slack DM
-      description: Lays out the DM (FOUND / RULE / FIX, or the AI text) with the answer links, as Slack buttons when notify.buttons is on, and sends it through the CTT Slack Webhook. After a Fixed! the check couldn't confirm, it starts with what is still wrong.
+      description: Lays out the DM (FOUND / RULE / FIX, or the AI text) with the answer links, as Slack buttons when notify.buttons is on, and sends it through the CTT Slack Webhook. After a Mark as Fixed the check couldn't confirm, it starts with what is still wrong.
       type: regular
       iscommand: false
       brand: ''
@@ -305,7 +305,7 @@ tasks:
     task:
       id: 35028b17-5063-5319-9bd4-19933781659c
       version: -1
-      name: 'Record: not a violation'
+      name: 'Record: false positive'
       description: 'CTTHygieneFixCheck false_positive=true: tells the CTT channel, then resolves as False Positive with a close note.'
       type: regular
       iscommand: false

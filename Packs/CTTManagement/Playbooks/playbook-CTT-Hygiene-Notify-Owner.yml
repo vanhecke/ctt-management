@@ -1,7 +1,7 @@
 id: CTT - Hygiene - Notify Owner
 version: -1
 name: CTT - Hygiene - Notify Owner
-description: 'Runs on every CTT hygiene health issue: assigns it to the person responsible (from the issue''s owner marker and the CTT registry), sends them a Slack DM with the fix and the answer buttons Fixed! / Not a violation, and waits for the answer. Fixed! runs the fix check (resolve with a close note, or ask again with what is still wrong); Not a violation resolves as False Positive and tells the CTT channel. DMs follow notify in ''CTT - Config''.'
+description: 'Runs on every CTT hygiene health issue: assigns it to the person responsible (from the issue''s owner marker and the CTT registry), sends them a Slack DM with the fix and the answer buttons Mark as Fixed / Mark as False Positive, and waits for the answer. Mark as Fixed runs the fix check (resolve with a close note, or ask again with what is still wrong); Mark as False Positive resolves it as False Positive and tells the CTT channel. DMs follow notify in ''CTT - Config''.'
 fromversion: 8.15.0
 marketplaces:
 - marketplacev2
@@ -269,7 +269,7 @@ tasks:
       id: 2c4885b7-82ea-5bca-af20-e094258d4b10
       version: -1
       name: Ask the owner until fixed
-      description: Runs CTT - Hygiene - Ask Owner (DM with the Fixed! / Not a violation answers, then the fix check) again until the issue is resolved. Resolving the issue also stops this playbook.
+      description: Runs CTT - Hygiene - Ask Owner (DM with the Mark as Fixed / Mark as False Positive answers, then the fix check) again until the issue is resolved. Resolving the issue also stops this playbook.
       type: playbook
       iscommand: false
       brand: ''

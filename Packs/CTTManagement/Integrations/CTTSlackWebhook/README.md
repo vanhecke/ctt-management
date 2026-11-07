@@ -5,7 +5,7 @@ The workflow accepts JSON with `action`, `slack_user_id`, `slack_channel_id`, `c
 | Action | Effect |
 | --- | --- |
 | msg_person | Direct message to `slack_user_id` (shown as plain text; links are clickable) |
-| msg_person_health_issue | Like msg_person, plus three buttons: **Fixed!** (`fixed_url`), **Not a violation** (`not_violation_url`) and **Open issue** (`issue_url`) |
+| msg_person_health_issue | Like msg_person, plus three buttons: **Mark as Fixed** (`fixed_url`), **Mark as False Positive** (`not_violation_url`) and **View Issue** (`issue_url`) |
 | msg_channel | Message to `slack_channel_id` |
 | channel_update_topic | Sets the topic of the CTT channel to `content` |
 | canvas_update | Replaces the 'Tenant Status' canvas in the CTT channel with `content` |
@@ -34,9 +34,9 @@ labels fixed in the workflow:
 
 | Input | Button | Opens |
 | --- | --- | --- |
-| `fixed_url` | Fixed! | The issue's confirmation page: one more click on Submit answers "Fixed" |
-| `not_violation_url` | Not a violation | The same page for the "Not a violation" answer |
-| `issue_url` | Open issue | The issue in Cortex |
+| `fixed_url` | Mark as Fixed | The issue's confirmation page: one more click on Submit answers "Fixed" |
+| `not_violation_url` | Mark as False Positive | The same page for the "False positive" answer |
+| `issue_url` | View Issue | The issue in Cortex |
 
 Every call sends all three (typed workflow inputs reject empty values). The confirmation pages need
 no Cortex login; once the issue is closed they show "expired".
