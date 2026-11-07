@@ -1,0 +1,153 @@
+commonfields:
+  id: CTTMarketplaceUpdates
+  version: -1
+name: CTTMarketplaceUpdates
+comment: 'Jev-reviewed Marketplace updates for the tenant (from the TypeSafe Jev Marketplace Guard): collects installed packs and newer releases, has TypeSafe Jev review each release against the enabled integrations, installs approved updates with their mandatory dependencies, verifies the versions, opens one review case per held or failed update, and writes a run summary for the CTT Slack channel. Run by the ''CTT - Marketplace Updates'' playbook.'
+script: '-'
+type: javascript
+runas: DBotWeakRole
+enabled: true
+timeout: 1800ns
+tags:
+- CTT
+- Content Management
+args:
+- name: action
+  required: true
+  auto: PREDEFINED
+  predefined:
+  - collect
+  - assess
+  - prepare_ai
+  - unpack_ai
+  - wrap_ai
+  - apply_ai
+  - publish
+  - install
+  - review
+  - pack_detail
+  - close_review
+  - summary
+  defaultValue: collect
+  description: 'collect, assess, prepare_ai, unpack_ai, wrap_ai, apply_ai, publish, install, review, or pack_detail (read-only pack review details), or summary (plain-text run summary for the CTT Slack channel). close_review: after a verified update, resolve the review issue + case (reason other, with comment) and mark the review list entry resolved.'
+- name: core_instance
+  description: Optional Core REST API integration instance name. If omitted, the enabled instance is selected automatically.
+- name: snapshot
+  description: Marketplace snapshot returned by the collect action.
+- name: assessment
+  description: Validated Marketplace assessment returned by the assess or apply_ai action.
+- name: dry_run
+  auto: PREDEFINED
+  predefined:
+  - 'true'
+  - 'false'
+  defaultValue: 'true'
+  description: Whether state-changing actions should only report the changes they would make.
+- name: review_plan
+  description: Release review plan returned by the prepare_ai action.
+- name: analysis_response
+  description: Jev response or responses to validate and apply.
+- name: batch_json
+  description: Serialized release evidence batch supplied to the analysis sub-playbook.
+- name: installation
+  description: TypeSafeJevMarketplace.Installation result (for action=review).
+- name: review
+  description: TypeSafeJevMarketplace.Review result (for action=summary).
+- name: routing
+  description: TypeSafeJevMarketplace.Routing result (for action=summary).
+- name: pack
+  description: Pack ID (e.g. HelloWorld, Core). Required for pack_detail and close_review.
+- name: target_version
+  description: Target pack version. Optional for pack_detail (defaults to latest); required for close_review (must equal the installed version).
+- name: issue_id
+  description: 'close_review: numeric review issue ID. Optional; if blank the review issue is found by title "Marketplace Guard - manual review: <pack> ... -> <target_version>".'
+- name: case_id
+  description: 'close_review: case ID to close. Optional; defaults to the case linked to the review issue.'
+- name: comment
+  description: 'close_review: resolution comment for issue and case. Optional; default "Marketplace Guard: <pack> updated to <target_version>, verified".'
+outputs:
+- contextPath: TypeSafeJevMarketplace.Snapshot
+  description: Current pack versions, newer release notes and observed enabled integrations.
+  type: Unknown
+- contextPath: TypeSafeJevMarketplace.Assessment
+  description: Publisher breaking flags, explicit notices and environment evidence.
+  type: Unknown
+- contextPath: TypeSafeJevMarketplace.Routing
+  description: Issue routing results.
+  type: Unknown
+- contextPath: TypeSafeJevMarketplace.ReviewPlan
+  description: Prepared release batches and immutable finding keys.
+  type: Unknown
+- contextPath: TypeSafeJevMarketplace.Batch
+  description: Evidence for the current Jev analysis batch.
+  type: Unknown
+- contextPath: TypeSafeJevMarketplace.AnalystBatch
+  description: Wrapped AI result returned by the analysis sub-playbook.
+  type: Unknown
+- contextPath: TypeSafeJevMarketplace.Installation
+  description: Verified installations, held updates and failed or unverified outcomes.
+  type: Unknown
+- contextPath: TypeSafeJevMarketplace.Review
+  description: Manual review cases created/updated for held, unresolved or failed updates.
+  type: unknown
+- contextPath: TypeSafeJevMarketplace.PackDetail
+  description: 'Read-only pack review detail (action=pack_detail): installed/latest/target versions, intervening release notes and links, dependencies, enabled integration instances, referencing content, Jev decision/hold reason and open review issue/case.'
+  type: Unknown
+- contextPath: TypeSafeJevMarketplace.PackDetail.pack_id
+  description: Pack ID.
+  type: Unknown
+- contextPath: TypeSafeJevMarketplace.PackDetail.pack_name
+  description: Pack display name.
+  type: Unknown
+- contextPath: TypeSafeJevMarketplace.PackDetail.installed_version
+  description: Currently installed version (null if not installed).
+  type: Unknown
+- contextPath: TypeSafeJevMarketplace.PackDetail.latest_version
+  description: Latest version available in Marketplace.
+  type: Unknown
+- contextPath: TypeSafeJevMarketplace.PackDetail.target_version
+  description: Version under review (input target_version or latest).
+  type: Unknown
+- contextPath: TypeSafeJevMarketplace.PackDetail.update_available
+  description: True if Marketplace has a newer version than installed.
+  type: Unknown
+- contextPath: TypeSafeJevMarketplace.PackDetail.target_in_marketplace
+  description: True if target version exists in the Marketplace changelog.
+  type: Unknown
+- contextPath: TypeSafeJevMarketplace.PackDetail.releases
+  description: 'Versions after installed up to target: version, released, breaking, breaking_notes, release_notes, github_url.'
+  type: Unknown
+- contextPath: TypeSafeJevMarketplace.PackDetail.marketplace_url
+  description: Marketplace page link.
+  type: Unknown
+- contextPath: TypeSafeJevMarketplace.PackDetail.dependencies
+  description: 'Declared dependencies: pack_id, mandatory, required_min_version, installed_version, latest_marketplace_version, satisfied, available.'
+  type: Unknown
+- contextPath: TypeSafeJevMarketplace.PackDetail.integration_instances
+  description: 'Integration instances of the pack: name, id, brand, enabled, health, last_error.'
+  type: Unknown
+- contextPath: TypeSafeJevMarketplace.PackDetail.references
+  description: 'Best-effort content referencing the pack (playbooks, automations, layouts, correlation_rules): name, id, pack, matched.'
+  type: Unknown
+- contextPath: TypeSafeJevMarketplace.PackDetail.guard
+  description: 'Guard state: review_key, review_ledger, state_v2_entries, jev (decisions with confidence), hold_reason, recommended_action, open_review_issue (issue_id, case_ids, status).'
+  type: Unknown
+- contextPath: TypeSafeJevMarketplace.PackDetail.gaps
+  description: Data that could not be retrieved.
+  type: Unknown
+- contextPath: TypeSafeJevMarketplace.Summary.text
+  description: Plain-text run summary for the CTT Slack channel (action=summary).
+  type: String
+- contextPath: TypeSafeJevMarketplace.Summary
+  description: 'Run counts behind the summary: checked, updates, installed, would_install, held, failed, review_cases_created.'
+  type: Unknown
+dependson:
+  must:
+  - core-api-get
+  - core-api-post
+fromversion: 8.9.0
+marketplaces:
+- marketplacev2
+- platform
+tests:
+- No tests (auto formatted)

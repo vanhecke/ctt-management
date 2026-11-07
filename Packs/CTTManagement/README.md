@@ -29,13 +29,15 @@ after a day and resolved as Security Testing after 7 days.
 | Job + playbook | CTT - Hygiene - Inventory Check | 08:30 SGT: objects that already exist without a tag, playbook Tags fields, inactive owners; one issue per guideline and owner |
 | Job + playbook | CTT - Case Housekeeping | Every 4 h: assigns Security cases unassigned for a day, reminds owners to close quiet cases, resolves cases open for 7 days (starred cases are skipped) |
 | Job + playbook | CTT - Tenant Status | Daily 09:00 SGT: replaces the Tenant Status canvas and sets the CTT channel topic |
+| Job + playbooks | CTT - Marketplace Updates (+ sub-playbook CTT - Marketplace Release Analysis) | Mon-Thu 05:00 SGT: TypeSafe Jev reviews newer pack releases, approved updates are installed and verified, held or failed ones get a review case, and a summary goes to the CTT channel |
 | Playbook | CTT - Hygiene - Notify Owner | Per CTT hygiene issue: assign it to its owner, send a Slack DM (FOUND / RULE / FIX template, or AI text with `notify.use_ai`), set it to In Progress |
 | Automation rule | CTT - Hygiene - Notify Owner | Runs the playbook on every Medium or higher health issue named `CTT - Hygiene - …`; enabled on install (`is_auto_enabled`) |
-| Script | CTTRegistrySync, CTTOwnerIndex, CTTInventoryCheck, CTTCaseHousekeeping, CTTTenantStatus | Backing scripts for the jobs |
+| Script | CTTRegistrySync, CTTOwnerIndex, CTTInventoryCheck, CTTCaseHousekeeping, CTTTenantStatus, CTTMarketplaceUpdates (JavaScript) | Backing scripts for the jobs |
+| Script | CTTSlackPost | Posts a message to the CTT Slack channel (used for the marketplace summary) |
 | Script | CTTHygieneTriage, CTTHygieneMessagePrompt (optional AI prompt), CTTHygieneSendDM | Backing scripts for notifying owners |
 | Integration | CTT Slack Webhook | One-way Slack workflow webhook: DM, channel message, channel topic, Tenant Status canvas |
 | Script | CTTRegistryLookup, CTTMyFootprint | Backing scripts for the agent |
-| Script | CTTEnsureJobs | Creates or updates the four jobs from the `CTT - Jobs` list (run after every install or upgrade) |
+| Script | CTTEnsureJobs | Creates or updates the five jobs from the `CTT - Jobs` list (run after every install or upgrade) |
 | List | CTT - Jobs | The job definitions CTTEnsureJobs applies |
 | List | CTT - Guidelines Index | Every guideline by ID, generated from CTT-Guidelines.md; quoted in the DMs |
 | List | CTT - Config | Pack settings (registry sheet, notify mode, inventory check, case housekeeping) |
@@ -57,6 +59,8 @@ join both.
 - A GoogleSheets instance that can read the registry sheet (otherwise the sync falls back to the
   `CTT - Registry Source` list).
 - A `CTT Slack Webhook` instance: the Slack workflow trigger URL, the CTT channel ID and a placeholder member ID.
+- A `TypeSafe Jev` instance (pack TypeSafeJev, command `jev-evaluate`) for `CTT - Marketplace Updates`. It is not a
+  pack dependency, so the pack installs without it; the job then fails at the Jev review whenever updates are pending.
 - `notify.mode` in `CTT - Config`: `allowlist` (default, DMs only to `notify.allowlist`), `admins_only`, `all` or `off`. `notify.use_ai` switches the DM text from the template to the AI prompt.
 - Install the pack fresh (uninstall first) when upgrading from a version before 1.1.3: `adopted: true` only takes effect when a playbook is first installed, and playbooks must be adopted to run on issues.
 - `cases.dry_run` in `CTT - Config` ships as `true`: case housekeeping only reports until you set it to `false`.
@@ -67,7 +71,7 @@ join both.
 
 1. Configure the `CTT Slack Webhook` instance.
 2. Run `!CTTEnsureJobs remove_obsolete=true` in the playground. Pack uploads to XSIAM 8.15 skip the Jobs folder, so
-   this creates the four jobs from the `CTT - Jobs` list and deletes jobs of older versions.
+   this creates the five jobs from the `CTT - Jobs` list and deletes jobs of older versions.
 3. Run `!CTTRegistrySync` and `!CTTOwnerIndex` once. They create the `ctt_registry` and
    `ctt_object_owners` lookups that the correlation rules join on (the owner index reads 365 days
    of audit log on its first run). The rules raise nothing until both exist.
@@ -85,6 +89,11 @@ JSON.
 ## Version History (Managed by GoCortex Spellbook)
 
 <!-- spellbook:version-history:start -->
+### 1.3.0
+
+- `CTT - Marketplace Updates` job and playbooks, imported from the TypeSafe Jev Marketplace Guard: Jev-reviewed pack updates with a run summary in the CTT Slack channel.
+- New `CTTSlackPost` script: posts a message to the CTT Slack channel.
+
 ### 1.2.0
 
 - The Notify Owner automation rule is enabled on install (`is_auto_enabled`); the Notify Dispatcher job is gone.

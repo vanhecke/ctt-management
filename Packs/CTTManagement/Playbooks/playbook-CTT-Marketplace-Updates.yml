@@ -1,0 +1,406 @@
+id: CTT - Marketplace Updates
+version: -1
+name: CTT - Marketplace Updates
+description: 'Jev-reviewed Marketplace updates: collects newer pack releases, has TypeSafe Jev review each one against the enabled integrations, installs approved updates with their mandatory dependencies and verifies the versions. Held, unresolved or failed updates get one deduplicated review case each, breaking changes that affect an enabled integration get a validation issue, and a summary goes to the CTT Slack channel. Run by the job of the same name (Monday to Thursday, 05:00 Singapore time). Needs the TypeSafe Jev and Core REST API integrations.'
+fromversion: 8.9.0
+marketplaces:
+- marketplacev2
+- platform
+tags:
+- CTT
+adopted: true
+starttaskid: '0'
+tasks:
+  '0':
+    id: '0'
+    taskid: 1fd3e597-6029-52b2-a65f-a6b69c9c0030
+    type: start
+    task:
+      id: 1fd3e597-6029-52b2-a65f-a6b69c9c0030
+      version: -1
+      name: ''
+      description: ''
+      type: start
+      iscommand: false
+      brand: ''
+    nexttasks:
+      '#none#':
+      - '1'
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 50, "y": 50}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+  '1':
+    id: '1'
+    taskid: 0a4c93e8-0285-5ac1-b9b3-da75a20d2c94
+    type: regular
+    task:
+      id: 0a4c93e8-0285-5ac1-b9b3-da75a20d2c94
+      version: -1
+      name: Collect installed packs and enabled integrations
+      description: Lists installed packs, their newer Marketplace releases and the enabled integration instances.
+      type: regular
+      iscommand: false
+      brand: ''
+      scriptName: CTTMarketplaceUpdates
+    nexttasks:
+      '#none#':
+      - '2'
+    scriptarguments:
+      action:
+        simple: collect
+      core_instance:
+        simple: ${inputs.CoreInstance}
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 50, "y": 220}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+  '2':
+    id: '2'
+    taskid: a2ea3fb1-af8f-5e8f-b79e-dd2826d6a6e5
+    type: regular
+    task:
+      id: a2ea3fb1-af8f-5e8f-b79e-dd2826d6a6e5
+      version: -1
+      name: Prepare release evidence for Jev
+      description: Batches the newer releases with their notes and the observed integrations for Jev.
+      type: regular
+      iscommand: false
+      brand: ''
+      scriptName: CTTMarketplaceUpdates
+    nexttasks:
+      '#none#':
+      - '3'
+    scriptarguments:
+      action:
+        simple: prepare_ai
+      core_instance:
+        simple: ${inputs.CoreInstance}
+      snapshot:
+        simple: ${TypeSafeJevMarketplace.Snapshot}
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 50, "y": 400}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+  '3':
+    id: '3'
+    taskid: e9e0afe1-2e75-522c-a85b-117401ba3934
+    type: condition
+    task:
+      id: e9e0afe1-2e75-522c-a85b-117401ba3934
+      version: -1
+      name: Are there newer releases to review?
+      description: Continue to Jev analysis only when the collected Marketplace inventory contains newer releases requiring review.
+      type: condition
+      iscommand: false
+      brand: ''
+    nexttasks:
+      '#default#':
+      - '5'
+      'yes':
+      - '4'
+    conditions:
+    - label: 'yes'
+      condition:
+      - - operator: isTrue
+          left:
+            value:
+              simple: TypeSafeJevMarketplace.ReviewPlan.Required
+            iscontext: true
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 50, "y": 580}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+  '4':
+    id: '4'
+    taskid: b09826a8-a994-59ee-870e-a903ae1ceaf7
+    type: playbook
+    task:
+      id: b09826a8-a994-59ee-870e-a903ae1ceaf7
+      version: -1
+      name: Review pending releases with Jev
+      description: Runs TypeSafe Jev for every evidence batch. Each returned question ID stays tied to its source release.
+      type: playbook
+      iscommand: false
+      brand: ''
+      playbookName: CTT - Marketplace Release Analysis
+    nexttasks:
+      '#none#':
+      - '5'
+    scriptarguments:
+      BatchJSON:
+        simple: ${TypeSafeJevMarketplace.ReviewPlan.BatchJSON}
+    separatecontext: true
+    loop:
+      iscommand: false
+      exitCondition: ''
+      wait: 1
+      max: 100
+      forEach: true
+    continueonerrortype: ''
+    view: '{"position": {"x": 280, "y": 760}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+  '5':
+    id: '5'
+    taskid: c9e96f4c-55ab-52f8-909c-2ca1d2629a78
+    type: regular
+    task:
+      id: c9e96f4c-55ab-52f8-909c-2ca1d2629a78
+      version: -1
+      name: Validate Jev decisions against supplied evidence
+      description: 'Validates all Jev answers in one run: rejects conflicting answers and keeps missing or uncertain judgments as unresolved.'
+      type: regular
+      iscommand: false
+      brand: ''
+      scriptName: CTTMarketplaceUpdates
+    nexttasks:
+      '#none#':
+      - '6'
+    scriptarguments:
+      action:
+        simple: apply_ai
+      analysis_response:
+        simple: ${TypeSafeJevMarketplace.AnalystBatch}
+      core_instance:
+        simple: ${inputs.CoreInstance}
+      review_plan:
+        simple: ${TypeSafeJevMarketplace.ReviewPlan}
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 50, "y": 940}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+  '6':
+    id: '6'
+    taskid: ed3fe3d6-da34-5845-a956-63fdb0bbcd11
+    type: regular
+    task:
+      id: ed3fe3d6-da34-5845-a956-63fdb0bbcd11
+      version: -1
+      name: Create validation issues for affected breaking changes
+      description: One deduplicated issue per breaking change that affects an enabled integration.
+      type: regular
+      iscommand: false
+      brand: ''
+      scriptName: CTTMarketplaceUpdates
+    nexttasks:
+      '#none#':
+      - '7'
+    scriptarguments:
+      action:
+        simple: publish
+      assessment:
+        simple: ${TypeSafeJevMarketplace.Assessment}
+      core_instance:
+        simple: ${inputs.CoreInstance}
+      dry_run:
+        simple: ${inputs.DryRun}
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 50, "y": 1120}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+  '7':
+    id: '7'
+    taskid: 91a981e0-9fc7-57bf-8442-84b8035e8949
+    type: regular
+    task:
+      id: 91a981e0-9fc7-57bf-8442-84b8035e8949
+      version: -1
+      name: Install approved updates and verify versions
+      description: Installs approved updates with their missing mandatory dependencies first (cyclic groups together) through the tenant Marketplace, then verifies each exact version. A failed dependency blocks its parents.
+      type: regular
+      iscommand: false
+      brand: ''
+      scriptName: CTTMarketplaceUpdates
+    nexttasks:
+      '#none#':
+      - '8'
+      '#error#':
+      - '8'
+    scriptarguments:
+      action:
+        simple: install
+      assessment:
+        simple: ${TypeSafeJevMarketplace.Assessment}
+      core_instance:
+        simple: ${inputs.CoreInstance}
+      dry_run:
+        simple: ${inputs.DryRun}
+      snapshot:
+        simple: ${TypeSafeJevMarketplace.Snapshot}
+    continueonerror: true
+    continueonerrortype: errorPath
+    separatecontext: false
+    view: '{"position": {"x": 50, "y": 1300}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+  '8':
+    id: '8'
+    taskid: 74f40908-55ef-54bd-942e-2a65371449df
+    type: regular
+    task:
+      id: 74f40908-55ef-54bd-942e-2a65371449df
+      version: -1
+      name: Create manual review cases for held or unresolved updates
+      description: One deduplicated review issue and case per held, unresolved or failed update (pack + target version). Resolves stale review cases once the pack is installed or the target changes. Never installs or approves anything.
+      type: regular
+      iscommand: false
+      brand: ''
+      scriptName: CTTMarketplaceUpdates
+    nexttasks:
+      '#none#':
+      - '9'
+    scriptarguments:
+      action:
+        simple: review
+      assessment:
+        simple: ${TypeSafeJevMarketplace.Assessment}
+      core_instance:
+        simple: ${inputs.CoreInstance}
+      dry_run:
+        simple: ${inputs.DryRun}
+      installation:
+        simple: ${TypeSafeJevMarketplace.Installation}
+      snapshot:
+        simple: ${TypeSafeJevMarketplace.Snapshot}
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 50, "y": 1480}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+  '9':
+    id: '9'
+    taskid: 0c099db0-8a81-5487-aacb-6201601e80cb
+    type: regular
+    task:
+      id: 0c099db0-8a81-5487-aacb-6201601e80cb
+      version: -1
+      name: Summarize the run
+      description: 'Builds a plain-text summary of this run: packs checked, installed, held and failed updates, and review cases.'
+      type: regular
+      iscommand: false
+      brand: ''
+      scriptName: CTTMarketplaceUpdates
+    nexttasks:
+      '#none#':
+      - '10'
+    scriptarguments:
+      action:
+        simple: summary
+      snapshot:
+        simple: ${TypeSafeJevMarketplace.Snapshot}
+      installation:
+        simple: ${TypeSafeJevMarketplace.Installation}
+      review:
+        simple: ${TypeSafeJevMarketplace.Review}
+      routing:
+        simple: ${TypeSafeJevMarketplace.Routing}
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 50, "y": 1660}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+  '10':
+    id: '10'
+    taskid: ad376174-0cfc-5eaf-ba39-c7f650d90348
+    type: regular
+    task:
+      id: ad376174-0cfc-5eaf-ba39-c7f650d90348
+      version: -1
+      name: Post the summary to the CTT Slack channel
+      description: Posts the run summary with CTTSlackPost. A Slack failure does not stop the run.
+      type: regular
+      iscommand: false
+      brand: ''
+      scriptName: CTTSlackPost
+    nexttasks:
+      '#none#':
+      - '11'
+    scriptarguments:
+      message:
+        simple: ${TypeSafeJevMarketplace.Summary.text}
+    continueonerror: true
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 50, "y": 1840}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+  '11':
+    id: '11'
+    taskid: cd532705-bafb-5833-9bf6-d056c2a0243d
+    type: regular
+    task:
+      id: cd532705-bafb-5833-9bf6-d056c2a0243d
+      version: -1
+      name: Close the completed Marketplace run
+      description: Closes only this run's investigation. Review cases stay open until resolved.
+      type: regular
+      iscommand: true
+      brand: Builtin
+      script: Builtin|||closeInvestigation
+    scriptarguments:
+      closeNotes:
+        simple: Marketplace release review, guarded installation and manual-review case routing completed. See TypeSafeJevMarketplace.Assessment, Routing, Installation, Review and Summary. Only this run's investigation is closed; review cases stay open.
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 50, "y": 2020}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+view: '{"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 2045, "width": 380, "x": 50, "y": 50}}}'
+inputs:
+- key: DryRun
+  value:
+    simple: 'false'
+  required: false
+  description: true reviews and reports without installing packs or creating, updating or closing cases.
+  playbookInputQuery: null
+- key: CoreInstance
+  value: {}
+  required: false
+  description: Core REST API instance name. Empty uses the enabled instance.
+  playbookInputQuery: null
+outputs: []
+tests:
+- No tests (auto formatted)

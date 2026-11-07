@@ -1,0 +1,35 @@
+commonfields:
+  id: CTTSlackPost
+  version: -1
+name: CTTSlackPost
+comment: Posts a message to the CTT Slack channel through the CTT Slack Webhook integration (action msg_channel). The channel is the instance's channel ID unless channel_id is given. A literal \n in the message becomes a line break, so it also works from the War Room. Messages over 3,900 characters are cut.
+script: '-'
+type: python
+subtype: python3
+dockerimage: demisto/python3:3.12.15.14069087
+runas: DBotWeakRole
+enabled: true
+tags:
+- CTT
+args:
+- name: message
+  required: true
+  description: The text to post. Plain text; line breaks are kept and URLs are clickable.
+- name: channel_id
+  description: Slack channel ID. Defaults to the channel ID of the CTT Slack Webhook instance.
+outputs:
+- contextPath: CTT.SlackPost.channel
+  description: The channel the message was posted to.
+  type: String
+- contextPath: CTT.SlackPost.characters
+  description: Characters posted.
+  type: Number
+dependson:
+  should:
+  - ctt-slack-webhook-send
+fromversion: 8.9.0
+marketplaces:
+- marketplacev2
+- platform
+tests:
+- No tests (auto formatted)

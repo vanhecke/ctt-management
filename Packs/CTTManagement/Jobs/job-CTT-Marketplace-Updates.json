@@ -1,0 +1,38 @@
+{
+    "id": "CTT - Marketplace Updates",
+    "name": "CTT - Marketplace Updates",
+    "details": "Jev-reviewed Marketplace updates: TypeSafe Jev reviews each newer pack release against the enabled integrations, approved updates are installed and verified, held or failed ones get a review case, and a summary goes to the CTT Slack channel. Run by the job of the same name Monday to Thursday at 05:00 Singapore time.",
+    "playbookId": "CTT - Marketplace Updates",
+    "scheduled": true,
+    "recurrent": true,
+    "cronView": false,
+    "humanCron": {
+        "days": [
+            "MON",
+            "TUE",
+            "WED",
+            "THU"
+        ],
+        "atTimeHour": "05",
+        "atTimeMinute": "00",
+        "timePeriodType": "weeks",
+        "timePeriod": 1
+    },
+    "startDate": "2026-11-06T00:00:00Z",
+    "type": "##default##",
+    "timezone": "Asia/Singapore",
+    "timezoneOffset": -480,
+    "shouldTriggerNew": true,
+    "closePrevRun": true,
+    "tags": [
+        "CTT"
+    ],
+    "isFeed": false,
+    "selectedFeeds": [],
+    "isAllFeeds": false,
+    "fromVersion": "8.9.0",
+    "supportedModules": [
+        "xsiam",
+        "agentix"
+    ]
+}

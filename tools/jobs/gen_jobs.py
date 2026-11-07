@@ -1,4 +1,4 @@
-"""Generate the CTTManagement job playbooks and jobs (one script per playbook).
+"""Generate the CTTManagement jobs and their playbooks (script steps; a job with "playbook" uses one generated elsewhere).
 
 Run from content/:  uv run --with pyyaml python3 tools/jobs/gen_jobs.py
 """
@@ -51,6 +51,13 @@ JOBS = [
             "send": ("true", "false only shows the canvas and topic in the War Room."),
         },
         "cron": {"days": ALL_DAYS, "atTimeHour": "09", "atTimeMinute": "00", "timePeriodType": "weeks", "timePeriod": 1},
+    },
+    {
+        # Its playbooks come from tools/playbooks/gen_marketplace_playbooks.py, not from steps.
+        "name": "CTT - Marketplace Updates",
+        "description": "Jev-reviewed Marketplace updates: TypeSafe Jev reviews each newer pack release against the enabled integrations, approved updates are installed and verified, held or failed ones get a review case, and a summary goes to the CTT Slack channel. Run by the job of the same name Monday to Thursday at 05:00 Singapore time.",
+        "playbook": "CTT - Marketplace Updates",
+        "cron": {"days": ["MON", "TUE", "WED", "THU"], "atTimeHour": "05", "atTimeMinute": "00", "timePeriodType": "weeks", "timePeriod": 1},
     },
 ]
 
@@ -124,7 +131,7 @@ def job_json(job: dict) -> dict:
         "id": job["name"],
         "name": job["name"],
         "details": job["description"],
-        "playbookId": job["name"],
+        "playbookId": job.get("playbook", job["name"]),
         "scheduled": True,
         "recurrent": True,
         "cronView": False,
@@ -175,12 +182,15 @@ def main() -> None:
     (PACK / "Lists" / "list-CTT_-_Jobs.json").write_text(json.dumps(jobs_list([job_json(j) for j in JOBS]), indent=4) + "\n")
     for job in JOBS:
         stem = re.sub(r"[^A-Za-z0-9]+", "-", job["name"])
+        jb = PACK / "Jobs" / f"job-{stem}.json"
+        jb.write_text(json.dumps(job_json(job), indent=4) + "\n")
+        if "playbook" in job:
+            print(f"wrote {jb.name} (playbook generated elsewhere)")
+            continue
         pb = PACK / "Playbooks" / f"playbook-{stem}.yml"
         pb.write_text(yaml.dump(playbook(job), sort_keys=False, width=10000))
         scripts = ", then ".join(f"`{st['script']}`" for st in job["steps"])
         (PACK / "Playbooks" / f"playbook-{stem}_README.md").write_text(f"{job['description']}\n\nRuns {scripts}.\n")
-        jb = PACK / "Jobs" / f"job-{stem}.json"
-        jb.write_text(json.dumps(job_json(job), indent=4) + "\n")
         print(f"wrote {pb.name}, {jb.name}")
 
 
