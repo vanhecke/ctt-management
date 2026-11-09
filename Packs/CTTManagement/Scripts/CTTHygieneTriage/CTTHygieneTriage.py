@@ -107,6 +107,8 @@ def compose(gid: str, title: str, details: str, tags: list[str], lab_octet: str)
     if gid in ("CTT-TAG-01", "CTT-TAG-04") and name:
         what = "without your tag prefix" if finding.startswith("no tag") else f"({finding})" if finding else "without your tag"
         fix = [f'Rename it to "{rename_target(kind, name, tag)}"']
+        if gid == "CTT-TAG-01" and kind.lower() == "playbook":
+            fix.append(f"Or add {tag} to the playbook's Tags field; then the name needs no prefix")
         if others:
             fix.append(f"Or use another of your tags: {others}")
         return f'{kind} "{name}" was created {what}.', fix

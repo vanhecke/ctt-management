@@ -84,7 +84,11 @@ def test_compose_tag_rule():
     )
     found, fix = compose("CTT-TAG-01", "Object created without owner tag", details, ["jvanhecke", "jva"], "20")
     assert found == 'Playbook "Local Analysis alert Investigation_copy" was created without your tag prefix.'
-    assert fix == ['Rename it to "jvanhecke - Local Analysis alert Investigation_copy"', "Or use another of your tags: jva"]
+    assert fix == [
+        'Rename it to "jvanhecke - Local Analysis alert Investigation_copy"',
+        "Or add jvanhecke to the playbook's Tags field; then the name needs no prefix",
+        "Or use another of your tags: jva",
+    ]
 
 
 def test_compose_owner_rule():

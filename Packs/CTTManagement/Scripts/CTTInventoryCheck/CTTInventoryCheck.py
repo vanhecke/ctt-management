@@ -89,11 +89,24 @@ def reported_names(issues: list[dict]) -> set[str]:
     return names
 
 
+def object_tag(obj: dict, registry: dict[str, dict]) -> tuple[str | None, dict | None]:
+    """The registered tag an object carries: its name prefix, or for a playbook a registered tag in
+    its Tags field (CTT-TAG-01: a playbook tagged there needs no name prefix)."""
+    tag = parse_tag(obj.get("name") or "")
+    if tag in registry:
+        return tag, registry[tag]
+    if obj.get("kind") == "Playbook":
+        field = sorted(str(t).strip().lower() for t in obj.get("tags") or [])
+        found = next((t for t in field if t in registry), None)
+        if found:
+            return found, registry[found]
+    return tag, None
+
+
 def check_object(obj: dict, registry: dict[str, dict], owners: dict | None = None) -> list[dict]:
     """obj: kind, name, creator (email or ''), tags (list, playbooks only). Returns findings."""
     name = obj.get("name") or ""
-    tag = parse_tag(name)
-    entry = registry.get(tag or "")
+    tag, entry = object_tag(obj, registry)
     base = {"kind": obj["kind"], "name": name}
     if not entry:
         detail = "no tag prefix" if not tag else f"prefix '{tag}' is not a registered tag"
@@ -112,8 +125,7 @@ def check_object(obj: dict, registry: dict[str, dict], owners: dict | None = Non
 
 
 def inventory_entry(obj: dict, registry: dict[str, dict], owners: dict | None = None) -> dict:
-    tag = parse_tag(obj.get("name") or "")
-    entry = registry.get(tag or "")
+    tag, entry = object_tag(obj, registry)
     owner = (entry.get("owner_email") or "central") if entry else find_owner(obj, owners or {})
     return {"kind": obj["kind"], "name": obj.get("name") or "", "tag": tag if entry else None, "owner": owner}
 

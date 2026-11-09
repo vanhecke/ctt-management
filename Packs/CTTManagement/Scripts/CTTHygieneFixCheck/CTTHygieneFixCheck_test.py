@@ -193,3 +193,16 @@ def test_playbook_close_uses_an_allowed_reason():
 
 def test_parse_issue_keeps_the_playbook_state():
     assert parse_issue({**TAG01, "playbook_run_status": "Waiting"})["playbook"] == "waiting"
+
+
+def test_check_listed_playbook_tags_field():
+    """CTT-TAG-01: a playbook with one of the owner's tags in its Tags field needs no name prefix."""
+    item = {"guideline": "CTT-TAG-01", "kind": "Playbook", "name": "Local copy", "endpoint": "", "email": "", "title": ""}
+    names = {"Playbook": {"Local copy"}}
+    verdict, text = check_listed(item, names, {"Local copy": {"jvanhecke"}}, {"jvanhecke", "jva"})
+    assert verdict == "fixed"
+    assert text == "playbook 'Local copy' carries your tag jvanhecke in its Tags field"
+    assert check_listed(item, names, {"Local copy": {"bob"}}, {"jvanhecke"})[0] == "open"
+    assert check_listed(item, names, {}, {"jvanhecke"})[0] == "open"
+    # CTT-TAG-04 (someone else's tag in the name) still needs the rename.
+    assert check_listed(dict(item, guideline="CTT-TAG-04"), names, {"Local copy": {"jvanhecke"}}, {"jvanhecke"})[0] == "open"

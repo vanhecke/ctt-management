@@ -80,6 +80,9 @@ Start the name of every object you create with `<tag> - `, for example
 Names that cannot hold spaces use `<tag>_<name>` instead: scripts (`jvanhecke_GetLabUsers`),
 lookup tables and other datasets (`jvanhecke_lab_assets`, lower case).
 
+Playbooks are the exception: a playbook with your tag in its *Tags* field (`CTT-TAG-02`) needs no
+name prefix.
+
 **CTT-TAG-02: Set your tag on objects that have a tag field.** *Active*
 Where an object has a tag or label field, add your tag to it. This applies to:
 
@@ -237,3 +240,4 @@ Before you leave the team, delete your objects or hand them over to another DC, 
 | 2026-11-07 | How monitoring works: Mark as Fixed / Mark as False Positive buttons, automatic fix checks with close notes, daily digest |
 | 2026-11-07 | CTT-LAB-01: a lab octet also covers `172.16.<octet>.0/24` |
 | 2026-11-09 | How monitoring works: one issue per finding; a false positive is not raised again for 30 days |
+| 2026-11-09 | CTT-TAG-01: a playbook with your tag in its Tags field needs no name prefix |

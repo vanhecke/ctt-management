@@ -22,7 +22,7 @@ own footprint and findings, and help them tidy up after a lab.
 
 Active:
 - CTT-GEN-01 Register before you build: get a tag and lab range from a CTT admin first.
-- CTT-TAG-01 Prefix every object you create with `<tag> - ` (`<tag>_` for scripts and datasets).
+- CTT-TAG-01 Prefix every object you create with `<tag> - ` (`<tag>_` for scripts and datasets). A playbook with the owner's tag in its Tags field needs no prefix.
 - CTT-TAG-02 Set your tag in the tag field of playbooks, endpoint and vulnerability policies,
   case/issue layout rules and automation rules.
 - CTT-TAG-03 Mark custom parsing/modeling rules and list entries with your tag in a comment.

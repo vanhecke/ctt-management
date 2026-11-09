@@ -161,3 +161,15 @@ def test_reported_names_only_from_rule_issues():
         {"name": "Something else", "description": "'Other'"},
     ]
     assert reported_names(issues) == {"fw alert triage"}
+
+
+def test_playbook_tagged_in_tags_field_needs_no_prefix():
+    """CTT-TAG-01: a registered tag in a playbook's Tags field counts as the owner tag."""
+    pb = {"kind": "Playbook", "name": "Local Analysis copy", "creator": "", "tags": ["Alice"]}
+    assert check_object(pb, REGISTRY) == []
+    assert inventory_entry(pb, REGISTRY)["owner"] == "alice@x.com"
+    # Another object kind, or an unregistered tag, still needs the prefix.
+    assert check_object({**pb, "tags": ["zed"]}, REGISTRY)[0]["guideline"] == "CTT-TAG-01"
+    assert check_object({**pb, "kind": "Script"}, REGISTRY)[0]["guideline"] == "CTT-TAG-01"
+    # The tag's owner is still checked: bob is inactive.
+    assert [f["guideline"] for f in check_object({**pb, "tags": ["bob"]}, REGISTRY)] == ["CTT-LIFE-02"]

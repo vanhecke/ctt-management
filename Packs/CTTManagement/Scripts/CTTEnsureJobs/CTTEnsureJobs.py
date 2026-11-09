@@ -6,7 +6,8 @@ from typing import Any
 from urllib.parse import quote
 
 JOBS_LIST = "CTT - Jobs"
-COMPARED = ("playbookId", "humanCron", "timezone", "scheduled", "recurrent", "details", "tags", "category", "endingType")
+# "scheduled" is left out: a job switched off on the tenant (Jobs > Disable) stays off.
+COMPARED = ("playbookId", "humanCron", "timezone", "recurrent", "details", "tags", "category", "endingType")
 
 
 def job_changes(wanted: dict, current: dict) -> list[str]:
@@ -41,11 +42,12 @@ def plan_jobs(wanted: list[dict], existing: list[dict]) -> list[tuple[str, dict,
 
 
 def job_body(job: dict, current: dict | None, owner: str) -> dict:
-    """What CTTEnsureJobs sends: the definition, with the tenant's id, version and start date for an
-    existing job, parent = that id, and an owner (the job's own, else the given one)."""
+    """What CTTEnsureJobs sends: the definition, with the tenant's id, version, start date and on/off
+    state for an existing job, parent = that id, and an owner (the job's own, else the given one)."""
     body = dict(job)
     if current:
         body.update(id=current["id"], version=current.get("version"), startDate=current.get("startDate"))
+        body.update({k: current[k] for k in ("scheduled", "schedulingStatus") if k in current})
     body["parent"] = body["id"]
     body["owner"] = (current or {}).get("owner") or owner
     return body
@@ -95,7 +97,8 @@ def main():  # pragma: no cover
                 if not body["owner"]:
                     raise DemistoException(f"Job {job['name']} needs an owner: run again with owner=<email of a CTT admin>.")
                 core_post("/jobs", body)
-            rows.append({"Job": job["name"], "Action": action, "Changed": ", ".join(changed), "Owner": body["owner"]})
+            state = "" if body.get("scheduled", True) else " (disabled)"
+            rows.append({"Job": job["name"], "Action": action + state, "Changed": ", ".join(changed), "Owner": body["owner"]})
         for job in obsolete_jobs(wanted, existing):
             removed = remove_obsolete and not dry_run
             if removed:

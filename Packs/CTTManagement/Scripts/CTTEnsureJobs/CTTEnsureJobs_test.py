@@ -51,3 +51,11 @@ def test_job_body():
         "2026-11-03T14:00:27Z",
         3,
     )
+
+
+def test_disabled_job_stays_disabled():
+    current = dict(WANTED[0], id="A", scheduled=False, schedulingStatus="disabled", **RUNNABLE)
+    assert job_changes(dict(WANTED[0], scheduled=True), current) == []
+    body = job_body(dict(WANTED[0], id="A", scheduled=True), current, "me@example.com")
+    assert body["scheduled"] is False
+    assert body["schedulingStatus"] == "disabled"

@@ -261,11 +261,20 @@ def check_registry(item: dict, people: dict[str, dict]) -> tuple[str, str]:
     return "open", f"{email} is still not in the CTT registry"
 
 
-def check_listed(item: dict, names: dict[str, set[str]]) -> tuple[str, str]:
+def check_listed(
+    item: dict, names: dict[str, set[str]], field_tags: dict[str, set[str]] | None = None, tags: set[str] | None = None
+) -> tuple[str, str]:
+    """TAG-01/TAG-04: the object no longer exists under that name. For CTT-TAG-01 a playbook also
+    passes when its Tags field carries one of the owner's tags: then the name needs no prefix."""
     kind = LISTED_KINDS[item["kind"]]
-    if item["name"] in names.get(kind, set()):
-        return "open", f"{what(item)} still exists under that name"
-    return "fixed", f"{what(item)} no longer exists under that name (renamed or deleted)"
+    if item["name"] not in names.get(kind, set()):
+        return "fixed", f"{what(item)} no longer exists under that name (renamed or deleted)"
+    if item["guideline"] == "CTT-TAG-01" and kind == "Playbook" and field_tags is not None:
+        mine = (field_tags.get(item["name"]) or set()) & (tags or set())
+        if mine:
+            return "fixed", f"{what(item)} carries your tag {', '.join(sorted(mine))} in its Tags field"
+        return "open", f"{what(item)} still exists under that name, without one of your tags in its Tags field"
+    return "open", f"{what(item)} still exists under that name"
 
 
 def check_builtin(item: dict, found: dict | None, tags: set[str]) -> tuple[str, str]:
@@ -317,7 +326,7 @@ def check_item(item: dict, ctx: dict) -> tuple[str, str]:
     if gid == "CTT-GEN-01":
         return check_registry(item, ctx["people"])
     if gid in ("CTT-TAG-01", "CTT-TAG-04") and kind in LISTED_KINDS and item["name"]:
-        return check_listed(item, ctx["names"])
+        return check_listed(item, ctx["names"], ctx.get("playbook_tags"), ctx["tags"](item["owner"]))
     if gid == "CTT-OOTB-01" and kind in BUILTIN_KINDS and item["name"]:
         return check_builtin(item, ctx["builtin"].get((BUILTIN_KINDS[kind], item["name"])), ctx["tags"](item["owner"]))
     if gid == "CTT-TAG-02" and item["name"]:
@@ -510,14 +519,21 @@ def recently_resolved(since_ms: int) -> list[dict]:
     return [i for i in search_issues(filters) if int(i.get("resolution_status_modified_ts") or 0) >= since_ms]
 
 
-def listed_names(kinds: set[str], errors: list[str]) -> dict[str, set[str]]:
+def listed_names(kinds: set[str], errors: list[str], playbook_tags: dict[str, set[str]] | None = None) -> dict[str, set[str]]:
     """Names of the custom objects of each kind the open issues need (same sources as the
-    inventory check's collect_objects)."""
+    inventory check's collect_objects); playbook_tags gets each playbook's Tags field."""
     names: dict[str, set[str]] = {}
+
+    def playbooks() -> list[str]:
+        rows = core_post("/playbook/search", {"query": "system:F", "size": 5000}).get("playbooks") or []
+        if playbook_tags is not None:
+            for p in rows:
+                if p.get("name"):
+                    playbook_tags[p["name"]] = {str(t).strip().lower() for t in p.get("tags") or [] if str(t).strip()}
+        return [p.get("name") for p in rows]
+
     fetch = {
-        "Playbook": lambda: [
-            p.get("name") for p in core_post("/playbook/search", {"query": "system:F", "size": 5000}).get("playbooks") or []
-        ],
+        "Playbook": playbooks,
         "Script": lambda: [
             s.get("name") for s in core_post("/automation/search", {"query": "system:F", "size": 5000}).get("scripts") or []
         ],
@@ -678,14 +694,21 @@ def send_digest(owner: str, entry: dict, content: str) -> None:
 
 
 def build_context(items: list[dict], registry: list[dict], errors: list[str]) -> dict:
-    ctx: dict[str, Any] = {"people": registry_people(registry), "names": {}, "builtin": {}, "policies": {}, "endpoints": {}}
+    ctx: dict[str, Any] = {
+        "people": registry_people(registry),
+        "names": {},
+        "playbook_tags": {},
+        "builtin": {},
+        "policies": {},
+        "endpoints": {},
+    }
     tag_cache: dict[str, set[str]] = {}
     ctx["tags"] = lambda owner: tag_cache.setdefault(owner, owner_tags(registry, owner))
     listed = {
         LISTED_KINDS[i["kind"]] for i in items if i["guideline"] in ("CTT-TAG-01", "CTT-TAG-04") and i["kind"] in LISTED_KINDS
     }
     if listed:
-        ctx["names"] = listed_names(listed, errors)
+        ctx["names"] = listed_names(listed, errors, ctx["playbook_tags"])
     for i in items:
         if i["guideline"] == "CTT-OOTB-01" and i["kind"] in BUILTIN_KINDS and i["name"]:
             key = (BUILTIN_KINDS[i["kind"]], i["name"])
