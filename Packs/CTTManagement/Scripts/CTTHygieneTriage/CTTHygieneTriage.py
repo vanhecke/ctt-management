@@ -186,7 +186,8 @@ def find_duplicate(issue_id: str, name: str, text: str, others: list[dict], now_
         if status in ("New", "In Progress") and int(oid) < int(issue_id):
             return (
                 oid,
-                f"Duplicate of issue #{oid}, which is still open for the same {label}. Closed by the CTT Notify Owner playbook without a DM.",
+                f"Duplicate of issue #{oid}, which is still open for the same {label}. "
+                "Closed by the CTT Notify Owner playbook without a DM.",
             )
         resolved = int(other.get("resolution_status_modified_ts") or 0)
         if (

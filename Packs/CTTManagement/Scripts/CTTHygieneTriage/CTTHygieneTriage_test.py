@@ -158,7 +158,8 @@ def test_find_duplicate_open_issue():
         },
     ]
     dup, note = find_duplicate("62190", LAB, LAB_TEXT, others, NOW, 30)
-    assert dup == "62180" and note.startswith("Duplicate of issue #62180, which is still open for the same endpoint PC1")
+    assert dup == "62180"
+    assert note.startswith("Duplicate of issue #62180, which is still open for the same endpoint PC1")
     # Only an older issue counts, so the first of a pair is never closed as a duplicate of the second.
     assert find_duplicate("62170", LAB, LAB_TEXT, others, NOW, 30) == ("", "")
 
@@ -173,7 +174,9 @@ def test_find_duplicate_false_positive_window():
         "resolution_status_modified_ts": NOW - 5 * DAY_MS,
     }
     dup, note = find_duplicate("62190", LAB, LAB_TEXT, [fp], NOW, 30)
-    assert dup == "60000" and "marked a false positive on" in note and "30 days" in note
+    assert dup == "60000"
+    assert "marked a false positive on" in note
+    assert "30 days" in note
     assert find_duplicate("62190", LAB, LAB_TEXT, [fp], NOW, 3) == ("", "")
     fixed = dict(fp, **{"status.resolution_reason": "RESOLVED_OTHER"})
     assert find_duplicate("62190", LAB, LAB_TEXT, [fixed], NOW, 30) == ("", "")
