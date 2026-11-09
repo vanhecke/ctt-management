@@ -158,6 +158,12 @@ def job_json(job: dict) -> dict:
         "startDate": "2026-11-06T00:00:00Z",
         # Likewise required: the job's incident type (error 100008 without it).
         "type": "##default##",
+        # Without these three the scheduler accepts the job but drops every run silently (status
+        # completed, droppedCount 1, no job-* run). The web UI sets them; CTTEnsureJobs sets parent
+        # to the job's id on the tenant (verified on joris, 2026-11-09).
+        "category": "job",
+        "parent": job["name"],
+        "endingType": "never",
         "timezone": "Asia/Singapore",
         "timezoneOffset": -480,
         "shouldTriggerNew": True,

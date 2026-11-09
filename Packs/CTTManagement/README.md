@@ -40,7 +40,7 @@ after a day and resolved as Security Testing after 7 days.
 | Integration | CTT Slack Webhook | One-way Slack workflow webhook: DM, channel message, channel topic, Tenant Status canvas |
 | Script | CTTRegistryLookup, CTTMyFootprint | Backing scripts for the agent |
 | Agent action | CTTHygieneConfirmFixAction | "I fixed issue 1234": runs the fix check for the user's issue (with their approval) |
-| Script | CTTEnsureJobs | Creates or updates the seven jobs from the `CTT - Jobs` list (run after every install or upgrade) |
+| Script | CTTEnsureJobs | Creates, updates and repairs the seven jobs from the `CTT - Jobs` list (run after every install or upgrade) |
 | List | CTT - Jobs | The job definitions CTTEnsureJobs applies |
 | List | CTT - Guidelines Index | Every guideline by ID, generated from CTT-Guidelines.md; quoted in the DMs |
 | List | CTT - Config | Pack settings (registry sheet, notify mode, inventory check, case housekeeping) |
@@ -74,7 +74,9 @@ join both.
 
 1. Configure the `CTT Slack Webhook` instance.
 2. Run `!CTTEnsureJobs remove_obsolete=true` in the playground. Pack uploads to XSIAM 8.15 skip the Jobs folder, so
-   this creates the seven jobs from the `CTT - Jobs` list and deletes jobs of older versions.
+   this creates the seven jobs from the `CTT - Jobs` list, owned by you (or `owner=<email>`), repairs jobs from
+   1.4.0 and earlier (their runs were dropped) and deletes jobs of older versions. Check under Jobs > Job Runs
+   that the first runs appear.
 3. Run `!CTTRegistrySync` and `!CTTOwnerIndex` once. They create the `ctt_registry` and
    `ctt_object_owners` lookups that the correlation rules join on (the owner index reads 365 days
    of audit log on its first run). The rules raise nothing until both exist.

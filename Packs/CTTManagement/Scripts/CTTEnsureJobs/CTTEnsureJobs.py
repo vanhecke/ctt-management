@@ -6,12 +6,18 @@ from typing import Any
 from urllib.parse import quote
 
 JOBS_LIST = "CTT - Jobs"
-COMPARED = ("playbookId", "humanCron", "timezone", "scheduled", "recurrent", "details", "tags")
+COMPARED = ("playbookId", "humanCron", "timezone", "scheduled", "recurrent", "details", "tags", "category", "endingType")
 
 
 def job_changes(wanted: dict, current: dict) -> list[str]:
-    """Fields whose value on the tenant differs from the definition."""
-    return [k for k in COMPARED if wanted.get(k) != current.get(k)]
+    """Fields whose value on the tenant differs from the definition. A job only runs when its
+    parent is its own id (UUID for jobs made in the UI) and it has an owner."""
+    changed = [k for k in COMPARED if wanted.get(k) != current.get(k)]
+    if current.get("parent") != current.get("id"):
+        changed.append("parent")
+    if not current.get("owner"):
+        changed.append("owner")
+    return changed
 
 
 def obsolete_jobs(wanted: list[dict], existing: list[dict]) -> list[dict]:
@@ -34,6 +40,32 @@ def plan_jobs(wanted: list[dict], existing: list[dict]) -> list[tuple[str, dict,
     return out
 
 
+def job_body(job: dict, current: dict | None, owner: str) -> dict:
+    """What CTTEnsureJobs sends: the definition, with the tenant's id, version and start date for an
+    existing job, parent = that id, and an owner (the job's own, else the given one)."""
+    body = dict(job)
+    if current:
+        body.update(id=current["id"], version=current.get("version"), startDate=current.get("startDate"))
+    body["parent"] = body["id"]
+    body["owner"] = (current or {}).get("owner") or owner
+    return body
+
+
+def current_user() -> str:
+    """The user running the script (its email), for the owner of new jobs."""
+    res = demisto.executeCommand("getUsers", {"current": "true"})
+    if is_error(res) or not res:
+        return ""
+    users = res[0].get("Contents") or []
+    users = users if isinstance(users, list) else [users]
+    for user in users:
+        for key in ("email", "username", "id"):
+            value = str((user or {}).get(key) or "")
+            if "@" in value:
+                return value.lower()
+    return ""
+
+
 def core_post(uri: str, body: dict) -> Any:
     res = demisto.executeCommand("core-api-post", {"uri": uri, "body": json.dumps(body)})
     if is_error(res):
@@ -44,28 +76,33 @@ def core_post(uri: str, body: dict) -> Any:
 
 def main():  # pragma: no cover
     try:
-        dry_run = argToBoolean(demisto.args().get("dry_run", "false"))
-        remove_obsolete = argToBoolean(demisto.args().get("remove_obsolete", "false"))
+        args = demisto.args()
+        dry_run = argToBoolean(args.get("dry_run", "false"))
+        remove_obsolete = argToBoolean(args.get("remove_obsolete", "false"))
         res = demisto.executeCommand("getList", {"listName": JOBS_LIST})
         if is_error(res):
             raise DemistoException(f"Cannot read '{JOBS_LIST}': {get_error(res)}")
         wanted = json.loads(res[0]["Contents"] or "[]")
         existing = core_post("/jobs/search", {"page": 0, "size": 500}).get("data") or []
+        plan = plan_jobs(wanted, existing)
+        owner = str(args.get("owner") or "").strip().lower()
+        if not owner and any(not (current or {}).get("owner") for action, _, current, _ in plan if action != "ok"):
+            owner = current_user()
         rows = []
-        for action, job, current, changed in plan_jobs(wanted, existing):
+        for action, job, current, changed in plan:
+            body = job_body(job, current, owner)
             if not dry_run and action != "ok":
-                body = dict(job)
-                if current:
-                    body.update(id=current["id"], version=current.get("version"), startDate=current.get("startDate"))
+                if not body["owner"]:
+                    raise DemistoException(f"Job {job['name']} needs an owner: run again with owner=<email of a CTT admin>.")
                 core_post("/jobs", body)
-            rows.append({"Job": job["name"], "Action": action, "Changed": ", ".join(changed)})
+            rows.append({"Job": job["name"], "Action": action, "Changed": ", ".join(changed), "Owner": body["owner"]})
         for job in obsolete_jobs(wanted, existing):
             removed = remove_obsolete and not dry_run
             if removed:
                 res = demisto.executeCommand("core-api-delete", {"uri": f"/jobs/{quote(str(job['id']), safe='')}"})
                 if is_error(res):
                     raise DemistoException(f"Cannot delete job {job['name']}: {get_error(res)}")
-            rows.append({"Job": job["name"], "Action": "deleted" if removed else "obsolete", "Changed": ""})
+            rows.append({"Job": job["name"], "Action": "deleted" if removed else "obsolete", "Changed": "", "Owner": ""})
         title = f"CTT jobs{' (dry run)' if dry_run else ''}"
         return_results(CommandResults(readable_output=tableToMarkdown(title, rows), outputs_prefix="CTT.Jobs", outputs=rows))
     except Exception as e:
