@@ -73,17 +73,19 @@ join both.
 ## After installing
 
 1. Configure the `CTT Slack Webhook` instance.
-2. Run `!CTTEnsureJobs remove_obsolete=true` in the playground. Pack uploads to XSIAM 8.15 skip the Jobs folder, so
-   this creates the seven jobs from the `CTT - Jobs` list, owned by you (or `owner=<email>`), repairs jobs from
-   1.4.0 and earlier (their runs were dropped) and deletes jobs of older versions. Check under Jobs > Job Runs
-   that the first runs appear.
-3. Run `!CTTRegistrySync` and `!CTTOwnerIndex` once. They create the `ctt_registry` and
+2. Run `!CTTRegistrySync` and `!CTTOwnerIndex` once. They create the `ctt_registry` and
    `ctt_object_owners` lookups that the correlation rules join on (the owner index reads 365 days
    of audit log on its first run). The rules raise nothing until both exist.
-4. Check under Automation Rules that `CTT - Hygiene - Notify Owner` is enabled.
-5. Check the `CTT - Hygiene` dashboard's registry widget.
-6. Run `!CTTInventoryCheck dry_run=true`, `!CTTCaseHousekeeping dry_run=true` and
+3. Check under Automation Rules that `CTT - Hygiene - Notify Owner` is enabled.
+4. Run `!CTTInventoryCheck dry_run=true`, `!CTTCaseHousekeeping dry_run=true` and
    `!CTTHygieneFixCheck dry_run=true` once to preview what the first real runs will do.
+5. Run `!CTTEnsureJobs remove_obsolete=true` in the playground. Pack uploads to XSIAM 8.15 skip the Jobs folder, so
+   this creates the seven jobs from the `CTT - Jobs` list, owned by you (or `owner=<email>`), repairs jobs from
+   1.4.0 and earlier (their runs were dropped) and deletes jobs of older versions. **Every job it creates or
+   repairs runs at once**: the Tenant Status canvas and topic are posted, owners get their digest, the inventory
+   check raises its issues and Marketplace Updates reviews pack updates. Check under Jobs > Job Runs that the
+   runs appear.
+6. Check the `CTT - Hygiene` dashboard's registry widget.
 7. The DM buttons need the `msg_person_health_issue` branch in the Slack workflow (CTT Slack Webhook
    README); without it, set `notify.buttons` to `false` in `CTT - Config`.
 
