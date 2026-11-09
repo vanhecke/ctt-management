@@ -193,7 +193,10 @@ Before you leave the team, delete your objects or hand them over to another DC, 
   - or press **Mark as Fixed**: the pack checks it where it can and resolves the issue, or tells you what
     it still sees;
   - if something was intended or wrong (a test, a demo), press **Mark as False Positive**: the issue is
-    closed as a false positive and the CTT admins are told.
+    closed as a false positive and the CTT admins are told. The same finding is not raised again
+    for 30 days.
+- You get one issue per finding: while it is open, the same finding found again is closed as a
+  duplicate without a DM.
 - Every closed issue carries a note saying why it was closed. An issue you don't answer stays
   open; you get one daily digest of your issues open for more than a day.
 - The one exception to "never changed automatically" is cases: Security cases are assigned after
@@ -233,3 +236,4 @@ Before you leave the team, delete your objects or hand them over to another DC, 
 | 2026-11-06 | How monitoring works: issues are assigned to their owner, Slack DM, Tenant Status canvas |
 | 2026-11-07 | How monitoring works: Mark as Fixed / Mark as False Positive buttons, automatic fix checks with close notes, daily digest |
 | 2026-11-07 | CTT-LAB-01: a lab octet also covers `172.16.<octet>.0/24` |
+| 2026-11-09 | How monitoring works: one issue per finding; a false positive is not raised again for 30 days |

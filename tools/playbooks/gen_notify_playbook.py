@@ -16,6 +16,9 @@ CTX = "CTT.Triage"
 ROUND1 = {"title": "20", "ask": "21", "wait": "22", "links": "23", "dm": "24", "progress": "25", "check": "26", "resolved": "27", "fp": "28", "close": "29", "fpclose": "40", "gate": "43"}
 ROUND2 = {"clear": "30", "title": "31", "ask": "32", "wait": "33", "links": "34", "dm": "35", "check": "36", "resolved": "37", "fp": "38", "last": "39", "close": "41", "fpclose": "42", "gate": "44", "lastgate": "45"}
 WATCH = {"watch": "50", "fixed": "51", "close": "52"}
+DUP = {"check": "60", "close": "61"}
+# Room for the duplicate check under triage: every task from "Can the issue be assigned" down moves.
+SHIFT = 170
 
 
 def tid(key: str) -> str:
@@ -63,7 +66,17 @@ def playbook() -> dict:
     t["9"]["nexttasks"] = {"#none#": ["1"]}
     t["1"] = base("1", "regular", "Triage the hygiene issue", "Finds the owner, their Slack ID and the guideline, and decides whether to assign and notify.", 260,
                   task_extra={"scriptName": "CTTHygieneTriage"})
-    t["1"]["nexttasks"] = {"#none#": ["2"]}
+    t["1"]["nexttasks"] = {"#none#": [DUP["check"]]}
+    # The daily rules (LAB-01, GEN-01) raise the same finding again once their one-day suppression
+    # ends: close it as a duplicate before anyone is assigned or DMed.
+    t[DUP["check"]] = base(DUP["check"], "condition", "Is it a duplicate?", "Triage found an older open issue about the same object, or one marked a false positive in the last notify.false_positive_days days.", 400)
+    t[DUP["check"]]["conditions"] = [
+        {"label": "yes", "condition": [[{"operator": "isNotEmpty", "left": {"value": {"simple": f"{CTX}.duplicate_of"}, "iscontext": True}}]]}
+    ]
+    t[DUP["check"]]["nexttasks"] = {"#default#": ["2"], "yes": [DUP["close"]]}
+    t[DUP["close"]] = base(DUP["close"], "regular", "Close the issue: duplicate", "Closes the issue as Duplicate Issue with a note naming the other issue (the playbook ends here).", 400, x=850,
+                           task_extra={"script": "Builtin|||closeInvestigation", "iscommand": True, "brand": "Builtin"})
+    t[DUP["close"]]["scriptarguments"] = {"closeReason": arg("duplicate_reason"), "closeNotes": arg("duplicate_note")}
     t["2"] = base("2", "condition", "Can the issue be assigned to a person?", "", 370)
     t["2"]["conditions"] = [{"label": "yes", "condition": is_true("assign")}]
     t["2"]["nexttasks"] = {"#default#": [WATCH["watch"]], "yes": ["3"]}
@@ -87,6 +100,11 @@ def playbook() -> dict:
     add_round(t, ROUND1, 1220, second=False)
     add_round(t, ROUND2, 2080, second=True)
     add_watch(t, 1380)
+    for key, task in t.items():
+        pos = json.loads(task["view"])["position"]
+        if key not in DUP.values() and pos["y"] >= 370:
+            pos["y"] += SHIFT
+            task["view"] = json.dumps({"position": pos})
     return {
         "id": NAME,
         "version": -1,
@@ -100,7 +118,7 @@ def playbook() -> dict:
         "adopted": True,
         "starttaskid": "0",
         "tasks": t,
-        "view": json.dumps({"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 3115, "width": 1080, "x": -150, "y": 50}}}),
+        "view": json.dumps({"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 3285, "width": 1080, "x": -150, "y": 50}}}),
         "inputs": [],
         "outputs": [],
         "tests": ["No tests (auto formatted)"],

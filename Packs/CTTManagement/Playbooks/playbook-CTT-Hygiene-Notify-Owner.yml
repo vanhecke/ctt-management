@@ -84,7 +84,66 @@ tasks:
     quietmode: 0
     nexttasks:
       '#none#':
+      - '60'
+  '60':
+    id: '60'
+    taskid: 8c918f19-3ad8-57b8-965b-3312460ae3c6
+    type: condition
+    task:
+      id: 8c918f19-3ad8-57b8-965b-3312460ae3c6
+      version: -1
+      name: Is it a duplicate?
+      description: Triage found an older open issue about the same object, or one marked a false positive in the last notify.false_positive_days days.
+      type: condition
+      iscommand: false
+      brand: ''
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 450, "y": 400}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    conditions:
+    - label: 'yes'
+      condition:
+      - - operator: isNotEmpty
+          left:
+            value:
+              simple: CTT.Triage.duplicate_of
+            iscontext: true
+    nexttasks:
+      '#default#':
       - '2'
+      'yes':
+      - '61'
+  '61':
+    id: '61'
+    taskid: 4e2f8ff3-42c0-5307-84e6-08bd73963c55
+    type: regular
+    task:
+      id: 4e2f8ff3-42c0-5307-84e6-08bd73963c55
+      version: -1
+      name: 'Close the issue: duplicate'
+      description: Closes the issue as Duplicate Issue with a note naming the other issue (the playbook ends here).
+      type: regular
+      iscommand: true
+      brand: Builtin
+      script: Builtin|||closeInvestigation
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 850, "y": 400}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    scriptarguments:
+      closeReason:
+        simple: ${CTT.Triage.duplicate_reason}
+      closeNotes:
+        simple: ${CTT.Triage.duplicate_note}
   '2':
     id: '2'
     taskid: 2f64e302-792f-5f6b-9ecd-92ca36c84d11
@@ -99,7 +158,7 @@ tasks:
       brand: ''
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 370}}'
+    view: '{"position": {"x": 450, "y": 540}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -136,7 +195,7 @@ tasks:
       script: Cortex Core - Platform|||core-update-issue
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 250, "y": 540}}'
+    view: '{"position": {"x": 250, "y": 710}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -165,7 +224,7 @@ tasks:
       brand: ''
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 250, "y": 880}}'
+    view: '{"position": {"x": 250, "y": 1050}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -200,7 +259,7 @@ tasks:
       aiTaskId: CTTHygieneMessagePrompt
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 50, "y": 1050}}'
+    view: '{"position": {"x": 50, "y": 1220}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -239,7 +298,7 @@ tasks:
       brand: ''
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 250, "y": 1220}}'
+    view: '{"position": {"x": 250, "y": 1390}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -264,7 +323,7 @@ tasks:
       brand: ''
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 50, "y": 1380}}'
+    view: '{"position": {"x": 50, "y": 1550}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -311,7 +370,7 @@ tasks:
       scriptName: Sleep
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 1380}}'
+    view: '{"position": {"x": 450, "y": 1550}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -338,7 +397,7 @@ tasks:
       scriptName: CTTHygieneAskLinks
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 1540}}'
+    view: '{"position": {"x": 450, "y": 1710}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -365,7 +424,7 @@ tasks:
       brand: ''
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 1620}}'
+    view: '{"position": {"x": 450, "y": 1790}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -402,7 +461,7 @@ tasks:
       scriptName: CTTHygieneSendDM
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 1780}}'
+    view: '{"position": {"x": 450, "y": 1950}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -453,7 +512,7 @@ tasks:
       script: Cortex Core - Platform|||core-update-issue
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 1940}}'
+    view: '{"position": {"x": 450, "y": 2110}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -480,7 +539,7 @@ tasks:
       scriptName: CTTHygieneFixCheck
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 50, "y": 1540}}'
+    view: '{"position": {"x": 50, "y": 1710}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -510,7 +569,7 @@ tasks:
       brand: ''
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 50, "y": 1700}}'
+    view: '{"position": {"x": 50, "y": 1870}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -544,7 +603,7 @@ tasks:
       script: Builtin|||closeInvestigation
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": -50, "y": 1860}}'
+    view: '{"position": {"x": -50, "y": 2030}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -570,7 +629,7 @@ tasks:
       scriptName: CTTHygieneFixCheck
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": -250, "y": 1540}}'
+    view: '{"position": {"x": -250, "y": 1710}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -601,7 +660,7 @@ tasks:
       script: Builtin|||closeInvestigation
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": -250, "y": 1700}}'
+    view: '{"position": {"x": -250, "y": 1870}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -627,7 +686,7 @@ tasks:
       scriptName: DeleteContext
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 250, "y": 2080}}'
+    view: '{"position": {"x": 250, "y": 2250}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -653,7 +712,7 @@ tasks:
       brand: ''
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 250, "y": 2220}}'
+    view: '{"position": {"x": 250, "y": 2390}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -677,7 +736,7 @@ tasks:
       brand: ''
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 50, "y": 2380}}'
+    view: '{"position": {"x": 50, "y": 2550}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -724,7 +783,7 @@ tasks:
       scriptName: Sleep
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 2380}}'
+    view: '{"position": {"x": 450, "y": 2550}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -751,7 +810,7 @@ tasks:
       scriptName: CTTHygieneAskLinks
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 2540}}'
+    view: '{"position": {"x": 450, "y": 2710}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -778,7 +837,7 @@ tasks:
       brand: ''
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 2620}}'
+    view: '{"position": {"x": 450, "y": 2790}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -813,7 +872,7 @@ tasks:
       scriptName: CTTHygieneSendDM
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 2780}}'
+    view: '{"position": {"x": 450, "y": 2950}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -863,7 +922,7 @@ tasks:
       scriptName: CTTHygieneFixCheck
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 50, "y": 2540}}'
+    view: '{"position": {"x": 50, "y": 2710}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -893,7 +952,7 @@ tasks:
       brand: ''
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 50, "y": 2700}}'
+    view: '{"position": {"x": 50, "y": 2870}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -927,7 +986,7 @@ tasks:
       script: Builtin|||closeInvestigation
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": -50, "y": 2860}}'
+    view: '{"position": {"x": -50, "y": 3030}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -953,7 +1012,7 @@ tasks:
       scriptName: CTTHygieneFixCheck
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": -250, "y": 2540}}'
+    view: '{"position": {"x": -250, "y": 2710}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -984,7 +1043,7 @@ tasks:
       script: Builtin|||closeInvestigation
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": -250, "y": 2700}}'
+    view: '{"position": {"x": -250, "y": 2870}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -1009,7 +1068,7 @@ tasks:
       brand: ''
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 2860}}'
+    view: '{"position": {"x": 450, "y": 3030}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -1044,7 +1103,7 @@ tasks:
       scriptName: CTTHygieneSendDM
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 50, "y": 3020}}'
+    view: '{"position": {"x": 50, "y": 3190}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -1090,7 +1149,7 @@ tasks:
       scriptName: CTTHygieneFixCheck
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 650, "y": 1380}}'
+    view: '{"position": {"x": 650, "y": 1550}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -1118,7 +1177,7 @@ tasks:
       brand: ''
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 650, "y": 1540}}'
+    view: '{"position": {"x": 650, "y": 1710}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -1150,7 +1209,7 @@ tasks:
       script: Builtin|||closeInvestigation
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 650, "y": 1700}}'
+    view: '{"position": {"x": 650, "y": 1870}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -1161,7 +1220,7 @@ tasks:
         simple: ${CTT.FixWatch.reason}
       closeNotes:
         simple: ${CTT.FixWatch.note}
-view: '{"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 3115, "width": 1080, "x": -150, "y": 50}}}'
+view: '{"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 3285, "width": 1080, "x": -150, "y": 50}}}'
 inputs: []
 outputs: []
 tests:

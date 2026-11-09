@@ -70,6 +70,7 @@ issue with a running Notify Owner playbook is closed by that playbook's last tas
 | Owner presses **Mark as Fixed** in the DM (or tells the CTT Assistant) | The check verifies it, or the guideline has no check | "Confirmed fixed by …" |
 | Owner presses **Mark as False Positive** | Always; the CTT channel is told so admins can tune the rule | "Marked as false positive by …" (False Positive) |
 | Inventory check (daily) | All objects of the owner's issue are fixed | its own note |
+| Notify Owner playbook, before assigning or DMing | An older issue about the same endpoint, user or object is still open, or one was marked a false positive in the last `notify.false_positive_days` days (30). The daily rules (LAB-01, GEN-01) raise a finding again once their one-day suppression ends | "Duplicate of issue #…" / "Same … as issue #…, which was marked a false positive …" (Duplicate Issue) |
 
 Each hygiene issue has its own Health case, which stays open when the issue is resolved; the fix
 check closes the case once all its issues are resolved, with a note quoting their close notes.
@@ -132,3 +133,4 @@ These jobs support the rules but check nothing themselves:
 | 2026-11-06 | 1.2.0: Type column (CR/PB). New rule for policy scope (TAG-02); OOTB applies to CTT admins; LAB-01 owners from installer creators and policy editors. The daily sweep became the inventory check (existing objects, Tags field, inactive owners); case checks moved to case housekeeping, which assigns, reminds and resolves cases (CASE-01, CASE-02 now Active) |
 | 2026-11-07 | 1.4.0: remediation loop. Fix check column; hourly fix check with close notes; Mark as Fixed / Mark as False Positive buttons in the DM (answer links by Generated link); daily digest; time-to-fix metrics |
 | 2026-11-07 | CTT-LAB-01: the rule, the fix check and case housekeeping also accept `172.16.<octet>.0/24` |
+| 2026-11-09 | Duplicates and repeated false positives close as Duplicate Issue without a DM; the jobs run on schedule (they were created without the fields the scheduler needs) |
