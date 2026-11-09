@@ -119,7 +119,24 @@ def playbook(job: dict) -> dict:
             },
         )
     done = str(len(steps) + 1)
-    tasks[done] = task(done, "title", "Done", None, 50 + 180 * (len(steps) + 1))
+    # The last task closes the job run, as the UI-made jobs do; otherwise each run stays In Progress
+    # until the next one closes it (closePrevRun).
+    tasks[done] = task(
+        done,
+        "regular",
+        "Close the job run",
+        None,
+        50 + 180 * (len(steps) + 1),
+        {
+            "task": {
+                "script": "Builtin|||closeInvestigation",
+                "iscommand": True,
+                "brand": "Builtin",
+                "description": "Closes this run's investigation.",
+            },
+            "scriptarguments": {"closeNotes": {"simple": f"{job['name']} run completed."}},
+        },
+    )
     return {
         "id": job["name"],
         "version": -1,

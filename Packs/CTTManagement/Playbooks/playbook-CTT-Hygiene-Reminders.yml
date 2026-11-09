@@ -65,16 +65,17 @@ tasks:
         simple: ${inputs.dry_run}
   '2':
     id: '2'
-    taskid: cc2815d0-a964-5e3d-9307-e66665df8d20
-    type: title
+    taskid: 4e7ea40b-9d42-5898-81d1-3b2efd655434
+    type: regular
     task:
-      id: cc2815d0-a964-5e3d-9307-e66665df8d20
+      id: 4e7ea40b-9d42-5898-81d1-3b2efd655434
       version: -1
-      name: Done
-      description: ''
-      type: title
-      iscommand: false
-      brand: ''
+      name: Close the job run
+      description: Closes this run's investigation.
+      type: regular
+      iscommand: true
+      brand: Builtin
+      script: Builtin|||closeInvestigation
     separatecontext: false
     continueonerrortype: ''
     view: '{"position": {"x": 50, "y": 410}}'
@@ -83,6 +84,9 @@ tasks:
     ignoreworker: false
     skipunavailable: false
     quietmode: 0
+    scriptarguments:
+      closeNotes:
+        simple: CTT - Hygiene - Reminders run completed.
 view: '{"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 425, "width": 380, "x": 50, "y": 50}}}'
 inputs:
 - key: remind

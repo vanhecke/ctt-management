@@ -90,16 +90,17 @@ tasks:
         simple: ${inputs.hours}
   '3':
     id: '3'
-    taskid: 8fd67056-f0cf-5c63-8d5e-190b553cf555
-    type: title
+    taskid: 7d140528-c5e6-5b6f-8e03-7f10b6825fcc
+    type: regular
     task:
-      id: 8fd67056-f0cf-5c63-8d5e-190b553cf555
+      id: 7d140528-c5e6-5b6f-8e03-7f10b6825fcc
       version: -1
-      name: Done
-      description: ''
-      type: title
-      iscommand: false
-      brand: ''
+      name: Close the job run
+      description: Closes this run's investigation.
+      type: regular
+      iscommand: true
+      brand: Builtin
+      script: Builtin|||closeInvestigation
     separatecontext: false
     continueonerrortype: ''
     view: '{"position": {"x": 50, "y": 590}}'
@@ -108,6 +109,9 @@ tasks:
     ignoreworker: false
     skipunavailable: false
     quietmode: 0
+    scriptarguments:
+      closeNotes:
+        simple: CTT - Registry Sync run completed.
 view: '{"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 605, "width": 380, "x": 50, "y": 50}}}'
 inputs:
 - key: source
