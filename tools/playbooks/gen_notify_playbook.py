@@ -23,6 +23,7 @@ CTX = "CTT.Triage"
 ROUND1 = {"title": "20", "ask": "21", "wait": "22", "links": "23", "dm": "24", "check": "26", "resolved": "27", "fp": "28", "done": "29", "fpdone": "40", "gate": "43"}
 ROUND2 = {"clear": "30", "title": "31", "ask": "32", "wait": "33", "links": "34", "dm": "35", "check": "36", "resolved": "37", "fp": "38", "last": "39", "done": "41", "fpdone": "42", "gate": "44", "lastgate": "45"}
 WATCH = {"watch": "50", "fixed": "51", "close": "52"}
+THANKS = {"answer": ("53", "54"), "watch": ("55", "56")}  # (gate, DM) in front of close 19 / 52
 _PB = NAME  # the playbook whose task IDs tid() derives; set per playbook in build()
 
 
@@ -145,14 +146,15 @@ def notify_playbook() -> dict:
     t["17"]["nexttasks"] = {"#none#": ["18"]}
     t["18"] = base("18", "condition", "Did the owner's answer close it?", "Yes for a verified fix, a guideline without a check, or a false positive.", 1880, x=50)
     t["18"]["conditions"] = [{"label": "yes", "condition": is_on("CTT.FixCheck.close")}]
-    t["18"]["nexttasks"] = {"yes": ["19"]}
-    add_close(t, "19", "Close the issue: the owner's answer", "CTT.FixCheck", 2040, x=50)
+    t["18"]["nexttasks"] = {"yes": [THANKS["answer"][0]]}
+    add_thanks(t, THANKS["answer"], "19", "CTT.FixCheck", 2040, x=50)
+    add_close(t, "19", "Close the issue: the owner's answer", "CTT.FixCheck", 2360, x=50)
     add_watch(t, 1720)
     return wrap(
         NAME,
         "Runs on every CTT hygiene health issue. Closes it at once when the same problem is already open (or was marked a false positive recently) or the guideline's check sees it fixed. Otherwise assigns it to the person responsible (from the issue's owner marker and the CTT registry), sets it In Progress, and runs CTT - Hygiene - Ask Owner (Slack DM with Mark as Fixed / Mark as False Positive) next to an hourly fix check (scheduled command). Every branch ends in its own close task with a close note saying why.",
         t,
-        2250,
+        2550,
     )
 
 
@@ -226,6 +228,30 @@ def add_close(t: dict, key: str, name: str, ctx: str, y: int, x: int) -> None:
     t[key]["scriptarguments"] = {"closeReason": {"simple": f"${{{ctx}.reason}}"}, "closeNotes": {"simple": f"${{{ctx}.note}}"}}
 
 
+def add_thanks(t: dict, keys: tuple[str, str], close: str, ctx: str, y: int, x: int) -> None:
+    """Thank the owner before the close task (closing the issue stops the playbook, so nothing runs
+    after it). Same gate as the question's DM; a failed DM never blocks the close."""
+    gate, dm = keys
+    t[gate] = base(gate, "condition", "Should the owner get a Slack DM?", "notify from triage (mode, allowlist, Slack ID). No closes the issue without a thank-you.", y, x=x)
+    t[gate]["conditions"] = [{"label": "yes", "condition": is_true("notify")}]
+    t[gate]["nexttasks"] = {"yes": [dm], "#default#": [close]}
+    t[dm] = base(dm, "regular", "Thank the owner", "CTTHygieneSendDM closed=true: thanks the owner and quotes the close note. Doesn't count toward the daily DM limit.", y + 160, x=x,
+                 task_extra={"scriptName": "CTTHygieneSendDM"})
+    t[dm]["scriptarguments"] = {
+        "slack_user_id": arg("slack_id"),
+        "owner_email": arg("owner_email"),
+        "first_name": arg("first_name"),
+        "issue_id": arg("issue_id"),
+        "issue_url": arg("issue_url"),
+        "guideline_id": arg("guideline_id"),
+        "closed": {"simple": "true"},
+        "close_reason": {"simple": f"${{{ctx}.reason}}"},
+        "close_note": {"simple": f"${{{ctx}.note}}"},
+    }
+    t[dm]["continueonerror"] = True
+    t[dm]["nexttasks"] = {"#none#": [close]}
+
+
 def add_watch(t: dict, y: int) -> None:
     """Runs next to the Ask Owner sub-playbook, or alone for an issue without an owner: a scheduled
     command (polling: true, ScheduledCommand every hour, see xsoar.pan.dev scheduled-commands)
@@ -237,8 +263,9 @@ def add_watch(t: dict, y: int) -> None:
     t[WATCH["watch"]]["nexttasks"] = {"#none#": [WATCH["fixed"]]}
     t[WATCH["fixed"]] = base(WATCH["fixed"], "condition", "Fixed?", "", y + 160, x=650)
     t[WATCH["fixed"]]["conditions"] = [{"label": "yes", "condition": [[{"operator": "isTrue", "left": {"value": {"simple": "CTT.FixWatch.close"}, "iscontext": True}}]]}]
-    t[WATCH["fixed"]]["nexttasks"] = {"yes": [WATCH["close"]]}
-    add_close(t, WATCH["close"], "Close the issue: fixed (checked)", "CTT.FixWatch", y + 320, x=650)
+    t[WATCH["fixed"]]["nexttasks"] = {"yes": [THANKS["watch"][0]]}
+    add_thanks(t, THANKS["watch"], WATCH["close"], "CTT.FixWatch", y + 320, x=650)
+    add_close(t, WATCH["close"], "Close the issue: fixed (checked)", "CTT.FixWatch", y + 640, x=650)
 
 
 def add_end(t: dict, key: str, name: str, y: int, x: int) -> None:
@@ -346,7 +373,8 @@ def main() -> None:
         "2. **Already fixed?** `CTTHygieneFixCheck resolve=false` runs the guideline's automatic check. If it sees the fix (for example a playbook with the owner's tag in its Tags field), the issue is closed with a note saying why, before anyone is assigned or notified.\n"
         "3. `CTTHygieneTriage` finds the owner from the issue's `[owner: ...]` marker, their name, role and Slack ID in the CTT registry, and the guideline; `core-update-issue` assigns the issue and sets it In Progress.\n"
         f"4. In parallel:\n   - **Ask the owner:** the `{ASK}` sub-playbook (DM with Mark as Fixed / Mark as False Positive, the answer and the fix check on it). When its result closes the issue, the next task does.\n"
-        "   - **Watch:** `CTTHygieneFixCheck watch=true`, a scheduled command (polling) that checks every hour and closes the issue once the check sees it fixed.\n\n"
+        "   - **Watch:** `CTTHygieneFixCheck watch=true`, a scheduled command (polling) that checks every hour and closes the issue once the check sees it fixed.\n"
+        "5. Before either of those closes, `CTTHygieneSendDM closed=true` thanks the owner and quotes the close note (same DM gate; it doesn't count toward the daily limit). Duplicates and issues that were already fixed close without a DM: the owner was never asked.\n\n"
         "An issue without an owner only gets the watch. The issue is always closed by the last task of a branch (`closeInvestigation` with the close note), never halfway; closing it stops the other branch. "
         "Assigning continues on error. DMs follow `notify.mode` (`off`, `allowlist`, `admins_only`, `all`) and the daily limit in `CTT - Config`.\n"
     )

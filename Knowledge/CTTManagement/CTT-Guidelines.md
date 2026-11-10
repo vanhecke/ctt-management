@@ -201,7 +201,8 @@ Before you leave the team, delete your objects or hand them over to another DC, 
 - You get one issue per finding: while it is open, the same finding found again is closed as a
   duplicate without a DM. A finding that is already fixed when the pack looks at it (for example a
   playbook you created with your tag in its Tags field) is closed without a DM too.
-- Every closed issue carries a note saying why it was closed. An issue you don't answer stays
+- Every closed issue carries a note saying why it was closed, and when an issue you were asked
+  about closes, you get a short thank-you DM with that note. An issue you don't answer stays
   open; you get one daily digest of your issues open for more than a day.
 - The one exception to "never changed automatically" is cases: Security cases are assigned after
   a day and resolved after 7 days (`CTT-CASE-01`, `CTT-CASE-02`).

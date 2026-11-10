@@ -46,6 +46,17 @@ args:
   - "true"
   - "false"
   description: true sends the links as Slack buttons (webhook action msg_person_health_issue, notify.buttons in CTT - Config); false lists them in the text.
+- name: closed
+  auto: PREDEFINED
+  predefined:
+  - "true"
+  - "false"
+  defaultValue: "false"
+  description: true sends the thank-you DM for a closed issue (close_reason, close_note) instead of the question. It doesn't count toward the daily DM limit.
+- name: close_reason
+  description: The close reason (with closed=true); a false positive gets its own thank-you.
+- name: close_note
+  description: The close note, quoted in the thank-you (with closed=true).
 - name: content
   description: Text that is already laid out for the code block (for example the case housekeeping digest). Sent as is instead of the template or AI message.
 outputs:

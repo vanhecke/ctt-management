@@ -431,6 +431,86 @@ tasks:
             iscontext: true
     nexttasks:
       'yes':
+      - '53'
+  '53':
+    id: '53'
+    taskid: 138aa69e-2e1a-5a4e-ba76-4609a527cc31
+    type: condition
+    task:
+      id: 138aa69e-2e1a-5a4e-ba76-4609a527cc31
+      version: -1
+      name: Should the owner get a Slack DM?
+      description: notify from triage (mode, allowlist, Slack ID). No closes the issue without a thank-you.
+      type: condition
+      iscommand: false
+      brand: ''
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 50, "y": 2040}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    conditions:
+    - label: 'yes'
+      condition:
+      - - operator: isEqualString
+          left:
+            value:
+              simple: CTT.Triage.notify
+            iscontext: true
+          right:
+            value:
+              simple: 'true'
+    nexttasks:
+      'yes':
+      - '54'
+      '#default#':
+      - '19'
+  '54':
+    id: '54'
+    taskid: 95bcf04c-a94a-5604-94ee-03d5248a81a5
+    type: regular
+    task:
+      id: 95bcf04c-a94a-5604-94ee-03d5248a81a5
+      version: -1
+      name: Thank the owner
+      description: 'CTTHygieneSendDM closed=true: thanks the owner and quotes the close note. Doesn''t count toward the daily DM limit.'
+      type: regular
+      iscommand: false
+      brand: ''
+      scriptName: CTTHygieneSendDM
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 50, "y": 2200}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    scriptarguments:
+      slack_user_id:
+        simple: ${CTT.Triage.slack_id}
+      owner_email:
+        simple: ${CTT.Triage.owner_email}
+      first_name:
+        simple: ${CTT.Triage.first_name}
+      issue_id:
+        simple: ${CTT.Triage.issue_id}
+      issue_url:
+        simple: ${CTT.Triage.issue_url}
+      guideline_id:
+        simple: ${CTT.Triage.guideline_id}
+      closed:
+        simple: 'true'
+      close_reason:
+        simple: ${CTT.FixCheck.reason}
+      close_note:
+        simple: ${CTT.FixCheck.note}
+    continueonerror: true
+    nexttasks:
+      '#none#':
       - '19'
   '19':
     id: '19'
@@ -447,7 +527,7 @@ tasks:
       script: Builtin|||closeInvestigation
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 50, "y": 2040}}'
+    view: '{"position": {"x": 50, "y": 2360}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -517,6 +597,86 @@ tasks:
             iscontext: true
     nexttasks:
       'yes':
+      - '55'
+  '55':
+    id: '55'
+    taskid: 7ec1f1d3-0260-58b1-b569-647f8aec6d5a
+    type: condition
+    task:
+      id: 7ec1f1d3-0260-58b1-b569-647f8aec6d5a
+      version: -1
+      name: Should the owner get a Slack DM?
+      description: notify from triage (mode, allowlist, Slack ID). No closes the issue without a thank-you.
+      type: condition
+      iscommand: false
+      brand: ''
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 650, "y": 2040}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    conditions:
+    - label: 'yes'
+      condition:
+      - - operator: isEqualString
+          left:
+            value:
+              simple: CTT.Triage.notify
+            iscontext: true
+          right:
+            value:
+              simple: 'true'
+    nexttasks:
+      'yes':
+      - '56'
+      '#default#':
+      - '52'
+  '56':
+    id: '56'
+    taskid: 2f9bc3e9-dac6-5ac8-b3f8-22de2e7e2827
+    type: regular
+    task:
+      id: 2f9bc3e9-dac6-5ac8-b3f8-22de2e7e2827
+      version: -1
+      name: Thank the owner
+      description: 'CTTHygieneSendDM closed=true: thanks the owner and quotes the close note. Doesn''t count toward the daily DM limit.'
+      type: regular
+      iscommand: false
+      brand: ''
+      scriptName: CTTHygieneSendDM
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 650, "y": 2200}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    scriptarguments:
+      slack_user_id:
+        simple: ${CTT.Triage.slack_id}
+      owner_email:
+        simple: ${CTT.Triage.owner_email}
+      first_name:
+        simple: ${CTT.Triage.first_name}
+      issue_id:
+        simple: ${CTT.Triage.issue_id}
+      issue_url:
+        simple: ${CTT.Triage.issue_url}
+      guideline_id:
+        simple: ${CTT.Triage.guideline_id}
+      closed:
+        simple: 'true'
+      close_reason:
+        simple: ${CTT.FixWatch.reason}
+      close_note:
+        simple: ${CTT.FixWatch.note}
+    continueonerror: true
+    nexttasks:
+      '#none#':
       - '52'
   '52':
     id: '52'
@@ -533,7 +693,7 @@ tasks:
       script: Builtin|||closeInvestigation
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 650, "y": 2040}}'
+    view: '{"position": {"x": 650, "y": 2360}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -544,7 +704,7 @@ tasks:
         simple: ${CTT.FixWatch.reason}
       closeNotes:
         simple: ${CTT.FixWatch.note}
-view: '{"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 2250, "width": 1300, "x": -250, "y": 50}}}'
+view: '{"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 2550, "width": 1300, "x": -250, "y": 50}}}'
 inputs: []
 outputs: []
 tests:

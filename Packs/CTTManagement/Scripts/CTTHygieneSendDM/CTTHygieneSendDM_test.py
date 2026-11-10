@@ -1,4 +1,4 @@
-from CTTHygieneSendDM import WIDTH, build_dm, bump, header, section, template_body, usable_ai_message, wrap_body
+from CTTHygieneSendDM import build_closed, WIDTH, build_dm, bump, header, section, template_body, usable_ai_message, wrap_body
 
 
 def test_header_is_a_closed_box():
@@ -78,3 +78,26 @@ def test_build_dm_without_buttons_lists_the_answer_links():
 def test_build_dm_puts_the_reask_note_first():
     dm = build_dm("CTT-TAG-01", "Body.", "60900", "", note="You said it was fixed, but playbook x still exists.")
     assert dm.index("You said it was fixed") < dm.index("Body.")
+
+
+def test_build_closed_thanks_for_a_fix():
+    dm = build_closed(
+        "CTT-TAG-01",
+        "Joris",
+        "62982",
+        "https://t/issue-view/62982",
+        "Resolved - Other",
+        "Auto-closed by the CTT fix check: playbook 'asdf' carries your tag jvanhecke in its Tags field.",
+    )
+    lines = dm.splitlines()
+    assert "CTT HYGIENE · CLOSED" in lines[1]
+    assert "Thanks for fixing it! Issue #62982 is closed." in dm
+    assert any(line.startswith("WHY     Auto-closed by the CTT fix check") for line in lines)
+    assert lines[-2:] == ["Issue #62982 · closed", "https://t/issue-view/62982"]
+    assert max(len(line) for line in lines) <= 46
+
+
+def test_build_closed_false_positive():
+    dm = build_closed("CTT-LAB-01", "", "7", "", "Resolved - False Positive", "Marked as false positive by j@x.com.")
+    assert "Hi there," in dm
+    assert "closed as a false positive, and the CTT admins" in dm.replace("\n", " ")

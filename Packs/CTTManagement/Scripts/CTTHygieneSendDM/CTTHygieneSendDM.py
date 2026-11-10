@@ -97,6 +97,24 @@ def build_dm(
     return "\n".join(p for p in parts if p is not None)
 
 
+def build_closed(guideline_id: str, first_name: str, issue_id: str, url: str, reason: str, note: str) -> str:
+    """The thank-you DM when the Notify Owner playbook closes an issue the owner was asked about:
+    after their answer (fixed or false positive) or when the hourly check saw it fixed."""
+    issue = f"Issue #{issue_id}" if issue_id else "The issue"
+    if "false positive" in (reason or "").lower():
+        thanks = (
+            f"Thanks for letting us know. {issue} is closed as a false positive, "
+            "and the CTT admins were told so they can tune the check."
+        )
+    else:
+        thanks = f"Thanks for fixing it! {issue} is closed."
+    parts = [header("CTT HYGIENE · CLOSED", guideline_id or "CTT"), "", f"Hi {first_name or 'there'},", "", wrap_body(thanks), ""]
+    if note:
+        parts += section("WHY", note) + [""]
+    parts += ["─" * WIDTH, f"{issue} · closed"] + ([url] if url else [])
+    return "\n".join(parts)
+
+
 def usable_ai_message(message: str) -> bool:
     """False for an empty or cut-off AI answer (its last line does not end a sentence)."""
     lines = [line.strip() for line in (message or "").strip().splitlines() if line.strip()]
@@ -108,6 +126,18 @@ def bump(state: dict, day: str, owner: str) -> dict:
     today = dict(state.get(day, {}))
     today[owner] = int(today.get(owner, 0)) + 1
     return {day: today}
+
+
+def count_dm(owner: str) -> None:  # pragma: no cover
+    day = datetime.now(UTC).strftime("%Y-%m-%d")
+    state_res = demisto.executeCommand("getList", {"listName": NOTIFY_STATE})
+    try:
+        state = json.loads(state_res[0]["Contents"]) if not is_error(state_res) else {}
+    except (ValueError, KeyError, TypeError, IndexError):
+        state = {}
+    payload = json.dumps(bump(state if isinstance(state, dict) else {}, day, owner))
+    if is_error(demisto.executeCommand("setList", {"listName": NOTIFY_STATE, "listData": payload})):
+        demisto.executeCommand("createList", {"listName": NOTIFY_STATE, "listData": payload})
 
 
 def main():  # pragma: no cover
@@ -124,7 +154,18 @@ def main():  # pragma: no cover
         has_links = all(links.values())
         buttons = has_links and argToBoolean(args.get("buttons") or "false") and bool(url)
         layout = {"note": note, "links": links if has_links else None, "buttons": buttons}
-        if args.get("content"):
+        closed = argToBoolean(args.get("closed") or "false")
+        if closed:
+            buttons = False
+            content = build_closed(
+                args.get("guideline_id", ""),
+                args.get("first_name", ""),
+                args.get("issue_id", ""),
+                url,
+                args.get("close_reason", ""),
+                args.get("close_note", ""),
+            )
+        elif args.get("content"):
             # Already laid out by the caller (the case housekeeping and hygiene digests).
             content = args["content"]
         elif usable_ai_message(message):
@@ -149,15 +190,8 @@ def main():  # pragma: no cover
         res = demisto.executeCommand("ctt-slack-webhook-send", send)
         if is_error(res):
             raise DemistoException(f"ctt-slack-webhook-send failed: {get_error(res)}")
-        day = datetime.now(UTC).strftime("%Y-%m-%d")
-        state_res = demisto.executeCommand("getList", {"listName": NOTIFY_STATE})
-        try:
-            state = json.loads(state_res[0]["Contents"]) if not is_error(state_res) else {}
-        except (ValueError, KeyError, TypeError):
-            state = {}
-        payload = json.dumps(bump(state if isinstance(state, dict) else {}, day, owner))
-        if is_error(demisto.executeCommand("setList", {"listName": NOTIFY_STATE, "listData": payload})):
-            demisto.executeCommand("createList", {"listName": NOTIFY_STATE, "listData": payload})
+        if not closed:  # a thank-you doesn't count toward notify.max_dms_per_owner_per_day
+            count_dm(owner)
         return_results(
             CommandResults(
                 readable_output=f"Sent this Slack DM to {owner} ({slack_id}):\n\n```\n{content}\n```",
