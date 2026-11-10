@@ -368,7 +368,10 @@ def decide(item: dict, verdict: str, text: str, mode: str, now_ms: int) -> dict:
             return {"action": "resolve", "reason": FIXED_REASON, "note": f"Confirmed fixed by {owner} on {sgt(now_ms)} ({text})."}
         return {
             "action": "keep",
-            "note": f"You said this is fixed, but the check still sees it: {text}. Fix it, then press Mark as Fixed again.",
+            "note": (
+                f"You said this is fixed, but the check still sees it: {text}. Fix it, then press Mark as Fixed again; "
+                "it also closes by itself within an hour once it is fixed."
+            ),
         }
     if verdict == "fixed":
         return {

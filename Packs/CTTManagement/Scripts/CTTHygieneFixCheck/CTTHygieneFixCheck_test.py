@@ -146,7 +146,10 @@ def test_decide_closes_with_a_note_saying_why():
     assert confirmed["note"].startswith("Confirmed fixed by jvanhecke@x.com")
     assert decide(item, "open", "still there", "confirm", 0) == {
         "action": "keep",
-        "note": "You said this is fixed, but the check still sees it: still there. Fix it, then press Mark as Fixed again.",
+        "note": (
+            "You said this is fixed, but the check still sees it: still there. Fix it, then press Mark as Fixed again; "
+            "it also closes by itself within an hour once it is fixed."
+        ),
     }
     fp = decide(item, "unchecked", "", "false_positive", 0)
     assert (fp["reason"], fp["note"].startswith("Marked as false positive by jvanhecke@x.com")) == (

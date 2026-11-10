@@ -352,6 +352,80 @@ tasks:
     continueonerror: true
     nexttasks:
       '#none#':
+      - '8'
+  '8':
+    id: '8'
+    taskid: 54fbf070-885b-5410-bd04-292a9b18362f
+    type: condition
+    task:
+      id: 54fbf070-885b-5410-bd04-292a9b18362f
+      version: -1
+      name: Write the message with AI?
+      description: notify.use_ai in CTT - Config; otherwise the FOUND / RULE / FIX template is used.
+      type: condition
+      iscommand: false
+      brand: ''
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 250, "y": 1560}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    conditions:
+    - label: 'yes'
+      condition:
+      - - operator: isEqualString
+          left:
+            value:
+              simple: CTT.Triage.use_ai
+            iscontext: true
+          right:
+            value:
+              simple: 'true'
+    nexttasks:
+      '#default#':
+      - '16'
+      'yes':
+      - '5'
+  '5':
+    id: '5'
+    taskid: f87aefbb-5af9-55ca-8f77-695a73d5177f
+    type: aiTask
+    task:
+      id: f87aefbb-5af9-55ca-8f77-695a73d5177f
+      version: -1
+      name: Write the Slack message with AI
+      description: CTTHygieneMessagePrompt writes the DM text (only with notify.use_ai).
+      type: aiTask
+      aiTaskId: CTTHygieneMessagePrompt
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 650, "y": 1560}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    scriptarguments:
+      first_name:
+        simple: ${CTT.Triage.first_name}
+      owner_tags:
+        simple: ${CTT.Triage.owner_tags}
+      issue_title:
+        simple: ${CTT.Triage.issue_title}
+      issue_details:
+        simple: ${CTT.Triage.issue_details}
+      guideline_id:
+        simple: ${CTT.Triage.guideline_id}
+      guideline_title:
+        simple: ${CTT.Triage.guideline_title}
+      guideline_text:
+        simple: ${CTT.Triage.guideline_text}
+    continueonerror: true
+    nexttasks:
+      '#none#':
       - '16'
   '16':
     id: '16'
@@ -367,7 +441,7 @@ tasks:
       brand: ''
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 250, "y": 1560}}'
+    view: '{"position": {"x": 250, "y": 1720}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -385,19 +459,30 @@ tasks:
       id: 0721c684-8e97-5c73-84ec-e42e420640ab
       version: -1
       name: Ask the owner
-      description: 'Runs CTT - Hygiene - Ask Owner: the Slack DM with the Mark as Fixed / Mark as False Positive buttons, the owner''s answer and the fix check on it (one re-ask). Its result is in CTT.FixCheck.'
+      description: 'Runs CTT - Hygiene - Ask Owner (one round: DM with Mark as Fixed / Mark as False Positive, the answer, the fix check on it) again until the answer closes the issue, at most 10 rounds. Its result is in CTT.FixCheck.'
       type: playbook
       iscommand: false
       brand: ''
       playbookName: CTT - Hygiene - Ask Owner
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 50, "y": 1720}}'
+    view: '{"position": {"x": 50, "y": 1880}}'
     note: false
     timertriggers: []
     ignoreworker: false
     skipunavailable: false
     quietmode: 0
+    loop:
+      iscommand: false
+      exitCondition: ''
+      wait: 1
+      max: 10
+      builtincondition:
+      - - operator: isTrue
+          left:
+            value:
+              simple: CTT.FixCheck.close
+            iscontext: true
     nexttasks:
       '#none#':
       - '18'
@@ -415,7 +500,7 @@ tasks:
       brand: ''
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 50, "y": 1880}}'
+    view: '{"position": {"x": 50, "y": 2040}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -446,7 +531,7 @@ tasks:
       brand: ''
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 50, "y": 2040}}'
+    view: '{"position": {"x": 50, "y": 2200}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -483,7 +568,7 @@ tasks:
       scriptName: CTTHygieneSendDM
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 50, "y": 2200}}'
+    view: '{"position": {"x": 50, "y": 2360}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -527,7 +612,7 @@ tasks:
       script: Builtin|||closeInvestigation
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 50, "y": 2360}}'
+    view: '{"position": {"x": 50, "y": 2520}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -553,7 +638,7 @@ tasks:
       scriptName: CTTHygieneFixCheck
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 650, "y": 1720}}'
+    view: '{"position": {"x": 650, "y": 1880}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -581,7 +666,7 @@ tasks:
       brand: ''
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 650, "y": 1880}}'
+    view: '{"position": {"x": 650, "y": 2040}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -612,7 +697,7 @@ tasks:
       brand: ''
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 650, "y": 2040}}'
+    view: '{"position": {"x": 650, "y": 2200}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -649,7 +734,7 @@ tasks:
       scriptName: CTTHygieneSendDM
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 650, "y": 2200}}'
+    view: '{"position": {"x": 650, "y": 2360}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -693,7 +778,7 @@ tasks:
       script: Builtin|||closeInvestigation
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 650, "y": 2360}}'
+    view: '{"position": {"x": 650, "y": 2520}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -704,7 +789,7 @@ tasks:
         simple: ${CTT.FixWatch.reason}
       closeNotes:
         simple: ${CTT.FixWatch.note}
-view: '{"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 2550, "width": 1300, "x": -250, "y": 50}}}'
+view: '{"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 2700, "width": 1300, "x": -250, "y": 50}}}'
 inputs: []
 outputs: []
 tests:
