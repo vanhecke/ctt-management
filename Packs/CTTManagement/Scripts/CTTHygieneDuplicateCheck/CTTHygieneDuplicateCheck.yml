@@ -1,0 +1,41 @@
+commonfields:
+  id: CTTHygieneDuplicateCheck
+  version: -1
+name: CTTHygieneDuplicateCheck
+comment: First step of the CTT - Hygiene - Notify Owner playbook. Finds another open CTT hygiene issue about the same endpoint, user or object, or one marked a false positive in the last notify.false_positive_days days (CTT - Config), so the playbook can close this issue as a duplicate before anyone is assigned or notified.
+script: '-'
+type: python
+subtype: python3
+dockerimage: demisto/python3:3.12.15.14069087
+runas: DBotWeakRole
+enabled: true
+tags:
+- CTT
+args:
+- name: issue_id
+  description: The issue to check. Default is the current issue.
+outputs:
+- contextPath: CTT.Duplicate.issue_id
+  description: The issue that was checked.
+  type: String
+- contextPath: CTT.Duplicate.object
+  description: The endpoint, user or object the issue is about.
+  type: String
+- contextPath: CTT.Duplicate.duplicate_of
+  description: The other issue (still open, or marked a false positive recently). Empty when this issue is new.
+  type: String
+- contextPath: CTT.Duplicate.note
+  description: The close note for a duplicate.
+  type: String
+- contextPath: CTT.Duplicate.reason
+  description: The close reason for a duplicate (Resolved - Duplicate Issue).
+  type: String
+dependson:
+  must:
+  - core-api-post
+fromversion: 8.9.0
+marketplaces:
+- marketplacev2
+- platform
+tests:
+- No tests (auto formatted)

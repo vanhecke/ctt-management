@@ -1,7 +1,7 @@
 id: CTT - Hygiene - Notify Owner
 version: -1
 name: CTT - Hygiene - Notify Owner
-description: 'Runs on every CTT hygiene health issue: assigns it to the person responsible (from the issue''s owner marker and the CTT registry), sends them a Slack DM with the fix and the answer buttons Mark as Fixed / Mark as False Positive, and waits for the answer. Mark as Fixed runs the fix check (resolve with a close note, or ask again with what is still wrong); Mark as False Positive resolves it as False Positive and tells the CTT channel. DMs follow notify in ''CTT - Config''.'
+description: Runs on every CTT hygiene health issue. Closes it at once when the same problem is already open (or was marked a false positive recently) or the guideline's check sees it fixed. Otherwise assigns it to the person responsible (from the issue's owner marker and the CTT registry), sets it In Progress, and runs CTT - Hygiene - Ask Owner (Slack DM with Mark as Fixed / Mark as False Positive) next to an hourly fix check (scheduled command). Every branch ends in its own close task with a close note saying why.
 fromversion: 8.15.0
 marketplaces:
 - marketplacev2
@@ -49,7 +49,7 @@ tasks:
       scriptName: DeleteContext
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 130}}'
+    view: '{"position": {"x": 450, "y": 180}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -60,7 +60,179 @@ tasks:
         simple: 'yes'
     nexttasks:
       '#none#':
+      - '10'
+  '10':
+    id: '10'
+    taskid: e1b24a89-47f3-5c19-a7ed-83a3815590a4
+    type: regular
+    task:
+      id: e1b24a89-47f3-5c19-a7ed-83a3815590a4
+      version: -1
+      name: Look for the same problem in other issues
+      description: 'CTTHygieneDuplicateCheck: another open issue about the same endpoint, user or object, or one marked a false positive in the last notify.false_positive_days days.'
+      type: regular
+      iscommand: false
+      brand: ''
+      scriptName: CTTHygieneDuplicateCheck
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 450, "y": 310}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    nexttasks:
+      '#none#':
+      - '11'
+  '11':
+    id: '11'
+    taskid: 2c4885b7-82ea-5bca-af20-e094258d4b10
+    type: condition
+    task:
+      id: 2c4885b7-82ea-5bca-af20-e094258d4b10
+      version: -1
+      name: Is the same problem already open, or marked a false positive?
+      description: ''
+      type: condition
+      iscommand: false
+      brand: ''
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 450, "y": 440}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    conditions:
+    - label: 'yes'
+      condition:
+      - - operator: isNotEmpty
+          left:
+            value:
+              simple: CTT.Duplicate.duplicate_of
+            iscontext: true
+    nexttasks:
+      'yes':
+      - '12'
+      '#default#':
+      - '13'
+  '12':
+    id: '12'
+    taskid: a16c267b-7243-5b41-aa59-c64203583cb3
+    type: regular
+    task:
+      id: a16c267b-7243-5b41-aa59-c64203583cb3
+      version: -1
+      name: 'Close the issue: duplicate'
+      description: Closes the issue with the close note saying why (the playbook ends here).
+      type: regular
+      iscommand: true
+      brand: Builtin
+      script: Builtin|||closeInvestigation
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 900, "y": 440}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    scriptarguments:
+      closeReason:
+        simple: ${CTT.Duplicate.reason}
+      closeNotes:
+        simple: ${CTT.Duplicate.note}
+  '13':
+    id: '13'
+    taskid: 0b063714-d882-5b54-bde9-e84c82d32b56
+    type: regular
+    task:
+      id: 0b063714-d882-5b54-bde9-e84c82d32b56
+      version: -1
+      name: Check whether it is already fixed
+      description: 'CTTHygieneFixCheck resolve=false: the guideline''s automatic check, if it has one. Writes the close reason and note to CTT.FixCheck.'
+      type: regular
+      iscommand: false
+      brand: ''
+      scriptName: CTTHygieneFixCheck
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 450, "y": 600}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    scriptarguments:
+      issue_id:
+        simple: ${CTT.Duplicate.issue_id}
+      resolve:
+        simple: 'false'
+    continueonerror: true
+    nexttasks:
+      '#none#':
+      - '14'
+  '14':
+    id: '14'
+    taskid: 1503139c-1686-5342-87bd-9572463657aa
+    type: condition
+    task:
+      id: 1503139c-1686-5342-87bd-9572463657aa
+      version: -1
+      name: Already fixed?
+      description: ''
+      type: condition
+      iscommand: false
+      brand: ''
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 450, "y": 760}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    conditions:
+    - label: 'yes'
+      condition:
+      - - operator: isTrue
+          left:
+            value:
+              simple: CTT.FixCheck.close
+            iscontext: true
+    nexttasks:
+      'yes':
+      - '15'
+      '#default#':
       - '1'
+  '15':
+    id: '15'
+    taskid: eec69b03-4d30-5e57-80fb-50e3c818a96b
+    type: regular
+    task:
+      id: eec69b03-4d30-5e57-80fb-50e3c818a96b
+      version: -1
+      name: 'Close the issue: already fixed'
+      description: Closes the issue with the close note saying why (the playbook ends here).
+      type: regular
+      iscommand: true
+      brand: Builtin
+      script: Builtin|||closeInvestigation
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 900, "y": 760}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    scriptarguments:
+      closeReason:
+        simple: ${CTT.FixCheck.reason}
+      closeNotes:
+        simple: ${CTT.FixCheck.note}
   '1':
     id: '1'
     taskid: 36f1a4d8-b559-5ab5-8174-33f8598786d6
@@ -76,7 +248,7 @@ tasks:
       scriptName: CTTHygieneTriage
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 260}}'
+    view: '{"position": {"x": 450, "y": 920}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -84,66 +256,7 @@ tasks:
     quietmode: 0
     nexttasks:
       '#none#':
-      - '60'
-  '60':
-    id: '60'
-    taskid: 8c918f19-3ad8-57b8-965b-3312460ae3c6
-    type: condition
-    task:
-      id: 8c918f19-3ad8-57b8-965b-3312460ae3c6
-      version: -1
-      name: Is it a duplicate?
-      description: Triage found an older open issue about the same object, or one marked a false positive in the last notify.false_positive_days days.
-      type: condition
-      iscommand: false
-      brand: ''
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 400}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    conditions:
-    - label: 'yes'
-      condition:
-      - - operator: isNotEmpty
-          left:
-            value:
-              simple: CTT.Triage.duplicate_of
-            iscontext: true
-    nexttasks:
-      '#default#':
       - '2'
-      'yes':
-      - '61'
-  '61':
-    id: '61'
-    taskid: 4e2f8ff3-42c0-5307-84e6-08bd73963c55
-    type: regular
-    task:
-      id: 4e2f8ff3-42c0-5307-84e6-08bd73963c55
-      version: -1
-      name: 'Close the issue: duplicate'
-      description: Closes the issue as Duplicate Issue with a note naming the other issue (the playbook ends here).
-      type: regular
-      iscommand: true
-      brand: Builtin
-      script: Builtin|||closeInvestigation
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": 850, "y": 400}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    scriptarguments:
-      closeReason:
-        simple: ${CTT.Triage.duplicate_reason}
-      closeNotes:
-        simple: ${CTT.Triage.duplicate_note}
   '2':
     id: '2'
     taskid: 2f64e302-792f-5f6b-9ecd-92ca36c84d11
@@ -158,7 +271,7 @@ tasks:
       brand: ''
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 540}}'
+    view: '{"position": {"x": 450, "y": 1080}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -195,7 +308,7 @@ tasks:
       script: Cortex Core - Platform|||core-update-issue
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 250, "y": 710}}'
+    view: '{"position": {"x": 250, "y": 1240}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -209,300 +322,13 @@ tasks:
     continueonerror: true
     nexttasks:
       '#none#':
-      - '8'
-  '8':
-    id: '8'
-    taskid: 54fbf070-885b-5410-bd04-292a9b18362f
-    type: condition
-    task:
-      id: 54fbf070-885b-5410-bd04-292a9b18362f
-      version: -1
-      name: Write the message with AI?
-      description: notify.use_ai in CTT - Config; otherwise the FOUND / RULE / FIX template is used.
-      type: condition
-      iscommand: false
-      brand: ''
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": 250, "y": 1050}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    conditions:
-    - label: 'yes'
-      condition:
-      - - operator: isEqualString
-          left:
-            value:
-              simple: CTT.Triage.use_ai
-            iscontext: true
-          right:
-            value:
-              simple: 'true'
-    nexttasks:
-      '#default#':
-      - '20'
-      'yes':
-      - '5'
-  '5':
-    id: '5'
-    taskid: f87aefbb-5af9-55ca-8f77-695a73d5177f
-    type: aiTask
-    task:
-      id: f87aefbb-5af9-55ca-8f77-695a73d5177f
-      version: -1
-      name: Write the Slack message with AI
-      description: CTTHygieneMessagePrompt writes the DM text (only with notify.use_ai).
-      type: aiTask
-      aiTaskId: CTTHygieneMessagePrompt
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": 50, "y": 1220}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    scriptarguments:
-      first_name:
-        simple: ${CTT.Triage.first_name}
-      owner_tags:
-        simple: ${CTT.Triage.owner_tags}
-      issue_title:
-        simple: ${CTT.Triage.issue_title}
-      issue_details:
-        simple: ${CTT.Triage.issue_details}
-      guideline_id:
-        simple: ${CTT.Triage.guideline_id}
-      guideline_title:
-        simple: ${CTT.Triage.guideline_title}
-      guideline_text:
-        simple: ${CTT.Triage.guideline_text}
-    continueonerror: true
-    nexttasks:
-      '#none#':
-      - '20'
-  '20':
-    id: '20'
-    taskid: aa73de1e-1307-57fd-b7fe-2ef9de266069
-    type: title
-    task:
-      id: aa73de1e-1307-57fd-b7fe-2ef9de266069
-      version: -1
-      name: 'Round 1: ask the owner'
-      description: ''
-      type: title
-      iscommand: false
-      brand: ''
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": 250, "y": 1390}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    nexttasks:
-      '#none#':
-      - '21'
-      - '22'
-      - '50'
-  '21':
-    id: '21'
-    taskid: a102c81c-43a6-5c58-b6e5-b91ea41253e3
-    type: condition
-    task:
-      id: a102c81c-43a6-5c58-b6e5-b91ea41253e3
-      version: -1
-      name: Did you fix it?
-      description: 'Asked by Generated link: one link per answer, opened without a Cortex login, behind the Mark as Fixed and Mark as False Positive buttons of the DM. Waits until answered (no timeout); the daily digest reminds the owner.'
-      type: condition
-      iscommand: false
-      brand: ''
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": 50, "y": 1550}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    message:
-      to:
-        simple: ${CTT.Triage.owner_email}
-      subject:
-        simple: 'CTT hygiene issue #${CTT.Triage.issue_id}'
-      body:
-        simple: 'CTT hygiene issue #${CTT.Triage.issue_id}: ${CTT.Triage.issue_title}. Did you fix it?'
-      methods:
-      - pushLinkToContext
-      format: ''
-      bcc: null
-      cc: null
-      timings:
-        retriescount: 0
-        retriesinterval: 1440
-        completeafterreplies: 1
-        completeafterv2: true
-        completeaftersla: false
-      replyOptions:
-      - Fixed
-      - False positive
-    nexttasks:
-      Fixed:
-      - '26'
-      False positive:
-      - '28'
-  '22':
-    id: '22'
-    taskid: cf938c30-6c08-50e0-93e7-d8356fc8adb9
+      - '4'
+  '4':
+    id: '4'
+    taskid: aac97799-4178-5d70-847d-f1d923bdd1a1
     type: regular
     task:
-      id: cf938c30-6c08-50e0-93e7-d8356fc8adb9
-      version: -1
-      name: Wait for the question's links
-      description: Gives the question time to write its answer links; a script started later gets them in its context.
-      type: regular
-      iscommand: false
-      brand: ''
-      scriptName: Sleep
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 1550}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    scriptarguments:
-      seconds:
-        simple: '20'
-    nexttasks:
-      '#none#':
-      - '23'
-  '23':
-    id: '23'
-    taskid: a89cdeb9-b522-59b4-beb7-e4c43214de30
-    type: regular
-    task:
-      id: a89cdeb9-b522-59b4-beb7-e4c43214de30
-      version: -1
-      name: Get the answer links
-      description: Returns the newest link per answer.
-      type: regular
-      iscommand: false
-      brand: ''
-      scriptName: CTTHygieneAskLinks
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 1710}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    scriptarguments:
-      task_id:
-        simple: '21'
-    continueonerror: true
-    nexttasks:
-      '#none#':
-      - '43'
-  '43':
-    id: '43'
-    taskid: 7dfd31b8-c918-52af-8a2d-623efdaef169
-    type: condition
-    task:
-      id: 7dfd31b8-c918-52af-8a2d-623efdaef169
-      version: -1
-      name: Should the owner get a Slack DM?
-      description: 'notify from triage: DMs follow notify in CTT - Config (mode, allowlist, daily limit). No skips only the DM.'
-      type: condition
-      iscommand: false
-      brand: ''
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 1790}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    conditions:
-    - label: 'yes'
-      condition:
-      - - operator: isEqualString
-          left:
-            value:
-              simple: CTT.Triage.notify
-            iscontext: true
-          right:
-            value:
-              simple: 'true'
-    nexttasks:
-      'yes':
-      - '24'
-      '#default#':
-      - '25'
-  '24':
-    id: '24'
-    taskid: 1169fbb4-eea8-5497-a265-2bdc77e477e0
-    type: regular
-    task:
-      id: 1169fbb4-eea8-5497-a265-2bdc77e477e0
-      version: -1
-      name: Send the Slack DM
-      description: Lays out the DM (FOUND / RULE / FIX, or the AI text) with the answer links, as Slack buttons when notify.buttons is on, and sends it through the CTT Slack Webhook.
-      type: regular
-      iscommand: false
-      brand: ''
-      scriptName: CTTHygieneSendDM
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 1950}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    scriptarguments:
-      slack_user_id:
-        simple: ${CTT.Triage.slack_id}
-      owner_email:
-        simple: ${CTT.Triage.owner_email}
-      first_name:
-        simple: ${CTT.Triage.first_name}
-      found:
-        simple: ${CTT.Triage.found}
-      fix:
-        simple: ${CTT.Triage.fix}
-      guideline_title:
-        simple: ${CTT.Triage.guideline_title}
-      message:
-        simple: ${CTT.HygieneMessage}
-      issue_url:
-        simple: ${CTT.Triage.issue_url}
-      issue_id:
-        simple: ${CTT.Triage.issue_id}
-      guideline_id:
-        simple: ${CTT.Triage.guideline_id}
-      buttons:
-        simple: ${CTT.Triage.buttons}
-      fixed_url:
-        simple: ${CTT.Ask.fixed_url}
-      not_violation_url:
-        simple: ${CTT.Ask.not_violation_url}
-    nexttasks:
-      '#none#':
-      - '25'
-  '25':
-    id: '25'
-    taskid: 8d040131-d12f-5225-b959-a02bf22363d1
-    type: regular
-    task:
-      id: 8d040131-d12f-5225-b959-a02bf22363d1
+      id: aac97799-4178-5d70-847d-f1d923bdd1a1
       version: -1
       name: Set the issue to In Progress
       description: The issue now waits for the owner's fix.
@@ -512,7 +338,7 @@ tasks:
       script: Cortex Core - Platform|||core-update-issue
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 2110}}'
+    view: '{"position": {"x": 250, "y": 1400}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -524,195 +350,24 @@ tasks:
       status:
         simple: In Progress
     continueonerror: true
-  '26':
-    id: '26'
-    taskid: ee5fd700-045d-5642-b163-ea15e3f2fd20
-    type: regular
-    task:
-      id: ee5fd700-045d-5642-b163-ea15e3f2fd20
-      version: -1
-      name: Check the owner's fix
-      description: 'CTTHygieneFixCheck confirm=true: resolves the issue with a close note when the check verifies the fix or the guideline has no check; otherwise keeps it open and writes what is still wrong to CTT.FixCheck.'
-      type: regular
-      iscommand: false
-      brand: ''
-      scriptName: CTTHygieneFixCheck
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": 50, "y": 1710}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    scriptarguments:
-      issue_id:
-        simple: ${CTT.Triage.issue_id}
-      confirm:
-        simple: 'true'
-      resolve:
-        simple: 'false'
     nexttasks:
       '#none#':
-      - '27'
-  '27':
-    id: '27'
-    taskid: ec531b4a-757f-5e59-8870-bce94bf81f81
-    type: condition
-    task:
-      id: ec531b4a-757f-5e59-8870-bce94bf81f81
-      version: -1
-      name: Close the issue?
-      description: Yes when the check verified the fix or the guideline has no check.
-      type: condition
-      iscommand: false
-      brand: ''
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": 50, "y": 1870}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    conditions:
-    - label: 'yes'
-      condition:
-      - - operator: isTrue
-          left:
-            value:
-              simple: CTT.FixCheck.close
-            iscontext: true
-    nexttasks:
-      'yes':
-      - '29'
-      '#default#':
-      - '30'
-  '29':
-    id: '29'
-    taskid: efcaf75e-3d34-5090-9559-932144dcd682
-    type: regular
-    task:
-      id: efcaf75e-3d34-5090-9559-932144dcd682
-      version: -1
-      name: 'Close the issue: fixed'
-      description: Closes the issue with the close note saying why (the playbook ends here).
-      type: regular
-      iscommand: true
-      brand: Builtin
-      script: Builtin|||closeInvestigation
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": -50, "y": 2030}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    scriptarguments:
-      closeReason:
-        simple: ${CTT.FixCheck.reason}
-      closeNotes:
-        simple: ${CTT.FixCheck.note}
-  '28':
-    id: '28'
-    taskid: cd7c3e5f-ee0d-56f4-93b9-fef5f0d8ab4a
-    type: regular
-    task:
-      id: cd7c3e5f-ee0d-56f4-93b9-fef5f0d8ab4a
-      version: -1
-      name: 'Record: false positive'
-      description: 'CTTHygieneFixCheck false_positive=true: tells the CTT channel and writes the False Positive close note.'
-      type: regular
-      iscommand: false
-      brand: ''
-      scriptName: CTTHygieneFixCheck
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": -250, "y": 1710}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    scriptarguments:
-      issue_id:
-        simple: ${CTT.Triage.issue_id}
-      false_positive:
-        simple: 'true'
-      resolve:
-        simple: 'false'
-    nexttasks:
-      '#none#':
-      - '40'
-  '40':
-    id: '40'
-    taskid: 18354499-168f-53c8-83a2-66491de8ff74
-    type: regular
-    task:
-      id: 18354499-168f-53c8-83a2-66491de8ff74
-      version: -1
-      name: 'Close the issue: false positive'
-      description: Closes the issue with the close note saying why (the playbook ends here).
-      type: regular
-      iscommand: true
-      brand: Builtin
-      script: Builtin|||closeInvestigation
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": -250, "y": 1870}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    scriptarguments:
-      closeReason:
-        simple: ${CTT.FixCheck.reason}
-      closeNotes:
-        simple: ${CTT.FixCheck.note}
-  '30':
-    id: '30'
-    taskid: d8eea851-cc86-583e-91ce-ab06399612fd
-    type: regular
-    task:
-      id: d8eea851-cc86-583e-91ce-ab06399612fd
-      version: -1
-      name: Clear the first round's answer links
-      description: Asking again appends links; the second DM needs the new ones.
-      type: regular
-      iscommand: false
-      brand: ''
-      scriptName: DeleteContext
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": 250, "y": 2250}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    scriptarguments:
-      key:
-        simple: Ask
-    nexttasks:
-      '#none#':
-      - '31'
-  '31':
-    id: '31'
-    taskid: a023c23a-23ec-509c-a77f-4ba1a9877b46
+      - '16'
+  '16':
+    id: '16'
+    taskid: 84815692-82de-54dc-9ab8-5eb1310c358f
     type: title
     task:
-      id: a023c23a-23ec-509c-a77f-4ba1a9877b46
+      id: 84815692-82de-54dc-9ab8-5eb1310c358f
       version: -1
-      name: 'Round 2: ask the owner'
+      name: Ask the owner and watch for the fix
       description: ''
       type: title
       iscommand: false
       brand: ''
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 250, "y": 2390}}'
+    view: '{"position": {"x": 250, "y": 1560}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -720,239 +375,47 @@ tasks:
     quietmode: 0
     nexttasks:
       '#none#':
-      - '32'
-      - '33'
-  '32':
-    id: '32'
-    taskid: adec757d-ff80-58c5-8b92-93968748b9be
+      - '17'
+      - '50'
+  '17':
+    id: '17'
+    taskid: 0721c684-8e97-5c73-84ec-e42e420640ab
+    type: playbook
+    task:
+      id: 0721c684-8e97-5c73-84ec-e42e420640ab
+      version: -1
+      name: Ask the owner
+      description: 'Runs CTT - Hygiene - Ask Owner: the Slack DM with the Mark as Fixed / Mark as False Positive buttons, the owner''s answer and the fix check on it (one re-ask). Its result is in CTT.FixCheck.'
+      type: playbook
+      iscommand: false
+      brand: ''
+      playbookName: CTT - Hygiene - Ask Owner
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 50, "y": 1720}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    nexttasks:
+      '#none#':
+      - '18'
+  '18':
+    id: '18'
+    taskid: 53ff9f1e-c1cf-5c60-ac2b-49510eb3cbb0
     type: condition
     task:
-      id: adec757d-ff80-58c5-8b92-93968748b9be
+      id: 53ff9f1e-c1cf-5c60-ac2b-49510eb3cbb0
       version: -1
-      name: Did you fix it? (second time)
-      description: 'Asked by Generated link: one link per answer, opened without a Cortex login, behind the Mark as Fixed and Mark as False Positive buttons of the DM. Waits until answered (no timeout); the daily digest reminds the owner.'
+      name: Did the owner's answer close it?
+      description: Yes for a verified fix, a guideline without a check, or a false positive.
       type: condition
       iscommand: false
       brand: ''
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 50, "y": 2550}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    message:
-      to:
-        simple: ${CTT.Triage.owner_email}
-      subject:
-        simple: 'CTT hygiene issue #${CTT.Triage.issue_id}'
-      body:
-        simple: 'CTT hygiene issue #${CTT.Triage.issue_id}: ${CTT.Triage.issue_title}. Did you fix it?'
-      methods:
-      - pushLinkToContext
-      format: ''
-      bcc: null
-      cc: null
-      timings:
-        retriescount: 0
-        retriesinterval: 1440
-        completeafterreplies: 1
-        completeafterv2: true
-        completeaftersla: false
-      replyOptions:
-      - Fixed
-      - False positive
-    nexttasks:
-      Fixed:
-      - '36'
-      False positive:
-      - '38'
-  '33':
-    id: '33'
-    taskid: ec1f32aa-2799-5970-89c4-e79b0533bf0e
-    type: regular
-    task:
-      id: ec1f32aa-2799-5970-89c4-e79b0533bf0e
-      version: -1
-      name: Wait for the question's links
-      description: Gives the question time to write its answer links; a script started later gets them in its context.
-      type: regular
-      iscommand: false
-      brand: ''
-      scriptName: Sleep
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 2550}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    scriptarguments:
-      seconds:
-        simple: '20'
-    nexttasks:
-      '#none#':
-      - '34'
-  '34':
-    id: '34'
-    taskid: 1c946b23-d3c1-5a9e-b5a6-05013647fd3b
-    type: regular
-    task:
-      id: 1c946b23-d3c1-5a9e-b5a6-05013647fd3b
-      version: -1
-      name: Get the answer links
-      description: Returns the newest link per answer.
-      type: regular
-      iscommand: false
-      brand: ''
-      scriptName: CTTHygieneAskLinks
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 2710}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    scriptarguments:
-      task_id:
-        simple: '32'
-    continueonerror: true
-    nexttasks:
-      '#none#':
-      - '44'
-  '44':
-    id: '44'
-    taskid: a4bac187-4760-5d8f-b49c-f09e7954807e
-    type: condition
-    task:
-      id: a4bac187-4760-5d8f-b49c-f09e7954807e
-      version: -1
-      name: Should the owner get a Slack DM?
-      description: 'notify from triage: DMs follow notify in CTT - Config (mode, allowlist, daily limit). No skips only the DM.'
-      type: condition
-      iscommand: false
-      brand: ''
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 2790}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    conditions:
-    - label: 'yes'
-      condition:
-      - - operator: isEqualString
-          left:
-            value:
-              simple: CTT.Triage.notify
-            iscontext: true
-          right:
-            value:
-              simple: 'true'
-    nexttasks:
-      'yes':
-      - '35'
-  '35':
-    id: '35'
-    taskid: 8213ec94-4d23-50f7-b6d9-3052dcb89f33
-    type: regular
-    task:
-      id: 8213ec94-4d23-50f7-b6d9-3052dcb89f33
-      version: -1
-      name: Send the second DM
-      description: Lays out the DM (FOUND / RULE / FIX, or the AI text) with the answer links, as Slack buttons when notify.buttons is on, and sends it through the CTT Slack Webhook. Starts with what the check still sees.
-      type: regular
-      iscommand: false
-      brand: ''
-      scriptName: CTTHygieneSendDM
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 2950}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    scriptarguments:
-      slack_user_id:
-        simple: ${CTT.Triage.slack_id}
-      owner_email:
-        simple: ${CTT.Triage.owner_email}
-      first_name:
-        simple: ${CTT.Triage.first_name}
-      found:
-        simple: ${CTT.Triage.found}
-      fix:
-        simple: ${CTT.Triage.fix}
-      guideline_title:
-        simple: ${CTT.Triage.guideline_title}
-      message:
-        simple: ${CTT.HygieneMessage}
-      issue_url:
-        simple: ${CTT.Triage.issue_url}
-      issue_id:
-        simple: ${CTT.Triage.issue_id}
-      guideline_id:
-        simple: ${CTT.Triage.guideline_id}
-      buttons:
-        simple: ${CTT.Triage.buttons}
-      fixed_url:
-        simple: ${CTT.Ask.fixed_url}
-      not_violation_url:
-        simple: ${CTT.Ask.not_violation_url}
-      note:
-        simple: ${CTT.FixCheck.note}
-  '36':
-    id: '36'
-    taskid: 2d9fd1cb-e047-5fa6-ab47-fd804fa0b14e
-    type: regular
-    task:
-      id: 2d9fd1cb-e047-5fa6-ab47-fd804fa0b14e
-      version: -1
-      name: Check the owner's fix
-      description: 'CTTHygieneFixCheck confirm=true: resolves the issue with a close note when the check verifies the fix or the guideline has no check; otherwise keeps it open and writes what is still wrong to CTT.FixCheck.'
-      type: regular
-      iscommand: false
-      brand: ''
-      scriptName: CTTHygieneFixCheck
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": 50, "y": 2710}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    scriptarguments:
-      issue_id:
-        simple: ${CTT.Triage.issue_id}
-      confirm:
-        simple: 'true'
-      resolve:
-        simple: 'false'
-    nexttasks:
-      '#none#':
-      - '37'
-  '37':
-    id: '37'
-    taskid: 5d589133-7e98-5a0e-b579-96d708afcd7a
-    type: condition
-    task:
-      id: 5d589133-7e98-5a0e-b579-96d708afcd7a
-      version: -1
-      name: Close the issue?
-      description: Yes when the check verified the fix or the guideline has no check.
-      type: condition
-      iscommand: false
-      brand: ''
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": 50, "y": 2870}}'
+    view: '{"position": {"x": 50, "y": 1880}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -968,17 +431,15 @@ tasks:
             iscontext: true
     nexttasks:
       'yes':
-      - '41'
-      '#default#':
-      - '45'
-  '41':
-    id: '41'
-    taskid: 1ed4bdd6-ea1c-58e5-b609-911224ce494c
+      - '19'
+  '19':
+    id: '19'
+    taskid: 9c4f8b2a-40eb-5852-b98c-2dff43b4e697
     type: regular
     task:
-      id: 1ed4bdd6-ea1c-58e5-b609-911224ce494c
+      id: 9c4f8b2a-40eb-5852-b98c-2dff43b4e697
       version: -1
-      name: 'Close the issue: fixed'
+      name: 'Close the issue: the owner''s answer'
       description: Closes the issue with the close note saying why (the playbook ends here).
       type: regular
       iscommand: true
@@ -986,7 +447,7 @@ tasks:
       script: Builtin|||closeInvestigation
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": -50, "y": 3030}}'
+    view: '{"position": {"x": 50, "y": 2040}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -997,143 +458,6 @@ tasks:
         simple: ${CTT.FixCheck.reason}
       closeNotes:
         simple: ${CTT.FixCheck.note}
-  '38':
-    id: '38'
-    taskid: 57e3d16e-5d23-56c7-a180-418feddf62b7
-    type: regular
-    task:
-      id: 57e3d16e-5d23-56c7-a180-418feddf62b7
-      version: -1
-      name: 'Record: false positive'
-      description: 'CTTHygieneFixCheck false_positive=true: tells the CTT channel and writes the False Positive close note.'
-      type: regular
-      iscommand: false
-      brand: ''
-      scriptName: CTTHygieneFixCheck
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": -250, "y": 2710}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    scriptarguments:
-      issue_id:
-        simple: ${CTT.Triage.issue_id}
-      false_positive:
-        simple: 'true'
-      resolve:
-        simple: 'false'
-    nexttasks:
-      '#none#':
-      - '42'
-  '42':
-    id: '42'
-    taskid: 8c2469b4-f877-5466-ae29-6396027685eb
-    type: regular
-    task:
-      id: 8c2469b4-f877-5466-ae29-6396027685eb
-      version: -1
-      name: 'Close the issue: false positive'
-      description: Closes the issue with the close note saying why (the playbook ends here).
-      type: regular
-      iscommand: true
-      brand: Builtin
-      script: Builtin|||closeInvestigation
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": -250, "y": 2870}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    scriptarguments:
-      closeReason:
-        simple: ${CTT.FixCheck.reason}
-      closeNotes:
-        simple: ${CTT.FixCheck.note}
-  '45':
-    id: '45'
-    taskid: b8c02c27-ef84-5c6c-8d66-6b5c26b25b4b
-    type: condition
-    task:
-      id: b8c02c27-ef84-5c6c-8d66-6b5c26b25b4b
-      version: -1
-      name: Should the owner get a Slack DM?
-      description: 'notify from triage: DMs follow notify in CTT - Config (mode, allowlist, daily limit). No skips only the DM.'
-      type: condition
-      iscommand: false
-      brand: ''
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": 450, "y": 3030}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    conditions:
-    - label: 'yes'
-      condition:
-      - - operator: isEqualString
-          left:
-            value:
-              simple: CTT.Triage.notify
-            iscontext: true
-          right:
-            value:
-              simple: 'true'
-    nexttasks:
-      'yes':
-      - '39'
-  '39':
-    id: '39'
-    taskid: 07d8ec6a-8447-5dde-8b08-7978730292d2
-    type: regular
-    task:
-      id: 07d8ec6a-8447-5dde-8b08-7978730292d2
-      version: -1
-      name: Tell the owner it closes by itself
-      description: 'Last DM: what the check still sees, and that the hourly fix check closes the issue once it''s fixed. No more questions.'
-      type: regular
-      iscommand: false
-      brand: ''
-      scriptName: CTTHygieneSendDM
-    separatecontext: false
-    continueonerrortype: ''
-    view: '{"position": {"x": 50, "y": 3190}}'
-    note: false
-    timertriggers: []
-    ignoreworker: false
-    skipunavailable: false
-    quietmode: 0
-    scriptarguments:
-      slack_user_id:
-        simple: ${CTT.Triage.slack_id}
-      owner_email:
-        simple: ${CTT.Triage.owner_email}
-      first_name:
-        simple: ${CTT.Triage.first_name}
-      found:
-        simple: ${CTT.Triage.found}
-      fix:
-        simple: ${CTT.Triage.fix}
-      guideline_title:
-        simple: ${CTT.Triage.guideline_title}
-      message:
-        simple: ${CTT.HygieneMessage}
-      issue_url:
-        simple: ${CTT.Triage.issue_url}
-      issue_id:
-        simple: ${CTT.Triage.issue_id}
-      guideline_id:
-        simple: ${CTT.Triage.guideline_id}
-      buttons:
-        simple: ${CTT.Triage.buttons}
-      note:
-        simple: 'You said this is fixed, but the check still sees it: ${CTT.FixCheck.evidence}. The issue closes by itself within an hour once it is fixed.'
   '50':
     id: '50'
     taskid: ba752c43-f2e1-5d96-a26c-8a72d995e43c
@@ -1149,7 +473,7 @@ tasks:
       scriptName: CTTHygieneFixCheck
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 650, "y": 1550}}'
+    view: '{"position": {"x": 650, "y": 1720}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -1177,7 +501,7 @@ tasks:
       brand: ''
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 650, "y": 1710}}'
+    view: '{"position": {"x": 650, "y": 1880}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -1209,7 +533,7 @@ tasks:
       script: Builtin|||closeInvestigation
     separatecontext: false
     continueonerrortype: ''
-    view: '{"position": {"x": 650, "y": 1870}}'
+    view: '{"position": {"x": 650, "y": 2040}}'
     note: false
     timertriggers: []
     ignoreworker: false
@@ -1220,7 +544,7 @@ tasks:
         simple: ${CTT.FixWatch.reason}
       closeNotes:
         simple: ${CTT.FixWatch.note}
-view: '{"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 3285, "width": 1080, "x": -150, "y": 50}}}'
+view: '{"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 2250, "width": 1300, "x": -250, "y": 50}}}'
 inputs: []
 outputs: []
 tests:

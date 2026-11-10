@@ -2,7 +2,7 @@ commonfields:
   id: CTTHygieneTriage
   version: -1
 name: CTTHygieneTriage
-comment: Triage step of the CTT - Hygiene - Notify Owner playbook. Reads the current hygiene issue, finds its owner (the [owner - ...] marker in the description), looks the owner up in the CTT registry for name, role and Slack ID, quotes the guideline from the "CTT - Guidelines Index" list, and decides whether to assign the issue and whether to DM the owner (notify.mode and the daily DM limit in "CTT - Config"). Flags a duplicate (an older open issue about the same object, or one marked a false positive in the last notify.false_positive_days days).
+comment: Triage step of the CTT - Hygiene - Notify Owner playbook. Reads the current hygiene issue, finds its owner (the [owner - ...] marker in the description), looks the owner up in the CTT registry for name, role and Slack ID, quotes the guideline from the "CTT - Guidelines Index" list, and decides whether to assign the issue and whether to DM the owner (notify.mode and the daily DM limit in "CTT - Config").
 script: '-'
 type: python
 subtype: python3
@@ -72,18 +72,6 @@ outputs:
 - contextPath: CTT.Triage.fallback_message
   description: Template DM, used when the AI-written message is missing.
   type: String
-- contextPath: CTT.Triage.duplicate_of
-  description: An older open issue about the same object, or one marked a false positive in the last notify.false_positive_days days. Empty when this issue is new.
-  type: String
-- contextPath: CTT.Triage.duplicate_note
-  description: The close note for a duplicate.
-  type: String
-- contextPath: CTT.Triage.duplicate_reason
-  description: The close reason for a duplicate (Resolved - Duplicate Issue).
-  type: String
-dependson:
-  must:
-  - core-api-post
 fromversion: 8.9.0
 marketplaces:
 - marketplacev2

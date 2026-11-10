@@ -199,7 +199,8 @@ Before you leave the team, delete your objects or hand them over to another DC, 
     closed as a false positive and the CTT admins are told. The same finding is not raised again
     for 30 days.
 - You get one issue per finding: while it is open, the same finding found again is closed as a
-  duplicate without a DM.
+  duplicate without a DM. A finding that is already fixed when the pack looks at it (for example a
+  playbook you created with your tag in its Tags field) is closed without a DM too.
 - Every closed issue carries a note saying why it was closed. An issue you don't answer stays
   open; you get one daily digest of your issues open for more than a day.
 - The one exception to "never changed automatically" is cases: Security cases are assigned after

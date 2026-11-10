@@ -1,11 +1,10 @@
 Runs on every CTT hygiene health issue (trigger `CTT - Hygiene - Notify Owner`).
 
-1. `CTTHygieneTriage` finds the owner from the issue's `[owner: ...]` marker, their name, role and Slack ID in the CTT registry, and the guideline.
-2. `core-update-issue` assigns the issue to the owner's email.
-3. With `notify.use_ai`, the `CTTHygieneMessagePrompt` AI task writes the DM text; otherwise the FOUND / RULE / FIX template from triage is used.
-4. **Round 1**: **Did you fix it?** is asked by Generated link (no timeout); in parallel `CTTHygieneAskLinks` gets its links and `CTTHygieneSendDM` sends the DM with the buttons **Mark as Fixed**, **Mark as False Positive** and **View Issue** (`notify.buttons`; otherwise links in the text). The issue is set to In Progress.
-5. **Watch** (parallel): `CTTHygieneFixCheck watch=true` checks every hour and closes the issue once the check sees it fixed (guidelines with an automatic check).
-6. **Mark as Fixed** runs `CTTHygieneFixCheck confirm=true resolve=false`: a verified fix (or a guideline without a check) closes the issue; otherwise **round 2** asks once more with a DM that says what is still wrong, and after a second unconfirmed answer a last DM says the issue closes by itself once fixed.
-7. **Mark as False Positive** runs `CTTHygieneFixCheck false_positive=true resolve=false` (a post in the CTT channel) and closes the issue as False Positive.
+1. **Same problem already known?** `CTTHygieneDuplicateCheck` looks for another open issue about the same endpoint, user or object, or one marked a false positive in the last `notify.false_positive_days` days. If so, the issue is closed as Duplicate Issue.
+2. **Already fixed?** `CTTHygieneFixCheck resolve=false` runs the guideline's automatic check. If it sees the fix (for example a playbook with the owner's tag in its Tags field), the issue is closed with a note saying why, before anyone is assigned or notified.
+3. `CTTHygieneTriage` finds the owner from the issue's `[owner: ...]` marker, their name, role and Slack ID in the CTT registry, and the guideline; `core-update-issue` assigns the issue and sets it In Progress.
+4. In parallel:
+   - **Ask the owner:** the `CTT - Hygiene - Ask Owner` sub-playbook (DM with Mark as Fixed / Mark as False Positive, the answer and the fix check on it). When its result closes the issue, the next task does.
+   - **Watch:** `CTTHygieneFixCheck watch=true`, a scheduled command (polling) that checks every hour and closes the issue once the check sees it fixed.
 
-Without a DM (DMs off, not on the allowlist, no Slack ID or the daily limit) the rounds run without the DM; an issue without an owner only gets the watch. The issue is always closed by the last task of a branch (`closeInvestigation` with the close note), never halfway. Assigning and the AI step continue on error. DMs follow `notify.mode` (`off`, `admins_only`, `all`) and the daily limit in `CTT - Config`.
+An issue without an owner only gets the watch. The issue is always closed by the last task of a branch (`closeInvestigation` with the close note), never halfway; closing it stops the other branch. Assigning continues on error. DMs follow `notify.mode` (`off`, `allowlist`, `admins_only`, `all`) and the daily limit in `CTT - Config`.

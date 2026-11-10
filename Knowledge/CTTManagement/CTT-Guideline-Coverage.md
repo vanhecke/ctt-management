@@ -70,7 +70,8 @@ issue with a running Notify Owner playbook is closed by that playbook's last tas
 | Owner presses **Mark as Fixed** in the DM (or tells the CTT Assistant) | The check verifies it, or the guideline has no check | "Confirmed fixed by …" |
 | Owner presses **Mark as False Positive** | Always; the CTT channel is told so admins can tune the rule | "Marked as false positive by …" (False Positive) |
 | Inventory check (daily) | All objects of the owner's issue are fixed | its own note |
-| Notify Owner playbook, before assigning or DMing | An older issue about the same endpoint, user or object is still open, or one was marked a false positive in the last `notify.false_positive_days` days (30). The daily rules (LAB-01, GEN-01) raise a finding again once their one-day suppression ends | "Duplicate of issue #…" / "Same … as issue #…, which was marked a false positive …" (Duplicate Issue) |
+| Notify Owner playbook, first step | An older issue about the same endpoint, user or object is still open, or one was marked a false positive in the last `notify.false_positive_days` days (30). The daily rules (LAB-01, GEN-01) raise a finding again once their one-day suppression ends | "Duplicate of issue #…" / "Same … as issue #…, which was marked a false positive …" (Duplicate Issue) |
+| Notify Owner playbook, second step | The guideline's check already sees the fix (for example a playbook created with the owner's tag in its Tags field), before anyone is assigned or notified | "Auto-closed by the CTT fix check: …" |
 
 Each hygiene issue has its own Health case, which stays open when the issue is resolved; the fix
 check closes the case once all its issues are resolved, with a note quoting their close notes.
@@ -135,3 +136,4 @@ These jobs support the rules but check nothing themselves:
 | 2026-11-07 | CTT-LAB-01: the rule, the fix check and case housekeeping also accept `172.16.<octet>.0/24` |
 | 2026-11-09 | Duplicates and repeated false positives close as Duplicate Issue without a DM; the jobs run on schedule (they were created without the fields the scheduler needs) |
 | 2026-11-09 | CTT-TAG-01: a playbook with the owner's tag in its Tags field passes (fix check and inventory check) |
+| 2026-11-10 | Notify Owner: duplicate check first, then "already fixed?", then assignment and the Ask Owner sub-playbook next to the hourly watch |

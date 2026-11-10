@@ -9,15 +9,6 @@ OWNER_RE = re.compile(r"\[owner: ([^\]]+)\]")
 GUIDELINE_RE = re.compile(r"(CTT-[A-Z]+-\d+)")
 NO_OWNER = {"", "unknown", "unassigned", "central", "null", "empty", "none"}
 NOTIFY_STATE = "CTT - Notify State"
-# Duplicates: the daily rules (LAB-01, GEN-01) raise the same finding again once their one-day
-# suppression ends, and a false positive would come back the next day.
-NAME_RE = re.compile(r"^CTT - Hygiene - (CTT-[A-Z]+-\d+) - ")
-ENDPOINT_RE = re.compile(r"^Endpoint (?P<name>.+?): ")
-EMAIL_RE = re.compile(r"^(?P<email>[^\s@]+@[^\s@]+) signed in")
-INVENTORY_MARKERS = ("The inventory check found", "The sweep found", "Daily sweep found")
-DUPLICATE_REASON = "Resolved - Duplicate Issue"
-DAY_MS = 86_400_000
-PAGE = 100
 
 
 def find_owner(issue: dict) -> str:
@@ -152,86 +143,6 @@ def compose(gid: str, title: str, details: str, tags: list[str], lab_octet: str)
     return f"{first}.", [f"Follow guideline {gid}"]
 
 
-def object_key(name: str, text: str) -> tuple[str, str]:
-    """(key, label) of the object a rule issue is about: guideline plus endpoint, user or object.
-    Empty for inventory check issues, which keep one issue per guideline and owner themselves."""
-    m = NAME_RE.match(name or "")
-    text = strip_marker(text)
-    if not m or text.startswith(INVENTORY_MARKERS):
-        return "", ""
-    gid = m.group(1)
-    endpoint = ENDPOINT_RE.match(text)
-    if endpoint:
-        return f"{gid}|endpoint|{endpoint.group('name').lower()}", f"endpoint {endpoint.group('name')}"
-    email = EMAIL_RE.match(text)
-    if email:
-        return f"{gid}|user|{email.group('email').lower()}", email.group("email").lower()
-    obj = OBJ_RE.search(text)
-    if obj:
-        return f"{gid}|{obj.group('kind').lower()}|{obj.group('name')}", f"{obj.group('kind').lower()} '{obj.group('name')}'"
-    return "", ""
-
-
-def find_duplicate(issue_id: str, name: str, text: str, others: list[dict], now_ms: int, fp_days: int) -> tuple[str, str]:
-    """(issue id, close note) when an older issue about the same object is still open, or one was
-    marked a false positive in the last fp_days days; ("", "") otherwise."""
-    key, label = object_key(name, text)
-    if not key or not str(issue_id).isdigit():
-        return "", ""
-    for other in sorted(others, key=lambda o: int(o.get("id") or 0)):
-        oid = str(other.get("id") or "")
-        if not oid.isdigit() or oid == str(issue_id):
-            continue
-        if object_key(str(other.get("name") or ""), str(other.get("description") or ""))[0] != key:
-            continue
-        status = str(other.get("status.progress") or "")
-        if status in ("New", "In Progress") and int(oid) < int(issue_id):
-            return (
-                oid,
-                f"Duplicate of issue #{oid}, which is still open for the same {label}. "
-                "Closed by the CTT Notify Owner playbook without a DM.",
-            )
-        resolved = int(other.get("resolution_status_modified_ts") or 0)
-        if (
-            status == "Resolved"
-            and "FALSE_POSITIVE" in str(other.get("status.resolution_reason") or "").upper()
-            and fp_days > 0
-            and now_ms - resolved < fp_days * DAY_MS
-        ):
-            day = datetime.fromtimestamp(resolved / 1000, UTC).strftime("%d %b %Y")
-            return oid, (
-                f"Same {label} as issue #{oid}, which was marked a false positive on {day}. It is not raised again for "
-                f"{fp_days} days (notify.false_positive_days in CTT - Config)."
-            )
-    return "", ""
-
-
-def related_issues(now_ms: int, fp_days: int) -> list[dict]:
-    """Open CTT hygiene issues, plus resolved ones recent enough for the false positive window."""
-    searches = [[{"field": "status.progress", "operator": "in", "value": ["New", "In Progress"]}]]
-    if fp_days > 0:
-        searches.append(
-            [
-                {"field": "status.progress", "operator": "in", "value": ["Resolved"]},
-                {"field": "_insert_time", "operator": "gte", "value": now_ms - 2 * fp_days * DAY_MS},
-            ]
-        )
-    issues: list[dict] = []
-    for filters in searches:
-        filters = [{"field": "issue_domain", "operator": "in", "value": ["Health"]}, *filters]
-        for start in range(0, 3000, PAGE):
-            body = {"request_data": {"filters": filters, "search_from": start, "search_to": start + PAGE}}
-            res = demisto.executeCommand("core-api-post", {"uri": "/public_api/v1/issue/search", "body": json.dumps(body)})
-            if is_error(res):
-                raise DemistoException(get_error(res))
-            response = res[0]["Contents"].get("response", {})
-            page = (response.get("reply", response) if isinstance(response, dict) else {}).get("DATA") or []
-            issues.extend(i for i in page if str(i.get("name", "")).startswith("CTT - Hygiene - "))
-            if len(page) < PAGE:
-                break
-    return issues
-
-
 def fallback_message(first_name: str, title: str, details: str, gid: str, gtitle: str, url: str = "") -> str:
     """Template body in the same shape as the AI message; CTTHygieneSendDM adds header and link."""
     return (
@@ -291,17 +202,6 @@ def main():  # pragma: no cover
         tags = [t.strip() for t in owner_tags(registry, owner).split(",") if t.strip()]
         found, fix = compose(gid, title, details, tags, entry.get("lab_octet", ""))
         url = issue_url(issue_id)
-        fp_days = int(notify_cfg.get("false_positive_days", 30))
-        duplicate_of, duplicate_note, errors = "", "", []
-        try:
-            now_ms = int(datetime.now(UTC).timestamp() * 1000)
-            duplicate_of, duplicate_note = find_duplicate(
-                issue_id, name, details, related_issues(now_ms, fp_days), now_ms, fp_days
-            )
-        except Exception as e:  # a failed search must not stop the notification
-            errors.append(f"duplicate check: {e}")
-        if duplicate_of:
-            assign, notify, reason = False, False, f"duplicate of issue #{duplicate_of}; closed without a DM"
         out = {
             "issue_id": issue_id,
             "issue_title": title,
@@ -322,18 +222,11 @@ def main():  # pragma: no cover
             "assign": "true" if assign else "false",
             "notify": "true" if notify else "false",
             "reason": reason,
-            "duplicate_of": duplicate_of,
-            "duplicate_note": duplicate_note,
-            "duplicate_reason": DUPLICATE_REASON if duplicate_of else "",
             "fallback_message": fallback_message(first_name, title, details, gid, guideline.get("title", ""), url),
         }
         md = tableToMarkdown(
-            "CTT hygiene triage",
-            out,
-            headers=["guideline_id", "owner_email", "slack_id", "assign", "notify", "duplicate_of", "reason"],
+            "CTT hygiene triage", out, headers=["guideline_id", "owner_email", "slack_id", "assign", "notify", "reason"]
         )
-        if errors:
-            md += "\n" + "\n".join(f"- {e}" for e in errors)
         return_results(CommandResults(readable_output=md, outputs_prefix="CTT.Triage", outputs_key_field="issue_id", outputs=out))
     except Exception as e:
         return_error(f"CTTHygieneTriage failed: {e}")

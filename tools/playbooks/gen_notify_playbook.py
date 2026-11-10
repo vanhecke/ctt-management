@@ -1,6 +1,12 @@
-"""Generate the 'CTT - Hygiene - Notify Owner' playbook and its trigger.
+"""Generate the 'CTT - Hygiene - Notify Owner' playbook, its 'CTT - Hygiene - Ask Owner'
+sub-playbook and the trigger.
 
 Run from content/:  uv run --with pyyaml python3 tools/playbooks/gen_notify_playbook.py
+
+Notify Owner (started by the automation rule on every CTT hygiene issue):
+  duplicate? -> close | already fixed? -> close | triage -> assign -> In Progress ->
+  [Ask Owner sub-playbook -> answer closes it? -> close] in parallel with [hourly watch -> close]
+Every branch ends in its own close task, so the issue is closed by the playbook's last task.
 """
 
 import json
@@ -11,18 +17,17 @@ import yaml
 
 PACK = Path(__file__).resolve().parent.parent.parent / "Packs" / "CTTManagement"
 NAME = "CTT - Hygiene - Notify Owner"
+ASK = "CTT - Hygiene - Ask Owner"
 NS = uuid.UUID("7a1e3c5d-9b2f-4e6a-8c0d-1f2e3d4c5b6a")
 CTX = "CTT.Triage"
-ROUND1 = {"title": "20", "ask": "21", "wait": "22", "links": "23", "dm": "24", "progress": "25", "check": "26", "resolved": "27", "fp": "28", "close": "29", "fpclose": "40", "gate": "43"}
-ROUND2 = {"clear": "30", "title": "31", "ask": "32", "wait": "33", "links": "34", "dm": "35", "check": "36", "resolved": "37", "fp": "38", "last": "39", "close": "41", "fpclose": "42", "gate": "44", "lastgate": "45"}
+ROUND1 = {"title": "20", "ask": "21", "wait": "22", "links": "23", "dm": "24", "check": "26", "resolved": "27", "fp": "28", "done": "29", "fpdone": "40", "gate": "43"}
+ROUND2 = {"clear": "30", "title": "31", "ask": "32", "wait": "33", "links": "34", "dm": "35", "check": "36", "resolved": "37", "fp": "38", "last": "39", "done": "41", "fpdone": "42", "gate": "44", "lastgate": "45"}
 WATCH = {"watch": "50", "fixed": "51", "close": "52"}
-DUP = {"check": "60", "close": "61"}
-# Room for the duplicate check under triage: every task from "Can the issue be assigned" down moves.
-SHIFT = 170
+_PB = NAME  # the playbook whose task IDs tid() derives; set per playbook in build()
 
 
 def tid(key: str) -> str:
-    return str(uuid.uuid5(NS, f"{NAME}-{key}"))
+    return str(uuid.uuid5(NS, f"{_PB}-{key}"))
 
 
 def base(key: str, kind: str, name: str, desc: str, y: int, x: int = 450, task_extra: dict | None = None) -> dict:
@@ -54,62 +59,20 @@ def is_true(path: str) -> list:
     return [[{"operator": "isEqualString", "left": {"value": {"simple": f"{CTX}.{path}"}, "iscontext": True}, "right": {"value": {"simple": "true"}}}]]
 
 
-def playbook() -> dict:
-    t = {}
-    t["0"] = base("0", "start", "", "", 50)
-    t["0"]["nexttasks"] = {"#none#": ["9"]}
-    # A re-run on the same issue appended a second triage result to the context, so the send
-    # task looped over two Slack IDs and sent the DM twice. Start from a clean context.
-    t["9"] = base("9", "regular", "Clear context from an earlier run", "Deletes the issue context so a re-run sends one DM.", 130,
-                  task_extra={"scriptName": "DeleteContext"})
-    t["9"]["scriptarguments"] = {"all": {"simple": "yes"}}
-    t["9"]["nexttasks"] = {"#none#": ["1"]}
-    t["1"] = base("1", "regular", "Triage the hygiene issue", "Finds the owner, their Slack ID and the guideline, and decides whether to assign and notify.", 260,
-                  task_extra={"scriptName": "CTTHygieneTriage"})
-    t["1"]["nexttasks"] = {"#none#": [DUP["check"]]}
-    # The daily rules (LAB-01, GEN-01) raise the same finding again once their one-day suppression
-    # ends: close it as a duplicate before anyone is assigned or DMed.
-    t[DUP["check"]] = base(DUP["check"], "condition", "Is it a duplicate?", "Triage found an older open issue about the same object, or one marked a false positive in the last notify.false_positive_days days.", 400)
-    t[DUP["check"]]["conditions"] = [
-        {"label": "yes", "condition": [[{"operator": "isNotEmpty", "left": {"value": {"simple": f"{CTX}.duplicate_of"}, "iscontext": True}}]]}
-    ]
-    t[DUP["check"]]["nexttasks"] = {"#default#": ["2"], "yes": [DUP["close"]]}
-    t[DUP["close"]] = base(DUP["close"], "regular", "Close the issue: duplicate", "Closes the issue as Duplicate Issue with a note naming the other issue (the playbook ends here).", 400, x=850,
-                           task_extra={"script": "Builtin|||closeInvestigation", "iscommand": True, "brand": "Builtin"})
-    t[DUP["close"]]["scriptarguments"] = {"closeReason": arg("duplicate_reason"), "closeNotes": arg("duplicate_note")}
-    t["2"] = base("2", "condition", "Can the issue be assigned to a person?", "", 370)
-    t["2"]["conditions"] = [{"label": "yes", "condition": is_true("assign")}]
-    t["2"]["nexttasks"] = {"#default#": [WATCH["watch"]], "yes": ["3"]}
-    t["3"] = base("3", "regular", "Assign the issue to its owner", "Sets the issue assignee to the owner's email.", 540, x=250,
-                  task_extra={"script": "Cortex Core - Platform|||core-update-issue", "iscommand": True, "brand": "Cortex Core - Platform"})
-    t["3"]["scriptarguments"] = {"id": arg("issue_id"), "assigned_user_mail": arg("owner_email")}
-    t["3"]["continueonerror"] = True
-    t["3"]["nexttasks"] = {"#none#": ["8"]}
-    t["8"] = base("8", "condition", "Write the message with AI?", "notify.use_ai in CTT - Config; otherwise the FOUND / RULE / FIX template is used.", 880, x=250)
-    t["8"]["conditions"] = [{"label": "yes", "condition": is_true("use_ai")}]
-    t["8"]["nexttasks"] = {"#default#": [ROUND1["title"]], "yes": ["5"]}
-    t["5"] = base("5", "aiTask", "Write the Slack message with AI", "CTTHygieneMessagePrompt writes the DM text (only with notify.use_ai).", 1050, x=50,
-                  task_extra={"aiTaskId": "CTTHygieneMessagePrompt"})
-    t["5"]["scriptarguments"] = {k: arg(k) for k in ("first_name", "owner_tags", "issue_title", "issue_details", "guideline_id", "guideline_title", "guideline_text")}
-    t["5"]["continueonerror"] = True
-    t["5"]["nexttasks"] = {"#none#": [ROUND1["title"]]}
-    # Two rounds, inline: a loop back to an earlier task deadlocks (a task waits for all incoming
-    # tasks), and a looped sub-playbook shows a confusing Work Plan. A second unconfirmed "Fixed"
-    # can only happen on a guideline with an automatic check, which the hourly fix check closes
-    # once it's really fixed, so two rounds are enough.
-    add_round(t, ROUND1, 1220, second=False)
-    add_round(t, ROUND2, 2080, second=True)
-    add_watch(t, 1380)
-    for key, task in t.items():
-        pos = json.loads(task["view"])["position"]
-        if key not in DUP.values() and pos["y"] >= 370:
-            pos["y"] += SHIFT
-            task["view"] = json.dumps({"position": pos})
+def is_set(path: str) -> list:
+    return [[{"operator": "isNotEmpty", "left": {"value": {"simple": path}, "iscontext": True}}]]
+
+
+def is_on(path: str) -> list:
+    return [[{"operator": "isTrue", "left": {"value": {"simple": path}, "iscontext": True}}]]
+
+
+def wrap(name: str, description: str, tasks: dict, height: int) -> dict:
     return {
-        "id": NAME,
+        "id": name,
         "version": -1,
-        "name": NAME,
-        "description": "Runs on every CTT hygiene health issue: assigns it to the person responsible (from the issue's owner marker and the CTT registry), sends them a Slack DM with the fix and the answer buttons Mark as Fixed / Mark as False Positive, and waits for the answer. Mark as Fixed runs the fix check (resolve with a close note, or ask again with what is still wrong); Mark as False Positive resolves it as False Positive and tells the CTT channel. DMs follow notify in 'CTT - Config'.",
+        "name": name,
+        "description": description,
         "fromversion": "8.15.0",
         "marketplaces": ["marketplacev2", "platform"],
         "tags": ["CTT"],
@@ -117,12 +80,113 @@ def playbook() -> dict:
         # them to an issue ("playbook is not adopted (69)"); this adopts them on install.
         "adopted": True,
         "starttaskid": "0",
-        "tasks": t,
-        "view": json.dumps({"linkLabelsPosition": {}, "paper": {"dimensions": {"height": 3285, "width": 1080, "x": -150, "y": 50}}}),
+        "tasks": tasks,
+        "view": json.dumps({"linkLabelsPosition": {}, "paper": {"dimensions": {"height": height, "width": 1300, "x": -250, "y": 50}}}),
         "inputs": [],
         "outputs": [],
         "tests": ["No tests (auto formatted)"],
     }
+
+
+def notify_playbook() -> dict:
+    global _PB
+    _PB = NAME
+    t = {}
+    t["0"] = base("0", "start", "", "", 50)
+    t["0"]["nexttasks"] = {"#none#": ["9"]}
+    # A re-run on the same issue appended a second triage result to the context, so the send
+    # task looped over two Slack IDs and sent the DM twice. Start from a clean context.
+    t["9"] = base("9", "regular", "Clear context from an earlier run", "Deletes the issue context so a re-run sends one DM.", 180,
+                  task_extra={"scriptName": "DeleteContext"})
+    t["9"]["scriptarguments"] = {"all": {"simple": "yes"}}
+    t["9"]["nexttasks"] = {"#none#": ["10"]}
+    # 1. Known already? The daily rules raise the same finding again once their one-day suppression
+    # ends, and a false positive would come back the next day.
+    t["10"] = base("10", "regular", "Look for the same problem in other issues", "CTTHygieneDuplicateCheck: another open issue about the same endpoint, user or object, or one marked a false positive in the last notify.false_positive_days days.", 310,
+                   task_extra={"scriptName": "CTTHygieneDuplicateCheck"})
+    t["10"]["nexttasks"] = {"#none#": ["11"]}
+    t["11"] = base("11", "condition", "Is the same problem already open, or marked a false positive?", "", 440)
+    t["11"]["conditions"] = [{"label": "yes", "condition": is_set("CTT.Duplicate.duplicate_of")}]
+    t["11"]["nexttasks"] = {"yes": ["12"], "#default#": ["13"]}
+    add_close(t, "12", "Close the issue: duplicate", "CTT.Duplicate", 440, x=900)
+    # 2. Fixed already? A playbook created with the owner's tag in its Tags field, an endpoint
+    # moved before the playbook ran: close without assigning or notifying anyone.
+    t["13"] = base("13", "regular", "Check whether it is already fixed", "CTTHygieneFixCheck resolve=false: the guideline's automatic check, if it has one. Writes the close reason and note to CTT.FixCheck.", 600,
+                   task_extra={"scriptName": "CTTHygieneFixCheck"})
+    t["13"]["scriptarguments"] = {"issue_id": {"simple": "${CTT.Duplicate.issue_id}"}, "resolve": {"simple": "false"}}
+    t["13"]["continueonerror"] = True
+    t["13"]["nexttasks"] = {"#none#": ["14"]}
+    t["14"] = base("14", "condition", "Already fixed?", "", 760)
+    t["14"]["conditions"] = [{"label": "yes", "condition": is_on("CTT.FixCheck.close")}]
+    t["14"]["nexttasks"] = {"yes": ["15"], "#default#": ["1"]}
+    add_close(t, "15", "Close the issue: already fixed", "CTT.FixCheck", 760, x=900)
+    # 3. Assign, then ask the owner (sub-playbook) and watch for the fix in parallel.
+    t["1"] = base("1", "regular", "Triage the hygiene issue", "Finds the owner, their Slack ID and the guideline, and decides whether to assign and notify.", 920,
+                  task_extra={"scriptName": "CTTHygieneTriage"})
+    t["1"]["nexttasks"] = {"#none#": ["2"]}
+    t["2"] = base("2", "condition", "Can the issue be assigned to a person?", "", 1080)
+    t["2"]["conditions"] = [{"label": "yes", "condition": is_true("assign")}]
+    t["2"]["nexttasks"] = {"#default#": [WATCH["watch"]], "yes": ["3"]}
+    t["3"] = base("3", "regular", "Assign the issue to its owner", "Sets the issue assignee to the owner's email.", 1240, x=250,
+                  task_extra={"script": "Cortex Core - Platform|||core-update-issue", "iscommand": True, "brand": "Cortex Core - Platform"})
+    t["3"]["scriptarguments"] = {"id": arg("issue_id"), "assigned_user_mail": arg("owner_email")}
+    t["3"]["continueonerror"] = True
+    t["3"]["nexttasks"] = {"#none#": ["4"]}
+    t["4"] = base("4", "regular", "Set the issue to In Progress", "The issue now waits for the owner's fix.", 1400, x=250,
+                  task_extra={"script": "Cortex Core - Platform|||core-update-issue", "iscommand": True, "brand": "Cortex Core - Platform"})
+    t["4"]["scriptarguments"] = {"id": arg("issue_id"), "status": {"simple": "In Progress"}}
+    t["4"]["continueonerror"] = True
+    t["4"]["nexttasks"] = {"#none#": ["16"]}
+    t["16"] = base("16", "title", "Ask the owner and watch for the fix", "", 1560, x=250)
+    t["16"]["nexttasks"] = {"#none#": ["17", WATCH["watch"]]}
+    t["17"] = base("17", "playbook", "Ask the owner", f"Runs {ASK}: the Slack DM with the Mark as Fixed / Mark as False Positive buttons, the owner's answer and the fix check on it (one re-ask). Its result is in CTT.FixCheck.", 1720, x=50,
+                   task_extra={"playbookName": ASK})
+    t["17"]["separatecontext"] = False
+    t["17"]["nexttasks"] = {"#none#": ["18"]}
+    t["18"] = base("18", "condition", "Did the owner's answer close it?", "Yes for a verified fix, a guideline without a check, or a false positive.", 1880, x=50)
+    t["18"]["conditions"] = [{"label": "yes", "condition": is_on("CTT.FixCheck.close")}]
+    t["18"]["nexttasks"] = {"yes": ["19"]}
+    add_close(t, "19", "Close the issue: the owner's answer", "CTT.FixCheck", 2040, x=50)
+    add_watch(t, 1720)
+    return wrap(
+        NAME,
+        "Runs on every CTT hygiene health issue. Closes it at once when the same problem is already open (or was marked a false positive recently) or the guideline's check sees it fixed. Otherwise assigns it to the person responsible (from the issue's owner marker and the CTT registry), sets it In Progress, and runs CTT - Hygiene - Ask Owner (Slack DM with Mark as Fixed / Mark as False Positive) next to an hourly fix check (scheduled command). Every branch ends in its own close task with a close note saying why.",
+        t,
+        2250,
+    )
+
+
+def ask_playbook() -> dict:
+    global _PB
+    _PB = ASK
+    t = {}
+    t["0"] = base("0", "start", "", "", 50)
+    t["0"]["nexttasks"] = {"#none#": ["1"]}
+    # The parent reads this sub-playbook's result from CTT.FixCheck; clear the "already fixed?"
+    # check it ran before.
+    t["1"] = base("1", "regular", "Clear the earlier fix check result", "The parent playbook reads the answer's result from CTT.FixCheck.", 180,
+                  task_extra={"scriptName": "DeleteContext"})
+    t["1"]["scriptarguments"] = {"key": {"simple": "CTT.FixCheck"}}
+    t["1"]["nexttasks"] = {"#none#": ["8"]}
+    t["8"] = base("8", "condition", "Write the message with AI?", "notify.use_ai in CTT - Config; otherwise the FOUND / RULE / FIX template is used.", 310)
+    t["8"]["conditions"] = [{"label": "yes", "condition": is_true("use_ai")}]
+    t["8"]["nexttasks"] = {"#default#": [ROUND1["title"]], "yes": ["5"]}
+    t["5"] = base("5", "aiTask", "Write the Slack message with AI", "CTTHygieneMessagePrompt writes the DM text (only with notify.use_ai).", 470, x=50,
+                  task_extra={"aiTaskId": "CTTHygieneMessagePrompt"})
+    t["5"]["scriptarguments"] = {k: arg(k) for k in ("first_name", "owner_tags", "issue_title", "issue_details", "guideline_id", "guideline_title", "guideline_text")}
+    t["5"]["continueonerror"] = True
+    t["5"]["nexttasks"] = {"#none#": [ROUND1["title"]]}
+    # Two rounds, inline: a loop back to an earlier task deadlocks (a task waits for all incoming
+    # tasks). A second unconfirmed "Fixed" can only happen on a guideline with an automatic check,
+    # which the parent's hourly watch closes once it's really fixed, so two rounds are enough.
+    add_round(t, ROUND1, 640, second=False)
+    add_round(t, ROUND2, 1500, second=True)
+    return wrap(
+        ASK,
+        "Sub-playbook of CTT - Hygiene - Notify Owner: asks the owner \"Did you fix it?\" by Generated link and sends the Slack DM with the answers as buttons (Mark as Fixed / Mark as False Positive / View Issue). Mark as Fixed runs the fix check (one re-ask with what is still wrong); Mark as False Positive records it and tells the CTT channel. Writes the result to CTT.FixCheck (close, reason, note); the parent playbook closes the issue. Runs in the parent's context.",
+        t,
+        2600,
+    )
 
 
 def dm_args(note: str = "", links: bool = True) -> dict:
@@ -163,9 +227,10 @@ def add_close(t: dict, key: str, name: str, ctx: str, y: int, x: int) -> None:
 
 
 def add_watch(t: dict, y: int) -> None:
-    """Runs next to the question rounds, or alone when no DM goes out (no owner, DMs off, daily
-    limit): checks the fix every hour (polling) and closes the issue when the check sees it fixed.
-    Guidelines without a check end this branch at once."""
+    """Runs next to the Ask Owner sub-playbook, or alone for an issue without an owner: a scheduled
+    command (polling: true, ScheduledCommand every hour, see xsoar.pan.dev scheduled-commands)
+    that checks the fix and closes the issue when the check sees it fixed. Guidelines without a
+    check end this branch at once."""
     t[WATCH["watch"]] = base(WATCH["watch"], "regular", "Watch for the fix", "CTTHygieneFixCheck watch=true: checks every hour until the check sees the issue fixed. Ends at once for guidelines without an automatic check.", y, x=650,
                              task_extra={"scriptName": "CTTHygieneFixCheck"})
     t[WATCH["watch"]]["scriptarguments"] = {"issue_id": arg("issue_id"), "watch": {"simple": "true"}}
@@ -176,10 +241,15 @@ def add_watch(t: dict, y: int) -> None:
     add_close(t, WATCH["close"], "Close the issue: fixed (checked)", "CTT.FixWatch", y + 320, x=650)
 
 
+def add_end(t: dict, key: str, name: str, y: int, x: int) -> None:
+    """End of a sub-playbook branch: the parent reads CTT.FixCheck and closes the issue."""
+    t[key] = base(key, "title", name, "", y, x=x)
+
+
 def add_round(t: dict, r: dict, y: int, second: bool) -> None:
-    """One question round: ask by Generated link and, in parallel, DM the answer links; then the fix
-    check on the answer. The second round starts by clearing the first round's links and its DM
-    says what the check still sees; after it, a last DM and the playbook ends."""
+    """One question round of the Ask Owner sub-playbook: ask by Generated link and, in parallel, DM
+    the answer links; then the fix check on the answer. The second round starts by clearing the
+    first round's links and its DM says what the check still sees; after it, a last DM."""
     n = 2 if second else 1
     if second:
         t[r["clear"]] = base(r["clear"], "regular", "Clear the first round's answer links", "Asking again appends links; the second DM needs the new ones.", y, x=250,
@@ -188,7 +258,7 @@ def add_round(t: dict, r: dict, y: int, second: bool) -> None:
         t[r["clear"]]["nexttasks"] = {"#none#": [r["title"]]}
         y += 140
     t[r["title"]] = base(r["title"], "title", f"Round {n}: ask the owner", "", y, x=250)
-    t[r["title"]]["nexttasks"] = {"#none#": [r["ask"], r["wait"]] + ([] if second else [WATCH["watch"]])}
+    t[r["title"]]["nexttasks"] = {"#none#": [r["ask"], r["wait"]]}
     t[r["ask"]] = base(r["ask"], "condition", "Did you fix it?" if not second else "Did you fix it? (second time)",
                        "Asked by Generated link: one link per answer, opened without a Cortex login, behind the Mark as Fixed and Mark as False Positive buttons of the DM. Waits until answered (no timeout); the daily digest reminds the owner.", y + 160, x=50)
     t[r["ask"]]["message"] = {
@@ -213,32 +283,26 @@ def add_round(t: dict, r: dict, y: int, second: bool) -> None:
     # Without links (Generated link unavailable) the DM still goes out, without answer buttons.
     t[r["links"]]["continueonerror"] = True
     t[r["links"]]["nexttasks"] = {"#none#": [r["gate"]]}
-    # Only the DM depends on notify (mode, allowlist, Slack ID, daily limit); the rest of the round
-    # runs either way.
-    add_gate(t, r["gate"], y + 400, [r["dm"]], [] if second else [r["progress"]])
+    # Only the DM depends on notify (mode, allowlist, Slack ID, daily limit); the question waits
+    # either way.
+    add_gate(t, r["gate"], y + 480, [r["dm"]], [])
     t[r["dm"]] = base(r["dm"], "regular", "Send the Slack DM" if not second else "Send the second DM",
                       "Lays out the DM (FOUND / RULE / FIX, or the AI text) with the answer links, as Slack buttons when notify.buttons is on, and sends it through the CTT Slack Webhook."
-                      + (" Starts with what the check still sees." if second else ""), y + 560, x=450, task_extra={"scriptName": "CTTHygieneSendDM"})
+                      + (" Starts with what the check still sees." if second else ""), y + 640, x=450, task_extra={"scriptName": "CTTHygieneSendDM"})
     t[r["dm"]]["scriptarguments"] = dm_args("${CTT.FixCheck.note}" if second else "")
-    if not second:
-        t[r["dm"]]["nexttasks"] = {"#none#": [r["progress"]]}
-        t[r["progress"]] = base(r["progress"], "regular", "Set the issue to In Progress", "The issue now waits for the owner's fix.", y + 720, x=450,
-                                task_extra={"script": "Cortex Core - Platform|||core-update-issue", "iscommand": True, "brand": "Cortex Core - Platform"})
-        t[r["progress"]]["scriptarguments"] = {"id": arg("issue_id"), "status": {"simple": "In Progress"}}
-        t[r["progress"]]["continueonerror"] = True
-    t[r["check"]] = base(r["check"], "regular", "Check the owner's fix", "CTTHygieneFixCheck confirm=true: resolves the issue with a close note when the check verifies the fix or the guideline has no check; otherwise keeps it open and writes what is still wrong to CTT.FixCheck.", y + 320, x=50,
+    t[r["check"]] = base(r["check"], "regular", "Check the owner's fix", "CTTHygieneFixCheck confirm=true resolve=false: close (with a note) when the check verifies the fix or the guideline has no check; otherwise writes what is still wrong to CTT.FixCheck.", y + 320, x=50,
                          task_extra={"scriptName": "CTTHygieneFixCheck"})
     t[r["check"]]["scriptarguments"] = {"issue_id": arg("issue_id"), "confirm": {"simple": "true"}, "resolve": {"simple": "false"}}
     t[r["check"]]["nexttasks"] = {"#none#": [r["resolved"]]}
-    t[r["resolved"]] = base(r["resolved"], "condition", "Close the issue?", "Yes when the check verified the fix or the guideline has no check.", y + 480, x=50)
-    t[r["resolved"]]["conditions"] = [{"label": "yes", "condition": [[{"operator": "isTrue", "left": {"value": {"simple": "CTT.FixCheck.close"}, "iscontext": True}}]]}]
-    t[r["resolved"]]["nexttasks"] = {"yes": [r["close"]], "#default#": [r["lastgate"] if second else ROUND2["clear"]]}
-    add_close(t, r["close"], "Close the issue: fixed", "CTT.FixCheck", y + 640, x=-50)
-    t[r["fp"]] = base(r["fp"], "regular", "Record: false positive", "CTTHygieneFixCheck false_positive=true: tells the CTT channel and writes the False Positive close note.", y + 320, x=-250,
+    t[r["resolved"]] = base(r["resolved"], "condition", "Fixed?", "Yes when the check verified the fix or the guideline has no check.", y + 480, x=50)
+    t[r["resolved"]]["conditions"] = [{"label": "yes", "condition": is_on("CTT.FixCheck.close")}]
+    t[r["resolved"]]["nexttasks"] = {"yes": [r["done"]], "#default#": [r["lastgate"] if second else ROUND2["clear"]]}
+    add_end(t, r["done"], "Fixed: the parent closes the issue", y + 640, x=-150)
+    t[r["fp"]] = base(r["fp"], "regular", "Record: false positive", "CTTHygieneFixCheck false_positive=true resolve=false: tells the CTT channel and writes the False Positive close note.", y + 320, x=-350,
                       task_extra={"scriptName": "CTTHygieneFixCheck"})
     t[r["fp"]]["scriptarguments"] = {"issue_id": arg("issue_id"), "false_positive": {"simple": "true"}, "resolve": {"simple": "false"}}
-    t[r["fp"]]["nexttasks"] = {"#none#": [r["fpclose"]]}
-    add_close(t, r["fpclose"], "Close the issue: false positive", "CTT.FixCheck", y + 480, x=-250)
+    t[r["fp"]]["nexttasks"] = {"#none#": [r["fpdone"]]}
+    add_end(t, r["fpdone"], "False positive: the parent closes the issue", y + 480, x=-350)
     if second:
         add_gate(t, r["lastgate"], y + 640, [r["last"]], [])
         t[r["last"]] = base(r["last"], "regular", "Tell the owner it closes by itself", "Last DM: what the check still sees, and that the hourly fix check closes the issue once it's fixed. No more questions.", y + 800, x=50,
@@ -247,7 +311,7 @@ def add_round(t: dict, r: dict, y: int, second: bool) -> None:
             "You said this is fixed, but the check still sees it: ${CTT.FixCheck.evidence}. The issue closes by itself within an hour once it is fixed.",
             links=False,
         )
-        # No next task: the watch branch closes the issue once the check sees it fixed.
+        # No next task: the parent's watch closes the issue once the check sees it fixed.
 
 
 def trigger() -> dict:
@@ -273,22 +337,29 @@ def trigger() -> dict:
 
 
 def main() -> None:
-    (PACK / "Playbooks" / "playbook-CTT-Hygiene-Notify-Owner.yml").write_text(yaml.dump(playbook(), sort_keys=False, width=10000))
-    (PACK / "Playbooks" / "playbook-CTT-Hygiene-Notify-Owner_README.md").write_text(
+    books = PACK / "Playbooks"
+    (books / "playbook-CTT-Hygiene-Notify-Owner.yml").write_text(yaml.dump(notify_playbook(), sort_keys=False, width=10000))
+    (books / "playbook-CTT-Hygiene-Ask-Owner.yml").write_text(yaml.dump(ask_playbook(), sort_keys=False, width=10000))
+    (books / "playbook-CTT-Hygiene-Notify-Owner_README.md").write_text(
         "Runs on every CTT hygiene health issue (trigger `CTT - Hygiene - Notify Owner`).\n\n"
-        "1. `CTTHygieneTriage` finds the owner from the issue's `[owner: ...]` marker, their name, role and Slack ID in the CTT registry, and the guideline.\n"
-        "2. `core-update-issue` assigns the issue to the owner's email.\n"
-        "3. With `notify.use_ai`, the `CTTHygieneMessagePrompt` AI task writes the DM text; otherwise the FOUND / RULE / FIX template from triage is used.\n"
-        "4. **Round 1**: **Did you fix it?** is asked by Generated link (no timeout); in parallel `CTTHygieneAskLinks` gets its links and `CTTHygieneSendDM` sends the DM with the buttons **Mark as Fixed**, **Mark as False Positive** and **View Issue** (`notify.buttons`; otherwise links in the text). The issue is set to In Progress.\n"
-        "5. **Watch** (parallel): `CTTHygieneFixCheck watch=true` checks every hour and closes the issue once the check sees it fixed (guidelines with an automatic check).\n"
-        "6. **Mark as Fixed** runs `CTTHygieneFixCheck confirm=true resolve=false`: a verified fix (or a guideline without a check) closes the issue; otherwise **round 2** asks once more with a DM that says what is still wrong, and after a second unconfirmed answer a last DM says the issue closes by itself once fixed.\n"
-        "7. **Mark as False Positive** runs `CTTHygieneFixCheck false_positive=true resolve=false` (a post in the CTT channel) and closes the issue as False Positive.\n\n"
-        "Without a DM (DMs off, not on the allowlist, no Slack ID or the daily limit) the rounds run without the DM; an issue without an owner only gets the watch. The issue is always closed by the last task of a branch (`closeInvestigation` with the close note), never halfway. "
-        "Assigning and the AI step continue on error. DMs follow `notify.mode` (`off`, `admins_only`, `all`) and the daily limit in `CTT - Config`.\n"
+        "1. **Same problem already known?** `CTTHygieneDuplicateCheck` looks for another open issue about the same endpoint, user or object, or one marked a false positive in the last `notify.false_positive_days` days. If so, the issue is closed as Duplicate Issue.\n"
+        "2. **Already fixed?** `CTTHygieneFixCheck resolve=false` runs the guideline's automatic check. If it sees the fix (for example a playbook with the owner's tag in its Tags field), the issue is closed with a note saying why, before anyone is assigned or notified.\n"
+        "3. `CTTHygieneTriage` finds the owner from the issue's `[owner: ...]` marker, their name, role and Slack ID in the CTT registry, and the guideline; `core-update-issue` assigns the issue and sets it In Progress.\n"
+        f"4. In parallel:\n   - **Ask the owner:** the `{ASK}` sub-playbook (DM with Mark as Fixed / Mark as False Positive, the answer and the fix check on it). When its result closes the issue, the next task does.\n"
+        "   - **Watch:** `CTTHygieneFixCheck watch=true`, a scheduled command (polling) that checks every hour and closes the issue once the check sees it fixed.\n\n"
+        "An issue without an owner only gets the watch. The issue is always closed by the last task of a branch (`closeInvestigation` with the close note), never halfway; closing it stops the other branch. "
+        "Assigning continues on error. DMs follow `notify.mode` (`off`, `allowlist`, `admins_only`, `all`) and the daily limit in `CTT - Config`.\n"
+    )
+    (books / "playbook-CTT-Hygiene-Ask-Owner_README.md").write_text(
+        f"Sub-playbook of `{NAME}`; runs in its context (CTT.Triage) and writes its result to CTT.FixCheck (`close`, `reason`, `note`). The parent closes the issue.\n\n"
+        "1. With `notify.use_ai`, the `CTTHygieneMessagePrompt` AI task writes the DM text; otherwise the FOUND / RULE / FIX template from triage is used.\n"
+        "2. **Round 1**: **Did you fix it?** is asked by Generated link (no timeout); in parallel `CTTHygieneAskLinks` gets its links and `CTTHygieneSendDM` sends the DM with the buttons **Mark as Fixed**, **Mark as False Positive** and **View Issue** (`notify.buttons`; otherwise links in the text). Without a DM (DMs off, not on the allowlist, no Slack ID, daily limit) only the DM is skipped.\n"
+        "3. **Mark as Fixed** runs `CTTHygieneFixCheck confirm=true resolve=false`: a verified fix (or a guideline without a check) ends the sub-playbook with `close`; otherwise **round 2** asks once more with a DM that says what is still wrong, and after a second unconfirmed answer a last DM says the issue closes by itself once fixed.\n"
+        "4. **Mark as False Positive** runs `CTTHygieneFixCheck false_positive=true resolve=false` (a post in the CTT channel) and ends with `close` (False Positive).\n"
     )
     (PACK / "Triggers").mkdir(exist_ok=True)
     (PACK / "Triggers" / "Trigger-CTT-Hygiene-Notify-Owner.json").write_text(json.dumps(trigger(), indent=4) + "\n")
-    print("wrote playbook and trigger")
+    print("wrote playbooks and trigger")
 
 
 if __name__ == "__main__":
