@@ -574,6 +574,30 @@ function resolveIssue(issue,comment,instance,reason) {
     var after=null;try{after=findIssue(issue.external_id,instance);}catch(ignore){}
     return !!after && !issueOpen(after);
 }
+// A resolved issue leaves its case open: close the issue's cases once all their issues are resolved
+// (as CTTHygieneFixCheck does). Returns the closed case IDs; errors go to the given list.
+function closeFinishedCases(caseIds,comment,instance,errors) {
+    var closed=[];
+    caseIds=(caseIds||[]).map(Number).filter(function(c){return c>0;});
+    if(!caseIds.length)return closed;
+    var cases=[];
+    try{var r=core('post','/public_api/v1/case/search',instance,{request_data:{filters:[{field:'case_id',operator:'in',value:caseIds}],search_to:100}});
+        r=(r&&r.reply)||r||{};cases=r.DATA||r.data||[];}
+    catch(e){errors.push('reading cases '+caseIds.join(',')+': '+String(e.message||e).slice(0,200));return closed;}
+    cases.forEach(function(c){
+        if(/^resolved/i.test(String(c.status_progress||'')))return;
+        try{
+            var ids=(c.issue_ids||[]).map(Number),issues=[];
+            if(ids.length){var q=core('post','/public_api/v1/issue/search',instance,{request_data:{filters:[{field:'id',operator:'in',value:ids}],search_to:100}});
+                q=(q&&q.reply)||q||{};issues=q.DATA||q.data||[];}
+            if(!issues.length||issues.some(issueOpen))return;
+            try{core('post','/public_api/v1/case/update/'+c.case_id,instance,{request_data:{update_data:{status_progress:'Resolved',resolve_reason:'Resolved - Other',resolve_comment:String(comment).slice(0,900)}}});}
+            catch(e){if(!/expected API response not received|Unexpected end of JSON input/.test(String(e.message||e)))throw e;}
+            closed.push(String(c.case_id));
+        }catch(e){errors.push('closing case '+c.case_id+': '+String(e.message||e).slice(0,200));}
+    });
+    return closed;
+}
 function summarizeNotes(text,limit) {
     var lines=String(text||'').split(/\r?\n/).map(function(l){return l.replace(/\*\*/g,'').replace(/<[^>]+>/g,'').trim();})
         .filter(function(l){return l && !/^#{1,6}\s*$/.test(l);});
@@ -742,9 +766,12 @@ function reviewHeld(snapshot,report,installation,instance,dryRun) {
         else why='Pack '+e.pack_id+' '+e.target_version+' is no longer held by the guard.';
         if(dryRun){result.stale.push({key:k,action:'would_resolve',reason:why});return;}
         var issue=null;try{issue=findIssue(e.external_id,instance);}catch(ignore){}
-        var ok=issue?(!issueOpen(issue)||resolveIssue(issue,'Marketplace Guard: '+why,instance,/is now at/.test(why)?'resolved - fixed':'resolved - other')):false;
+        // 'Resolved - Other': 'Resolved - Fixed' depends on the license, and cttasean and joris refuse it
+        // (the issue stayed open and every run reported resolve_failed).
+        var ok=issue?(!issueOpen(issue)||resolveIssue(issue,'Marketplace Guard: '+why,instance,'resolved - other')):false;
+        var caseErrors=[],closedCases=ok?closeFinishedCases(issue.case_ids,'Marketplace Guard: '+why,instance,caseErrors):[];
         e.status=ok?'resolved':'open';if(ok){e.resolved_at=new Date().toISOString();e.resolution=why;changed=true;result.resolved_stale++;}
-        result.stale.push({key:k,action:ok?'resolved':'resolve_failed',issue_id:issue&&issue.id,reason:why});
+        result.stale.push({key:k,action:ok?'resolved':'resolve_failed',issue_id:issue&&issue.id,cases_closed:closedCases,errors:caseErrors,reason:why});
     });
     if(changed && !dryRun)saveNamedLedger(state,instance);
     result.completed_at=new Date().toISOString();
@@ -1033,6 +1060,8 @@ function runSummary(input,now){
     if(review.would_create)cases.push(review.would_create+' would be created');
     if(review.existing)cases.push(review.existing+' already open');
     if(review.resolved_stale)cases.push(review.resolved_stale+' resolved, no longer needed');
+    var stuck=(review.stale||[]).filter(function(x){return x.action==='resolve_failed';}).length;
+    if(stuck)cases.push(stuck+' no longer needed but could not be closed');
     if(cases.length)out.push('','Review cases: '+cases.join(', ')+'.');
     if(routing.created)out.push('Breaking-change issues created: '+routing.created+'.');
     return {text:out.join('\n'),checked:checked,updates:updates,installed:(installation.installed||[]).length,
@@ -1087,7 +1116,7 @@ function main(input) {
     else if(action==='review'){
         summary=(value.dry_run?'Dry run. ':'')+'Manual review cases - required: '+value.reviews_required+'; created: '+value.created+'; already open: '+value.existing+'; would create: '+value.would_create+'; stale resolved: '+value.resolved_stale+'.';
         if(value.cases.length)summary+='\n\n| Action | Case | Severity |\n|---|---|---|\n'+value.cases.map(function(c){return '| '+c.action+' | '+String(c.title||c.key).replace(/\|/g,'/')+(c.issue_id?' (issue '+c.issue_id+')':'')+' | '+(c.severity||'')+' |';}).join('\n');
-        if(value.stale.length)summary+='\n\nStale: '+value.stale.map(function(x){return x.key+' -> '+x.action;}).join('; ');
+        if(value.stale.length)summary+='\n\nStale: '+value.stale.map(function(x){return x.key+' -> '+x.action+((x.cases_closed||[]).length?' (case '+x.cases_closed.join(', ')+' closed)':'')+((x.errors||[]).length?' ['+x.errors.join('; ')+']':'');}).join('; ');
     }
     else summary=(value.dry_run?'Dry run. ':'')+'Validation issues created: '+value.created+'; existing: '+value.existing+'; pending reconciliation: '+value.pending+'; would create: '+value.would_create+'. Assessment health: '+value.assessment_health+'.';
     if(action==='apply_ai')summary+=' Jev release decisions received: '+value.ai_decision_count+'/'+value.expected_ai_decision_count+'.';

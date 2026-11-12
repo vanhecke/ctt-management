@@ -7,7 +7,7 @@ The `CTT - Marketplace Updates` playbook runs it one action at a time:
 | prepare_ai, unpack_ai, wrap_ai, apply_ai | Batch the release evidence for TypeSafe Jev (`jev-evaluate`) and validate its answers. |
 | publish | One deduplicated validation issue per breaking change that affects an enabled integration. |
 | install | Installs approved updates with their mandatory dependencies through the tenant Marketplace and verifies each exact version. |
-| review | One deduplicated review issue and case per held, unresolved or failed update; resolves stale ones. |
+| review | One deduplicated review issue and case per held, unresolved or failed update. Resolves stale ones (pack installed, or a newer target) as Resolved - Other with a note, and closes their case once all its issues are resolved. |
 | summary | A plain-text run summary for the CTT Slack channel (`TypeSafeJevMarketplace.Summary.text`), posted by `CTTSlackPost`. |
 | pack_detail, close_review | Manual use: review details for one pack, and closing its review once the update is verified. |
 
