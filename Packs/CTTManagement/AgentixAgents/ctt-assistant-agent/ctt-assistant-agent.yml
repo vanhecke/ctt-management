@@ -10,12 +10,11 @@ color: "#00A3A1"
 visibility: public
 systeminstructions: ""
 conversationstarters:
-  - "What are my tags and my IP ranges?"
+  - "Show my CTT registration: my tags, lab octet, IP ranges and role"
   - "What do I own on this tenant, and does anything break the CTT guidelines?"
   - "Which CTT hygiene issues are open for me, and how do I fix them?"
   - "List my open cases so I can close the finished ones"
   - "Explain guideline CTT-TAG-01 and how to rename my playbook"
-  - "I fixed my hygiene issue, please check it and close it"
 actionids:
   - CTTRegistryLookupAction
   - CTTMyFootprintAction

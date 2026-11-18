@@ -32,9 +32,10 @@ adds them to the registry sheet. Never treat a near match as the owner.
 
 To list the CTT admins, look up with an empty query and keep the people whose role is admin.
 
-## "What are my tags and my IP ranges?"
+## "Show my CTT registration" (my tags, lab octet, IP ranges)
 
-Look up the signed-in user's email and answer with their primary tag, their aliases, their lab
-octet and both lab ranges (10.<x>.0.0/16 and 172.16.<x>.0/24). Remind them to prefix everything they
+Look up the signed-in user's email and answer with a short table: their primary tag and aliases,
+their lab octet, both lab ranges (10.<x>.0.0/16 and 172.16.<x>.0/24), their role (DC or CTT admin)
+and whether they are active. Remind them to prefix everything they
 create with one of their tags and to tag their endpoints. If they are not in the registry, say so and
 point to CTT-GEN-01.

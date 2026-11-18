@@ -13,12 +13,11 @@ and lab range. Some answers take a minute or two (your footprint runs the invent
 
 Conversation starters:
 
-- What are my tags and my IP ranges?
+- Show my CTT registration: my tags, lab octet, IP ranges and role
 - What do I own on this tenant, and does anything break the CTT guidelines?
 - Which CTT hygiene issues are open for me, and how do I fix them?
 - List my open cases so I can close the finished ones
 - Explain guideline CTT-TAG-01 and how to rename my playbook
-- I fixed my hygiene issue, please check it and close it
 
 ## What it can do
 
@@ -26,7 +25,7 @@ Conversation starters:
 |---|---|---|
 | "What does CTT-LAB-02 say?", "How do I name a script?" | Quotes the guideline by ID and gives an example for your case; the naming table for every object type | Its instructions, the CTT guideline documents (knowledge) |
 | "Which guidelines are checked automatically?" | Says which guidelines a correlation rule or the daily inventory check monitors, and how issues close | CTT-Guideline-Coverage (knowledge) |
-| "What are my tags and my IP ranges?" | Your primary tag, aliases, lab octet and ranges (10.x.0.0/16, 172.16.x.0/24) | CTTRegistryLookupAction |
+| "Show my CTT registration" | Your tags (primary and aliases), lab octet, IP ranges (10.x.0.0/16, 172.16.x.0/24), role (DC or CTT admin) and whether you are active | CTTRegistryLookupAction |
 | "Who owns tag jva / 10.23.4.5 / octet 7 / `SF - Labs`?" | The registered owner; for an object, the owner of its name prefix. No match means not registered (CTT-GEN-01) | CTTRegistryLookupAction |
 | "Who are the CTT admins?" | The people with the admin role in the registry | CTTRegistryLookupAction |
 | "What do I own, and is it compliant?" | Your playbooks, scripts, jobs, integration instances, correlation rules, lookups, data collectors, policy profiles, policy rules and untagged endpoints, and every guideline finding for them with the fix | CTTMyFootprintAction (the inventory check, as a dry run) |

@@ -36,7 +36,7 @@ is untested on 4.0. On 8.15 (joris) the actions worked as scripts, but knowledge
 
 | # | Prompt | Expected | Result |
 |---|---|---|---|
-| B1 | What are my tags and my IP ranges? | Without asking who you are: jvanhecke + alias jva, lab octet and both ranges | |
+| B1 | Show my CTT registration: my tags, lab octet, IP ranges and role (starter) | Without asking who you are: jvanhecke + alias jva, lab octet, both ranges, admin, active | |
 | B2 | Who owns the tag sfi? | sfirmansyah, with all their tags and lab range | |
 | B3 | Who owns 10.23.4.5? / octet 7? | The owner of that lab octet, or "unassigned" | |
 | B4 | Who owns the policy `SF - Labs`? | Prefix `sf` is not a registered tag; no near-match owner (never says sfirmansyah owns it from the name) | |
