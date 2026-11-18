@@ -19,6 +19,8 @@ TAG_RE = re.compile(r"^\s*([A-Za-z0-9]{2,16})\s*[-_]")
 # Issues of the inventory check resolve themselves through its own plan().
 INVENTORY_MARKERS = ("The inventory check found", "The sweep found", "Daily sweep found")
 NO_OWNER = {"", "unknown", "null", "none", "unassigned"}
+# Kinds with a Tags field: one of the owner's tags there replaces the name prefix (CTT-TAG-01).
+TAGGED_KINDS = ("Playbook", "Script", "Job")
 # Audit-log object kinds whose objects the API can list by name (audit kind -> listed kind).
 LISTED_KINDS = {
     "Playbook": "Playbook",
@@ -262,15 +264,19 @@ def check_registry(item: dict, people: dict[str, dict]) -> tuple[str, str]:
 
 
 def check_listed(
-    item: dict, names: dict[str, set[str]], field_tags: dict[str, set[str]] | None = None, tags: set[str] | None = None
+    item: dict,
+    names: dict[str, set[str]],
+    field_tags: dict[tuple[str, str], set[str]] | None = None,
+    tags: set[str] | None = None,
 ) -> tuple[str, str]:
-    """TAG-01/TAG-04: the object no longer exists under that name. For CTT-TAG-01 a playbook also
-    passes when its Tags field carries one of the owner's tags: then the name needs no prefix."""
+    """TAG-01/TAG-04: the object no longer exists under that name. For CTT-TAG-01 a playbook, script
+    or job also passes when its Tags field carries one of the owner's tags: then the name needs no
+    prefix. field_tags: (kind, name) -> Tags field."""
     kind = LISTED_KINDS[item["kind"]]
     if item["name"] not in names.get(kind, set()):
         return "fixed", f"{what(item)} no longer exists under that name (renamed or deleted)"
-    if item["guideline"] == "CTT-TAG-01" and kind == "Playbook" and field_tags is not None:
-        mine = (field_tags.get(item["name"]) or set()) & (tags or set())
+    if item["guideline"] == "CTT-TAG-01" and kind in TAGGED_KINDS and field_tags is not None:
+        mine = (field_tags.get((kind, item["name"])) or set()) & (tags or set())
         if mine:
             return "fixed", f"{what(item)} carries your tag {', '.join(sorted(mine))} in its Tags field"
         return "open", f"{what(item)} still exists under that name, without one of your tags in its Tags field"
@@ -326,7 +332,7 @@ def check_item(item: dict, ctx: dict) -> tuple[str, str]:
     if gid == "CTT-GEN-01":
         return check_registry(item, ctx["people"])
     if gid in ("CTT-TAG-01", "CTT-TAG-04") and kind in LISTED_KINDS and item["name"]:
-        return check_listed(item, ctx["names"], ctx.get("playbook_tags"), ctx["tags"](item["owner"]))
+        return check_listed(item, ctx["names"], ctx.get("field_tags"), ctx["tags"](item["owner"]))
     if gid == "CTT-OOTB-01" and kind in BUILTIN_KINDS and item["name"]:
         return check_builtin(item, ctx["builtin"].get((BUILTIN_KINDS[kind], item["name"])), ctx["tags"](item["owner"]))
     if gid == "CTT-TAG-02" and item["name"]:
@@ -522,25 +528,29 @@ def recently_resolved(since_ms: int) -> list[dict]:
     return [i for i in search_issues(filters) if int(i.get("resolution_status_modified_ts") or 0) >= since_ms]
 
 
-def listed_names(kinds: set[str], errors: list[str], playbook_tags: dict[str, set[str]] | None = None) -> dict[str, set[str]]:
+def listed_names(
+    kinds: set[str], errors: list[str], field_tags: dict[tuple[str, str], set[str]] | None = None
+) -> dict[str, set[str]]:
     """Names of the custom objects of each kind the open issues need (same sources as the
-    inventory check's collect_objects); playbook_tags gets each playbook's Tags field."""
+    inventory check's collect_objects); field_tags gets the Tags field of each playbook, script and
+    job, by (kind, name)."""
     names: dict[str, set[str]] = {}
 
-    def playbooks() -> list[str]:
-        rows = core_post("/playbook/search", {"query": "system:F", "size": 5000}).get("playbooks") or []
-        if playbook_tags is not None:
-            for p in rows:
-                if p.get("name"):
-                    playbook_tags[p["name"]] = {str(t).strip().lower() for t in p.get("tags") or [] if str(t).strip()}
-        return [p.get("name") for p in rows]
+    def tagged(kind: str, rows: list[dict]) -> list[str]:
+        if field_tags is not None:
+            for r in rows:
+                if r.get("name"):
+                    field_tags[(kind, r["name"])] = {str(t).strip().lower() for t in r.get("tags") or [] if str(t).strip()}
+        return [r.get("name") for r in rows]
 
     fetch = {
-        "Playbook": playbooks,
-        "Script": lambda: [
-            s.get("name") for s in core_post("/automation/search", {"query": "system:F", "size": 5000}).get("scripts") or []
-        ],
-        "Job": lambda: [j.get("name") for j in core_post("/jobs/search", {"page": 0, "size": 1000}).get("data") or []],
+        "Playbook": lambda: tagged(
+            "Playbook", core_post("/playbook/search", {"query": "system:F", "size": 5000}).get("playbooks") or []
+        ),
+        "Script": lambda: tagged(
+            "Script", core_post("/automation/search", {"query": "system:F", "size": 5000}).get("scripts") or []
+        ),
+        "Job": lambda: tagged("Job", core_post("/jobs/search", {"page": 0, "size": 1000}).get("data") or []),
         "Integration instance": lambda: [
             i.get("name") for i in core_post("/settings/integration/search", {"size": 2000}).get("instances") or []
         ],
@@ -700,7 +710,7 @@ def build_context(items: list[dict], registry: list[dict], errors: list[str]) ->
     ctx: dict[str, Any] = {
         "people": registry_people(registry),
         "names": {},
-        "playbook_tags": {},
+        "field_tags": {},
         "builtin": {},
         "policies": {},
         "endpoints": {},
@@ -711,7 +721,7 @@ def build_context(items: list[dict], registry: list[dict], errors: list[str]) ->
         LISTED_KINDS[i["kind"]] for i in items if i["guideline"] in ("CTT-TAG-01", "CTT-TAG-04") and i["kind"] in LISTED_KINDS
     }
     if listed:
-        ctx["names"] = listed_names(listed, errors, ctx["playbook_tags"])
+        ctx["names"] = listed_names(listed, errors, ctx["field_tags"])
     for i in items:
         if i["guideline"] == "CTT-OOTB-01" and i["kind"] in BUILTIN_KINDS and i["name"]:
             key = (BUILTIN_KINDS[i["kind"]], i["name"])

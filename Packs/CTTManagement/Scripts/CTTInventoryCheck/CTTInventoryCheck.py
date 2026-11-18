@@ -18,6 +18,8 @@ TITLES = {
     "CTT-TAG-02": "Playbooks missing the owner tag field",
     "CTT-LIFE-02": "Objects owned by an inactive DC",
 }
+# Kinds with a Tags field: a registered tag there replaces the name prefix (CTT-TAG-01).
+TAGGED_KINDS = ("Playbook", "Script", "Job")
 # Inventory kinds and the object kinds the owner index (audit log) uses for them.
 INDEX_KINDS = {
     "Playbook": ("Playbook",),
@@ -90,12 +92,12 @@ def reported_names(issues: list[dict]) -> set[str]:
 
 
 def object_tag(obj: dict, registry: dict[str, dict]) -> tuple[str | None, dict | None]:
-    """The registered tag an object carries: its name prefix, or for a playbook a registered tag in
-    its Tags field (CTT-TAG-01: a playbook tagged there needs no name prefix)."""
+    """The registered tag an object carries: its name prefix, or for a playbook, script or job a
+    registered tag in its Tags field (CTT-TAG-01: an object tagged there needs no name prefix)."""
     tag = parse_tag(obj.get("name") or "")
     if tag in registry:
         return tag, registry[tag]
-    if obj.get("kind") == "Playbook":
+    if obj.get("kind") in TAGGED_KINDS:
         field = sorted(str(t).strip().lower() for t in obj.get("tags") or [])
         found = next((t for t in field if t in registry), None)
         if found:
@@ -104,7 +106,7 @@ def object_tag(obj: dict, registry: dict[str, dict]) -> tuple[str | None, dict |
 
 
 def check_object(obj: dict, registry: dict[str, dict], owners: dict | None = None) -> list[dict]:
-    """obj: kind, name, creator (email or ''), tags (list, playbooks only). Returns findings."""
+    """obj: kind, name, creator (email or ''), tags (Tags field of playbooks, scripts, jobs). Returns findings."""
     name = obj.get("name") or ""
     tag, entry = object_tag(obj, registry)
     base = {"kind": obj["kind"], "name": name}
@@ -253,14 +255,17 @@ def collect_objects(errors: list[str]) -> list[dict]:
     def scripts():
         res = core_post("/automation/search", {"query": "system:F", "size": 2000})
         return [
-            {"kind": "Script", "name": s.get("name"), "creator": s.get("user", "")}
+            {"kind": "Script", "name": s.get("name"), "creator": s.get("user", ""), "tags": s.get("tags") or []}
             for s in res.get("scripts") or []
             if not s.get("packID") and not s.get("system")
         ]
 
     def jobs():
         res = core_post("/jobs/search", {"page": 0, "size": 500})
-        return [{"kind": "Job", "name": j.get("name"), "creator": j.get("owner", "")} for j in res.get("data") or []]
+        return [
+            {"kind": "Job", "name": j.get("name"), "creator": j.get("owner", ""), "tags": j.get("tags") or []}
+            for j in res.get("data") or []
+        ]
 
     def instances():
         res = core_post("/settings/integration/search", {"size": 1000})

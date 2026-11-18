@@ -80,8 +80,8 @@ Start the name of every object you create with `<tag> - `, for example
 Names that cannot hold spaces use `<tag>_<name>` instead: scripts (`jvanhecke_GetLabUsers`),
 lookup tables and other datasets (`jvanhecke_lab_assets`, lower case).
 
-Playbooks are the exception: a playbook with your tag in its *Tags* field (`CTT-TAG-02`) needs no
-name prefix.
+Objects with a *Tags* field are the exception: a playbook, script or job with one of your tags in
+its *Tags* field needs no name prefix (for playbooks that tag is required anyway, `CTT-TAG-02`).
 
 **CTT-TAG-02: Set your tag on objects that have a tag field.** *Active*
 Where an object has a tag or label field, add your tag to it. This applies to:
@@ -222,8 +222,9 @@ Before you leave the team, delete your objects or hand them over to another DC, 
 | Object | Format | Example |
 |---|---|---|
 | Playbook | `<tag> - <name>`, plus tag in the Tags field | `jvanhecke - Phishing triage` |
-| Script | `<tag>_<Name>` | `jvanhecke_GetLabUsers` |
-| Job, list, dashboard, widget, report | `<tag> - <name>` | `SF - Weekly lab report` |
+| Script | `<tag>_<Name>`, or your tag in the Tags field | `jvanhecke_GetLabUsers` |
+| Job | `<tag> - <name>`, or your tag in the Tags field | `SF - Weekly lab report` |
+| List, dashboard, widget, report | `<tag> - <name>` | `SF - Lab inventory` |
 | Correlation rule, BIOC, scheduled query | `<tag> - <name>` | `SF - Mimikatz on lab DC` |
 | Lookup table or dataset | `<tag>_<name>` (lower case) | `sf_lab_assets` |
 | Endpoint profile or policy rule | `<tag> - <name>` | `SF - Labs` |
@@ -243,3 +244,4 @@ Before you leave the team, delete your objects or hand them over to another DC, 
 | 2026-11-07 | CTT-LAB-01: a lab octet also covers `172.16.<octet>.0/24` |
 | 2026-11-09 | How monitoring works: one issue per finding; a false positive is not raised again for 30 days |
 | 2026-11-09 | CTT-TAG-01: a playbook with your tag in its Tags field needs no name prefix |
+| 2026-11-18 | CTT-TAG-01: a script or job with your tag in its Tags field needs no name prefix either |

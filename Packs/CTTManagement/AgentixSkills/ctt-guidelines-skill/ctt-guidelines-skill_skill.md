@@ -9,8 +9,9 @@ For the naming format, use this table:
 | Object | Format |
 |---|---|
 | Playbook | `<tag> - <name>`, and the tag in the playbook Tags field |
-| Script | `<tag>_<Name>` |
-| Job, list, dashboard, widget, report, correlation rule, BIOC, scheduled query | `<tag> - <name>` |
+| Script | `<tag>_<Name>`, or the tag in the script Tags field |
+| Job | `<tag> - <name>`, or the tag in the job Tags field |
+| List, dashboard, widget, report, correlation rule, BIOC, scheduled query | `<tag> - <name>` |
 | Lookup table or dataset | `<tag>_<name>` in lower case |
 | Endpoint profile, policy rule, integration instance, engine, Broker VM | `<tag> - <name>` |
 | Parsing or modeling rule | a comment `// <tag>: <purpose>` |

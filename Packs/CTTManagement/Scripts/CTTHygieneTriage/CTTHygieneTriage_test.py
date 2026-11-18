@@ -77,6 +77,12 @@ def test_compose_tag_rule():
         "Or add jvanhecke to the playbook's Tags field; then the name needs no prefix",
         "Or use another of your tags: jva",
     ]
+    script = "j@x.com created Script 'GetUsers': no tag prefix. Rename it to start with your own tag (guideline CTT-TAG-01)."
+    _, fix = compose("CTT-TAG-01", "Object created without owner tag", script, ["jvanhecke"], "20")
+    assert fix == [
+        'Rename it to "jvanhecke_GetUsers"',
+        "Or add jvanhecke to the script's Tags field; then the name needs no prefix",
+    ]
 
 
 def test_compose_owner_rule():

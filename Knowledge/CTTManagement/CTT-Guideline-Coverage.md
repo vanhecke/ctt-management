@@ -86,7 +86,7 @@ What each fix check verifies:
 | Guideline | Verified when |
 |---|---|
 | CTT-GEN-01 | The person is in the CTT registry |
-| CTT-TAG-01, CTT-TAG-04 | No playbook, script, job, integration instance, correlation rule or dataset has that name any more (renamed or deleted). For CTT-TAG-01 a playbook also passes when its Tags field carries one of the owner's tags. Other object types: owner confirmation |
+| CTT-TAG-01, CTT-TAG-04 | No playbook, script, job, integration instance, correlation rule or dataset has that name any more (renamed or deleted). For CTT-TAG-01 a playbook, script or job also passes when its Tags field carries one of the owner's tags. Other object types: owner confirmation |
 | CTT-TAG-02 | The policy rule's latest scope targets one of the owner's tags, or it was deleted (audit log, 90 days) |
 | CTT-OOTB-01 | Playbooks and scripts: attached to their pack again, renamed with the owner's tag, or deleted. Other object types: owner confirmation |
 | CTT-LAB-01 | The endpoint no longer breaks the rule (the rule's own query), or it no longer reports |
@@ -137,3 +137,4 @@ These jobs support the rules but check nothing themselves:
 | 2026-11-09 | Duplicates and repeated false positives close as Duplicate Issue without a DM; the jobs run on schedule (they were created without the fields the scheduler needs) |
 | 2026-11-09 | CTT-TAG-01: a playbook with the owner's tag in its Tags field passes (fix check and inventory check) |
 | 2026-11-10 | Notify Owner: duplicate check first, then "already fixed?", then assignment and the Ask Owner sub-playbook next to the hourly watch |
+| 2026-11-18 | CTT-TAG-01: a script or job with the owner's tag in its Tags field passes too (fix check, inventory check, DM advice) |
