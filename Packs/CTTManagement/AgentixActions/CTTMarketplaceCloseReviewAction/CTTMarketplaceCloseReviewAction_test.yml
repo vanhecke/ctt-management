@@ -1,0 +1,12 @@
+tests:
+  - name: closes a verified Marketplace review
+    prompt: Core 3.7.2 is installed now. Please close the Marketplace Guard review case for Core 3.7.1 -> 3.7.2.
+    agent_id: ctt-assistant-agent
+    expected_outcomes:
+      - evaluation_mode: any_of
+        actions:
+          - action_name: CTTMarketplaceCloseReviewAction
+            arguments:
+              pack: Core
+              target_version: 3.7.2
+fixtures: []

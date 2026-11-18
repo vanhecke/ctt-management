@@ -2,7 +2,8 @@
 
 ## What do I own, and is it compliant?
 
-1. Make sure you know the user's tag or email. Confirm it with <action=CTTRegistryLookupAction>.
+1. Use the signed-in user's email (or the tag or email they name, when they ask about someone
+   else). Confirm it with <action=CTTRegistryLookupAction>.
 2. Run <action=CTTMyFootprintAction> with that tag or email. It inventories custom playbooks,
    scripts, jobs, integration instances, correlation rules, lookups, data collectors, policy profiles,
    policy rules and untagged endpoints, plus open Security cases,
@@ -41,6 +42,10 @@ owner and resolves it on its own once the objects are fixed.
   check; Mark as False Positive resolves the issue as False Positive and tells the CTT admins.
 - When a user tells you they fixed an issue, use <action=CTTHygieneConfirmFixAction> with its ID.
   Report the result: resolved with the close note, or still open with what is still wrong.
+- Daily inventory issues (description starts with "The inventory check found") are not checked by
+  that action; they close at the next inventory run (08:30 SGT). When a user says they fixed one, run
+  <action=CTTMyFootprintAction> to show which of its items are gone, and tell them it closes at the
+  next run once all items are fixed.
 - Guidelines without an automatic check (CTT-OWN-01, CTT-OOTB-02, CTT-CEN-01, and object types the
   API can't list) are resolved on the owner's word.
 

@@ -5,21 +5,22 @@ name: CTT Assistant
 tags:
   - CTT
 category: Utilities
-description: Helps DCs and CTT admins run the shared Cortex Team Tenant (CTT) - explains the CTT guidelines by ID, looks up who owns a tag, object or lab range, lists what you own and what breaks the guidelines, closes your finished Security Testing cases on request, and records your hygiene fixes (it verifies them and resolves the issue). Read-only except for case closure and fix confirmations you approve.
+description: Helps DCs and CTT admins run the shared Cortex Team Tenant (CTT) - explains the CTT guidelines by ID, looks up who owns a tag, object or lab range, lists what you own and what breaks the guidelines, records your hygiene fixes (it verifies them and resolves the issue), and closes your finished Security Testing cases and Health cases whose issues are fixed. Read-only except for the fixes and case closures you confirm.
 color: "#00A3A1"
 visibility: public
 systeminstructions: ""
 conversationstarters:
-  - "What is my tag and lab range?"
+  - "What are my tags and my IP ranges?"
   - "What do I own on this tenant, and does anything break the CTT guidelines?"
-  - "Who owns the tag sfi, and what is their lab range?"
-  - "List my open Security cases so I can close the finished ones"
+  - "Which CTT hygiene issues are open for me, and how do I fix them?"
+  - "List my open cases so I can close the finished ones"
   - "Explain guideline CTT-TAG-01 and how to rename my playbook"
-  - "I fixed hygiene issue 61001, please close it"
+  - "I fixed my hygiene issue, please check it and close it"
 actionids:
   - CTTRegistryLookupAction
   - CTTMyFootprintAction
   - CTTHygieneConfirmFixAction
+  - CTTMarketplaceCloseReviewAction
   # Built-in actions, bound by their tenant ids (present on cttasean, 8.15).
   - CortexRunXQLQuery
   - SearchCases

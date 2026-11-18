@@ -1,0 +1,79 @@
+commonfields:
+  id: CTTMarketplaceCloseReviewAction
+  version: -1
+display: CTT Close Marketplace Review
+name: CTTMarketplaceCloseReviewAction
+tags:
+  - CTT
+category: Utilities
+description: >-
+  Closes a Marketplace Guard manual-review case (Health domain, "Marketplace Guard - manual review:
+  <pack> <current> -> <target>") once the pack is installed at the target version. It checks the
+  installed version first and changes nothing if it differs; otherwise it resolves the review issue
+  and its case with a comment and marks the review done, so the daily Marketplace job does not reopen
+  it. Use when a user says a held pack update was installed, or asks to close a review case.
+args:
+  - name: pack
+    description: The pack ID from the case name, for example Core or CommonScripts (the ID in brackets when the case shows a display name).
+    type: string
+    required: true
+    underlyingargname: pack
+  - name: target_version
+    description: The target version from the case name (after "->"), for example 3.7.2.
+    type: string
+    required: true
+    underlyingargname: target_version
+  - name: issue_id
+    description: The review issue ID, if known. Empty finds the issue by the case name.
+    type: string
+    required: false
+    underlyingargname: issue_id
+  - name: comment
+    description: Resolution comment for the issue and case. Empty uses "Marketplace Guard <pack> updated to <target>, verified".
+    type: string
+    required: false
+    underlyingargname: comment
+  - name: action
+    description: Always close_review for this action.
+    type: string
+    required: false
+    defaultvalue: close_review
+    hidden: true
+    underlyingargname: action
+outputs:
+  - name: issue_status
+    description: The review issue's status after the update.
+    type: unknown
+    underlyingoutputcontextpath: TypeSafeJevMarketplace.CloseReview.issue_status
+  - name: case_status
+    description: The case status after the update.
+    type: unknown
+    underlyingoutputcontextpath: TypeSafeJevMarketplace.CloseReview.case_status
+  - name: installed_version
+    description: The pack version installed on the tenant.
+    type: unknown
+    underlyingoutputcontextpath: TypeSafeJevMarketplace.CloseReview.installed_version
+  - name: errors
+    description: What could not be done, if anything.
+    type: unknown
+    underlyingoutputcontextpath: TypeSafeJevMarketplace.CloseReview.errors
+underlyingcontentitem:
+  id: CTTMarketplaceUpdates
+  name: CTTMarketplaceUpdates
+  type: script
+  version: -1
+requiresuserapproval: true
+fewshots:
+  - >-
+    "Core 3.7.2 is installed, close the Marketplace Guard case for it." Run pack="Core",
+    target_version="3.7.2", then report the issue and case status, or the version mismatch.
+  - >-
+    "Close case 29" where case 29 is "Marketplace Guard - manual review: Core 3.7.1 -> 3.7.2": take
+    pack Core and target 3.7.2 from the name, confirm with the user, then run.
+  - >-
+    WRONG: running it for a pack that is not installed at the target yet; the action refuses, and the
+    case stays open until the update is installed.
+marketplaces:
+  - platform
+supportedModules:
+  - agentix
