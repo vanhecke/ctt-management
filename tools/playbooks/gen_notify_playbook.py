@@ -22,9 +22,12 @@ NAME = "CTT - Hygiene - Notify Owner"
 ASK = "CTT - Hygiene - Ask Owner"
 NS = uuid.UUID("7a1e3c5d-9b2f-4e6a-8c0d-1f2e3d4c5b6a")
 CTX = "CTT.Triage"
-ROUND = {"clear": "1", "title": "2", "ask": "21", "wait": "22", "links": "23", "gate": "43", "dm": "24", "check": "26", "resolved": "27", "done": "29", "remember": "30", "fp": "28", "fpdone": "40"}
+ROUND = {"clear": "1", "title": "2", "ask": "21", "wait": "22", "links": "23", "gate": "43", "dm": "24", "nodm": "44", "check": "26", "resolved": "27", "done": "29", "remember": "30", "fp": "28", "fpdone": "40"}
 MAX_ROUNDS = 10  # the parent's loop over Ask Owner; the hourly watch keeps going after that
-WATCH = {"watch": "50", "fixed": "51", "close": "52"}
+WATCH = {"watch": "50", "fixed": "51", "close": "52", "ended": "57"}
+# Every condition task needs a #default# branch: a condition none of whose branches match fails the
+# task ("The output [] didn't satisfy any of the conditions", playbook state error).
+OPEN_AFTER_ROUNDS = "20"
 THANKS = {"answer": ("53", "54"), "watch": ("55", "56")}  # (gate, DM) in front of close 19 / 52
 _PB = NAME  # the playbook whose task IDs tid() derives; set per playbook in build()
 
@@ -157,7 +160,8 @@ def notify_playbook() -> dict:
     t["17"]["nexttasks"] = {"#none#": ["18"]}
     t["18"] = base("18", "condition", "Did the owner's answer close it?", "Yes for a verified fix, a guideline without a check, or a false positive.", 2040, x=50)
     t["18"]["conditions"] = [{"label": "yes", "condition": is_on("CTT.FixCheck.close")}]
-    t["18"]["nexttasks"] = {"yes": [THANKS["answer"][0]]}
+    t["18"]["nexttasks"] = {"yes": [THANKS["answer"][0]], "#default#": [OPEN_AFTER_ROUNDS]}
+    t[OPEN_AFTER_ROUNDS] = base(OPEN_AFTER_ROUNDS, "title", "Still open after the last question round", "The issue stays open; the hourly check and the daily digest carry on.", 2200, x=-250)
     add_thanks(t, THANKS["answer"], "19", "CTT.FixCheck", 2200, x=50)
     add_close(t, "19", "Close the issue: the owner's answer", "CTT.FixCheck", 2520, x=50)
     add_watch(t, 1880)
@@ -256,7 +260,8 @@ def add_watch(t: dict, y: int) -> None:
     t[WATCH["watch"]]["nexttasks"] = {"#none#": [WATCH["fixed"]]}
     t[WATCH["fixed"]] = base(WATCH["fixed"], "condition", "Fixed?", "", y + 160, x=650)
     t[WATCH["fixed"]]["conditions"] = [{"label": "yes", "condition": [[{"operator": "isTrue", "left": {"value": {"simple": "CTT.FixWatch.close"}, "iscontext": True}}]]}]
-    t[WATCH["fixed"]]["nexttasks"] = {"yes": [THANKS["watch"][0]]}
+    t[WATCH["fixed"]]["nexttasks"] = {"yes": [THANKS["watch"][0]], "#default#": [WATCH["ended"]]}
+    t[WATCH["ended"]] = base(WATCH["ended"], "title", "Watch ended: no automatic check for this issue", "Guidelines and object types without a check, and the daily inventory issues (they close at the next inventory run).", y + 320, x=1000)
     add_thanks(t, THANKS["watch"], WATCH["close"], "CTT.FixWatch", y + 320, x=650)
     add_close(t, WATCH["close"], "Close the issue: fixed (checked)", "CTT.FixWatch", y + 640, x=650)
 
@@ -303,7 +308,8 @@ def add_round(t: dict, r: dict, y: int) -> None:
     t[r["links"]]["nexttasks"] = {"#none#": [r["gate"]]}
     # Only the DM depends on notify (mode, allowlist, Slack ID, daily limit); the question waits
     # either way.
-    add_gate(t, r["gate"], y + 480, [r["dm"]], [])
+    add_gate(t, r["gate"], y + 480, [r["dm"]], [r["nodm"]])
+    t[r["nodm"]] = base(r["nodm"], "title", "No DM (see the triage reason)", "", y + 640, x=700)
     t[r["dm"]] = base(r["dm"], "regular", "Send the Slack DM",
                       "Lays out the DM (FOUND / RULE / FIX, or the AI text) with the answer links, as Slack buttons when notify.buttons is on, and sends it through the CTT Slack Webhook. From the second round on it starts with what the check still saw (CTT.Reask.note).",
                       y + 640, x=450, task_extra={"scriptName": "CTTHygieneSendDM"})

@@ -517,6 +517,28 @@ tasks:
     nexttasks:
       'yes':
       - '53'
+      '#default#':
+      - '20'
+  '20':
+    id: '20'
+    taskid: aa73de1e-1307-57fd-b7fe-2ef9de266069
+    type: title
+    task:
+      id: aa73de1e-1307-57fd-b7fe-2ef9de266069
+      version: -1
+      name: Still open after the last question round
+      description: The issue stays open; the hourly check and the daily digest carry on.
+      type: title
+      iscommand: false
+      brand: ''
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": -250, "y": 2200}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
   '53':
     id: '53'
     taskid: 138aa69e-2e1a-5a4e-ba76-4609a527cc31
@@ -683,6 +705,28 @@ tasks:
     nexttasks:
       'yes':
       - '55'
+      '#default#':
+      - '57'
+  '57':
+    id: '57'
+    taskid: 5ed0281e-7fcb-596d-a98c-e5b7399d3ffd
+    type: title
+    task:
+      id: 5ed0281e-7fcb-596d-a98c-e5b7399d3ffd
+      version: -1
+      name: 'Watch ended: no automatic check for this issue'
+      description: Guidelines and object types without a check, and the daily inventory issues (they close at the next inventory run).
+      type: title
+      iscommand: false
+      brand: ''
+    separatecontext: false
+    continueonerrortype: ''
+    view: '{"position": {"x": 1000, "y": 2200}}'
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
   '55':
     id: '55'
     taskid: 7ec1f1d3-0260-58b1-b569-647f8aec6d5a
