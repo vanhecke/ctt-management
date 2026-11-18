@@ -4,7 +4,8 @@
 
 1. Make sure you know the user's tag or email. Confirm it with <action=CTTRegistryLookupAction>.
 2. Run <action=CTTMyFootprintAction> with that tag or email. It inventories custom playbooks,
-   scripts, jobs, integration instances, correlation rules and lookups, plus open Security cases,
+   scripts, jobs, integration instances, correlation rules, lookups, data collectors, policy profiles,
+   policy rules and untagged endpoints, plus open Security cases,
    and returns the objects the user owns and the guideline findings for them. It takes a minute or
    two; tell the user you are checking.
 3. Answer with two short tables: what they own, and what to fix. For each finding, name the

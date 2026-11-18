@@ -46,7 +46,7 @@ after a day and resolved as Security Testing after 7 days.
 | List | CTT - Config | Pack settings (registry sheet, notify mode, inventory check, case housekeeping) |
 | List | CTT - Registry Source | CSV fallback registry, used when the sheet can't be read |
 | Dashboard | CTT - Hygiene | Issues by guideline, who changes what, untagged objects, stale cases, endpoint ownership, registry |
-| AI agent | CTT Assistant (`ctt-assistant-agent`) | Explains guidelines, looks up owners, shows a DC's footprint, closes finished Security Testing cases on request |
+| AI agent | CTT Assistant (`ctt-assistant-agent`) | Explains guidelines, looks up owners, shows a DC's footprint and hygiene issues, records fixes (with approval), closes finished Security Testing cases on request. What it can do, its limits and its parts: `Knowledge/CTTManagement/CTT-Assistant.md` (also part of its knowledge); test plan: `docs/CTT-Assistant-test-plan.md` |
 
 Every hygiene issue is a Medium (or High) health issue named
 `CTT - Hygiene - <guideline ID> - <what happened>`, and each opens its own case in the Health

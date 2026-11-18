@@ -8,7 +8,8 @@ tags:
 category: Utilities
 description: >-
   List what one DC owns on the shared tenant (custom playbooks, scripts, jobs, integration
-  instances, correlation rules, lookups) and which of their objects or open Security cases break
+  instances, correlation rules, lookups, data collectors, policy profiles, policy rules, untagged
+  endpoints) and which of their objects or open Security cases break
   the CTT guidelines, with the guideline ID and detail per finding. Read-only and slow (one to two
   minutes): it inventories the tenant.
 args:

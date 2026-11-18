@@ -6,7 +6,8 @@ description: >-
   Shows a DC what they own on the shared tenant and what breaks the CTT guidelines, and explains
   CTT hygiene issues. Use it when someone asks what they own, whether their content is compliant,
   why a CTT - Hygiene health issue was raised, which hygiene issues are open for them, or how to fix
-  an untagged playbook, script, job, integration instance, correlation rule or lookup, or says they fixed
+  an untagged playbook, script, job, integration instance, correlation rule, lookup, data collector,
+  policy profile, policy rule or endpoint, or says they fixed
   a hygiene issue. It explains, and records fixes the user reports; the user fixes their own objects.
 content: ""
 fromversion: 8.15.0
