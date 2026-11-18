@@ -64,8 +64,9 @@ join both.
 - A `CTT Slack Webhook` instance: the Slack workflow trigger URL, the CTT channel ID and a placeholder member ID.
 - A `TypeSafe Jev` instance (pack TypeSafeJev, command `jev-evaluate`) for `CTT - Marketplace Updates`. It is not a
   pack dependency, so the pack installs without it; the job then closes each run without changes.
-- `notify.mode` in `CTT - Config`: `allowlist` (default, DMs only to `notify.allowlist`), `admins_only`, `all` or `off`. `notify.use_ai` switches the DM text from the template to the AI prompt. `notify.false_positive_days` (default 30) keeps a finding marked a false positive from being raised again. `notify.buttons` (default `true`) sends the answer links as Slack buttons through the webhook action `msg_person_health_issue` (see the CTT Slack Webhook README); `false` lists them in the DM text.
+- `notify.mode` in `CTT - Config`: `all` (default, DMs to every owner in the registry sheet with a Slack ID), `allowlist` (DMs only to `notify.allowlist`, for testing), `admins_only` or `off`. `notify.use_ai` switches the DM text from the template to the AI prompt. `notify.false_positive_days` (default 30) keeps a finding marked a false positive from being raised again. `notify.buttons` (default `true`) sends the answer links as Slack buttons through the webhook action `msg_person_health_issue` (see the CTT Slack Webhook README); `false` lists them in the DM text.
 - Install the pack fresh (uninstall first) when upgrading from a version before 1.1.3: `adopted: true` only takes effect when a playbook is first installed, and playbooks must be adopted to run on issues.
+- `CTT - Config` is read-only on XSIAM 4.0 (pack lists are system items): change it in git and upload the pack.
 - `cases.dry_run` in `CTT - Config` ships as `true`: case housekeeping only reports until you set it to `false`.
 - XSIAM 4.0 for the agent's knowledge documents. On 8.15 the agent installs, but its knowledge is
   empty.
