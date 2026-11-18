@@ -35,7 +35,8 @@ dataset = management_auditing
     arrayindex(regextract(description, "installation package '(.+?)'"), 0),
     arrayindex(regextract(description, "script, name: (.+?), description"), 0),
     arrayindex(regextract(description, "^Edit (.+?), script id"), 0),
+    if(description ~= "^Next-Generation Firewall Data Collection", null, arrayindex(regextract(description, " Data Collection for (.+?) (?:created|edited|deleted)"), 0)),
     if(object_kind in ("Agent", "Action", "KnowledgeSource", "JobCenter"), arrayindex(regextract(description, "^(.+?)(?:, ID: .*)?$"), 0), null)
   )
 | alter obj_tag = lowercase(arrayindex(regextract(object_name, "^\s*([A-Za-z0-9]{2,16})\s*[-_]"), 0))
-| alter object_kind = if(object_kind = "RULES", if(description ~= "^Correlations? rule", "Correlation rule", if(description ~= "^BIOC", "BIOC rule", if(description ~= "^IOC", "IOC rule", "Detection rule"))), if(object_kind = "DISTRIBUTIONS", "Agent installer", if(object_kind = "POLICY_RULES", "Policy rule", if(object_kind = "POLICY_PROFILES", "Policy profile", if(object_kind = "DASHBOARD", "Dashboard", if(object_kind = "LOOKUPS", "Lookup dataset", if(object_kind = "DATASETS", "Dataset", if(object_kind = "CLOUDSEC_RULE", "Cloud security rule", object_kind))))))))
+| alter object_kind = if(object_kind = "RULES", if(description ~= "^Correlations? rule", "Correlation rule", if(description ~= "^BIOC", "BIOC rule", if(description ~= "^IOC", "IOC rule", "Detection rule"))), if(object_kind = "DISTRIBUTIONS", "Agent installer", if(object_kind = "POLICY_RULES", "Policy rule", if(object_kind = "POLICY_PROFILES", "Policy profile", if(object_kind = "DASHBOARD", "Dashboard", if(object_kind = "LOOKUPS", "Lookup dataset", if(object_kind = "DATASETS", "Dataset", if(object_kind = "CLOUDSEC_RULE", "Cloud security rule", if(object_kind in ("SAAS_COLLECTION", "COLLECTION"), "Data collector", object_kind)))))))))

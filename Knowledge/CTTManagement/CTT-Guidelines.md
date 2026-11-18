@@ -75,6 +75,7 @@ Start the name of every object you create with `<tag> - `, for example
 - Cloud workload and posture rules
 - Endpoint groups, asset groups, saved views and filters
 - Integration instances, engines, Broker VMs, agent installation packages
+- Data collectors: HTTP collectors and other data collection you set up under Data Sources
 - AI agents and AI actions you build
 
 Names that cannot hold spaces use `<tag>_<name>` instead: scripts (`jvanhecke_GetLabUsers`),
@@ -229,6 +230,7 @@ Before you leave the team, delete your objects or hand them over to another DC, 
 | Lookup table or dataset | `<tag>_<name>` (lower case) | `sf_lab_assets` |
 | Endpoint profile or policy rule | `<tag> - <name>` | `SF - Labs` |
 | Integration instance, engine, Broker VM | `<tag> - <name>` | `jvanhecke - jev` |
+| Data collector (HTTP collector) | `<tag> - <name>` | `SF - fortigate lab` |
 | Parsing or modeling rule | `// <tag>: <purpose>` comment | `// SF: fortigate lab parsing` |
 | List entry in a built-in list | Tag in a comment or the description | |
 | Endpoint | Endpoint tag `<tag>` | |
@@ -244,4 +246,4 @@ Before you leave the team, delete your objects or hand them over to another DC, 
 | 2026-11-07 | CTT-LAB-01: a lab octet also covers `172.16.<octet>.0/24` |
 | 2026-11-09 | How monitoring works: one issue per finding; a false positive is not raised again for 30 days |
 | 2026-11-09 | CTT-TAG-01: a playbook with your tag in its Tags field needs no name prefix |
-| 2026-11-18 | CTT-TAG-01: a script or job with your tag in its Tags field needs no name prefix either |
+| 2026-11-18 | CTT-TAG-01: a script or job with your tag in its Tags field needs no name prefix either; data collectors (HTTP collectors) need the prefix too |

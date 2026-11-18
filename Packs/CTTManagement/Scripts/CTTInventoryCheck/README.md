@@ -4,7 +4,11 @@ objects that already exist.
 
 It reads the registry from the `CTT - Registry` list (written by CTTRegistrySync), inventories
 custom playbooks, scripts, jobs, integration instances, correlation rules and lookup datasets
-through the tenant API, and checks them against the CTT guidelines:
+through the tenant API, and data collectors (HTTP collectors and other data collection) from the
+audit log, and checks them against the CTT guidelines. No API lists data collectors, and the audit
+log records a rename as an edit of the old name, so it lists collectors created in the last year and
+never edited or deleted since. It skips platform objects with fixed names: the `testmodule` instance
+and the user hook scripts (`CommonServerUserPython`, `CommonServerUserPowerShell`, `CommonUserServer`).
 
 | Guideline | Check |
 | --- | --- |

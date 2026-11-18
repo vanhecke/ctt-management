@@ -28,7 +28,94 @@ INDEX_KINDS = {
     "Integration instance": ("Integrations", "Integration"),
     "Correlation rule": ("Correlation rule",),
     "Lookup dataset": ("Lookup dataset", "Dataset"),
+    "Data collector": ("Data collector",),
 }
+# Platform objects that exist on every tenant under a fixed name: other code loads the user hook
+# scripts by name, and testmodule is the platform's own instance (no integration behind it).
+PLATFORM_SCRIPTS = {"CommonServerUserPython", "CommonServerUserPowerShell", "CommonUserServer"}
+PLATFORM_INSTANCE_BRANDS = {"testmodule"}
+COLLECTOR_DAYS = 365
+
+# BEGIN GENERATED INVENTORY_COLLECTOR_QUERY (tools/correlation_rules/gen_correlation_rules.py; do not edit)
+INVENTORY_COLLECTOR_QUERY = (
+    "dataset = management_auditing\n"
+    "| filter management_auditing_result = ENUM.MANAGEMENT_AUDIT_SUCCESS\n"
+    '| filter email != null and email != "" and email not in ("Palo Alto Networks", "N/A", "Xpanse Develo'
+    'pment", "Cortex Automation")\n'
+    '| filter user_name = null or user_name !~= "^(Public API - [0-9]+|APIKeyUser_[0-9]+|XSIAM Automation'
+    '|Cortex Automation)$"\n'
+    '| alter actor_email = if(email contains "@", lowercase(email), null), actor_name = lowercase(user_na'
+    "me)\n"
+    '| alter object_kind = coalesce(arrayindex(regextract(subtype, "^[A-Za-z ]+ - (.+)$"), 0), replex(to_'
+    'string(management_auditing_type), "^(MANAGEMENT_AUDIT_|management_auditing_type_)", ""))\n'
+    '| alter action = if(subtype ~= "^(Add|Upload|Copy|Create|New|Save as new|Import)" or subtype ~= "^(C'
+    'reate|Upload lookup|Addition)", "create", if(subtype ~= "(Delete|Remove)", "delete", if(subtype ~= "'
+    '(Edit|Change|Update|Modif|Adopt|Detach|Enable|Disable|Rename|Scope Edit)", "modify", "other")))\n'
+    "| alter object_name = coalesce(\n"
+    '    arrayindex(regextract(description, "ClonedPlaybookName: (.+?), ID:"), 0),\n'
+    '    arrayindex(regextract(description, "playbookName: (.+?), ID:"), 0),\n'
+    '    arrayindex(regextract(description, "scriptName: (.+?), (?:removed from|ID):"), 0),\n'
+    '    arrayindex(regextract(description, "aiTaskName: (.+?), "), 0),\n'
+    '    arrayindex(regextract(description, "CredentialsName: (.+?), ID:"), 0),\n'
+    '    arrayindex(regextract(description, "ModuleName: ([^,]+)"), 0),\n'
+    '    arrayindex(regextract(description, "ModuleBrand: (.+?), ID:"), 0),\n'
+    '    arrayindex(regextract(description, "Layout (?:created|edited|deleted) - Name: (.+?), ID:"), 0),\n'
+    '    arrayindex(regextract(description, "CaseField (?:created|edited|deleted) - Name: (.+?), Type:"),'
+    " 0),\n"
+    '    arrayindex(regextract(description, "Name: (.+?), JobID:"), 0),\n'
+    '    arrayindex(regextract(description, "JobID: [^,]+, Name: (.+?), ID:"), 0),\n'
+    '    arrayindex(regextract(description, "^name: (.+?), ID:"), 0),\n'
+    '    arrayindex(regextract(description, "^Name: (.+?), ID:"), 0),\n'
+    "    arrayindex(regextract(description, \"dashboard '(.+?)'\"), 0),\n"
+    '    arrayindex(regextract(description, "(?:BIOC|Correlations? rule|IOC|Analytics BIOC|Attack Surface'
+    ' Rule) [a-z]+ - name: (.+?),? id: "), 0),\n'
+    '    arrayindex(regextract(description, " profile (.+?) was (?:created|edited|deleted)"), 0),\n'
+    '    arrayindex(regextract(description, "policy rule (.+?) (?:with target|updated|scope updated|was d'
+    'eleted|was created|created|was)"), 0),\n'
+    '    arrayindex(regextract(description, "^Rule (.+?) status changed"), 0),\n'
+    '    arrayindex(regextract(description, "Security Control: [^,]+, (.+)$"), 0),\n'
+    "    arrayindex(regextract(description, \"Connector Template '?(.+?)'? (?:created|deleted|modified)\"),"
+    " 0),\n"
+    "    arrayindex(regextract(description, \"Endpoint group '(.+?)'\"), 0),\n"
+    '    arrayindex(regextract(description, "lookup dataset called (\\S+)"), 0),\n'
+    '    arrayindex(regextract(description, "Dataset (\\S+) of type"), 0),\n'
+    "    arrayindex(regextract(description, \"(?:query|macro) '(.+?)'\"), 0),\n"
+    "    arrayindex(regextract(description, \"report template\\(?s?\\)? '(.+?)'\"), 0),\n"
+    "    arrayindex(regextract(description, \"Cloud Security Rule '(.+?)'\"), 0),\n"
+    "    arrayindex(regextract(description, \"installation package '(.+?)'\"), 0),\n"
+    '    arrayindex(regextract(description, "script, name: (.+?), description"), 0),\n'
+    '    arrayindex(regextract(description, "^Edit (.+?), script id"), 0),\n'
+    '    if(description ~= "^Next-Generation Firewall Data Collection", null, arrayindex(regextract(descr'
+    'iption, " Data Collection for (.+?) (?:created|edited|deleted)"), 0)),\n'
+    '    if(object_kind in ("Agent", "Action", "KnowledgeSource", "JobCenter"), arrayindex(regextract(des'
+    'cription, "^(.+?)(?:, ID: .*)?$"), 0), null)\n'
+    "  )\n"
+    '| alter obj_tag = lowercase(arrayindex(regextract(object_name, "^\\s*([A-Za-z0-9]{2,16})\\s*[-_]"), 0)'
+    ")\n"
+    '| alter object_kind = if(object_kind = "RULES", if(description ~= "^Correlations? rule", "Correlatio'
+    'n rule", if(description ~= "^BIOC", "BIOC rule", if(description ~= "^IOC", "IOC rule", "Detection ru'
+    'le"))), if(object_kind = "DISTRIBUTIONS", "Agent installer", if(object_kind = "POLICY_RULES", "Polic'
+    'y rule", if(object_kind = "POLICY_PROFILES", "Policy profile", if(object_kind = "DASHBOARD", "Dashbo'
+    'ard", if(object_kind = "LOOKUPS", "Lookup dataset", if(object_kind = "DATASETS", "Dataset", if(objec'
+    't_kind = "CLOUDSEC_RULE", "Cloud security rule", if(object_kind in ("SAAS_COLLECTION", "COLLECTION")'
+    ', "Data collector", object_kind)))))))))\n'
+    '| join type = left (dataset = ctt_registry | filter owner_email != "" | alter is_adm = if(role = "ad'
+    'min", 1, 0) | comp max(is_adm) as reg_actor_admin by owner_email | alter reg_actor_email = owner_ema'
+    "il | fields reg_actor_email, reg_actor_admin) as ra ra.reg_actor_email = actor_email\n"
+    '| join type = left (dataset = ctt_registry | filter owner_email != "" | alter is_adm = if(role = "ad'
+    'min", 1, 0), reg_name_key = lowercase(owner_name) | comp max(is_adm) as reg_name_admin, max(owner_em'
+    "ail) as reg_name_email by reg_name_key | fields reg_name_key, reg_name_admin, reg_name_email) as rn "
+    "rn.reg_name_key = actor_name\n"
+    "| alter actor = coalesce(reg_actor_email, reg_name_email, actor_email, actor_name), actor_is_admin ="
+    " coalesce(reg_actor_admin, reg_name_admin, 0), actor_registered = if(coalesce(reg_actor_email, reg_n"
+    'ame_email) != null, "yes", "no")\n'
+    '| filter object_kind = "Data collector" and object_name != null and object_name != ""\n'
+    '| alter is_create = if(action = "create", 1, 0)\n'
+    "| comp count() as events, max(is_create) as has_create, earliest(actor) as creator by object_name\n"
+    "| filter events = 1 and has_create = 1\n"
+    "| fields object_name, creator"
+)
+# END GENERATED INVENTORY_COLLECTOR_QUERY
 QUOTED_RE = re.compile(r"'([^']+)'")
 DAY_MS = 86_400_000
 PAGE = 100  # the public API refuses search sizes above 100
@@ -257,7 +344,7 @@ def collect_objects(errors: list[str]) -> list[dict]:
         return [
             {"kind": "Script", "name": s.get("name"), "creator": s.get("user", ""), "tags": s.get("tags") or []}
             for s in res.get("scripts") or []
-            if not s.get("packID") and not s.get("system")
+            if not s.get("packID") and not s.get("system") and s.get("name") not in PLATFORM_SCRIPTS
         ]
 
     def jobs():
@@ -272,8 +359,12 @@ def collect_objects(errors: list[str]) -> list[dict]:
         return [
             {"kind": "Integration instance", "name": i.get("name"), "creator": ""}
             for i in res.get("instances") or []
-            if not i.get("isBuiltin") and not i.get("packID")
+            if not i.get("isBuiltin") and not i.get("packID") and i.get("brand") not in PLATFORM_INSTANCE_BRANDS
         ]
+
+    def collectors():
+        rows = run_xql(INVENTORY_COLLECTOR_QUERY, COLLECTOR_DAYS)
+        return [{"kind": "Data collector", "name": r.get("object_name"), "creator": r.get("creator") or ""} for r in rows]
 
     def correlation_rules():
         rows: list[dict] = []
@@ -309,9 +400,28 @@ def collect_objects(errors: list[str]) -> list[dict]:
         ("integration instances", instances),
         ("correlation rules", correlation_rules),
         ("lookups", lookups),
+        ("data collectors", collectors),
     ]:
         attempt(label, fn)
     return objects
+
+
+def run_xql(query: str, days: int, timeout: int = 300) -> list[dict]:
+    qid = core_post(
+        "/public_api/v1/xql/start_xql_query",
+        {"request_data": {"query": query, "timeframe": {"relativeTime": days * DAY_MS}}},
+    )
+    deadline = time.time() + timeout
+    while True:
+        res = core_post(
+            "/public_api/v1/xql/get_query_results",
+            {"request_data": {"query_id": qid, "pending_flag": True, "limit": 1000, "format": "json"}},
+        )
+        if res.get("status") == "SUCCESS":
+            return (res.get("results") or {}).get("data") or []
+        if res.get("status") not in ("PENDING", None) or time.time() > deadline:
+            raise DemistoException(f"XQL query {res.get('status') or 'timed out'}")
+        time.sleep(5)
 
 
 def read_owner_index() -> dict[tuple[str, str], str]:

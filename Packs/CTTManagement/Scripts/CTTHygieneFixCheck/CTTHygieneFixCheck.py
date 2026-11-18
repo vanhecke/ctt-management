@@ -106,6 +106,8 @@ FIX_POLICY_QUERY = (
     "    arrayindex(regextract(description, \"installation package '(.+?)'\"), 0),\n"
     '    arrayindex(regextract(description, "script, name: (.+?), description"), 0),\n'
     '    arrayindex(regextract(description, "^Edit (.+?), script id"), 0),\n'
+    '    if(description ~= "^Next-Generation Firewall Data Collection", null, arrayindex(regextract(descr'
+    'iption, " Data Collection for (.+?) (?:created|edited|deleted)"), 0)),\n'
     '    if(object_kind in ("Agent", "Action", "KnowledgeSource", "JobCenter"), arrayindex(regextract(des'
     'cription, "^(.+?)(?:, ID: .*)?$"), 0), null)\n'
     "  )\n"
@@ -116,7 +118,8 @@ FIX_POLICY_QUERY = (
     'le"))), if(object_kind = "DISTRIBUTIONS", "Agent installer", if(object_kind = "POLICY_RULES", "Polic'
     'y rule", if(object_kind = "POLICY_PROFILES", "Policy profile", if(object_kind = "DASHBOARD", "Dashbo'
     'ard", if(object_kind = "LOOKUPS", "Lookup dataset", if(object_kind = "DATASETS", "Dataset", if(objec'
-    't_kind = "CLOUDSEC_RULE", "Cloud security rule", object_kind))))))))\n'
+    't_kind = "CLOUDSEC_RULE", "Cloud security rule", if(object_kind in ("SAAS_COLLECTION", "COLLECTION")'
+    ', "Data collector", object_kind)))))))))\n'
     '| join type = left (dataset = ctt_registry | filter owner_email != "" | alter is_adm = if(role = "ad'
     'min", 1, 0) | comp max(is_adm) as reg_actor_admin by owner_email | alter reg_actor_email = owner_ema'
     "il | fields reg_actor_email, reg_actor_admin) as ra ra.reg_actor_email = actor_email\n"

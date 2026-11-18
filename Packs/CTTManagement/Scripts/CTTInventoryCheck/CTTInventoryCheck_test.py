@@ -1,4 +1,6 @@
+import CTTInventoryCheck
 from CTTInventoryCheck import (
+    collect_objects,
     find_owner,
     owner_index,
     reported_names,
@@ -178,3 +180,43 @@ def test_tagged_in_tags_field_needs_no_prefix():
     assert check_object({**script, "tags": ["Content Management"]}, REGISTRY)[0]["guideline"] == "CTT-TAG-01"
     # The tag's owner is still checked: bob is inactive.
     assert [f["guideline"] for f in check_object({**pb, "tags": ["bob"]}, REGISTRY)] == ["CTT-LIFE-02"]
+
+
+def test_collect_objects_skips_platform_objects_and_lists_collectors(monkeypatch):
+    """testmodule and the user hook scripts exist on every tenant under fixed names; data collectors
+    come from the audit log query (created and never edited or deleted)."""
+    replies = {
+        "/playbook/search": {"playbooks": []},
+        "/automation/search": {
+            "scripts": [
+                {"name": "CommonServerUserPython"},
+                {"name": "CommonUserServer"},
+                {"name": "GetLabUsers", "user": "a@x.com", "tags": ["ali"]},
+            ]
+        },
+        "/jobs/search": {"data": [{"name": "Nightly", "owner": "b@x.com", "tags": ["bob"]}]},
+        "/settings/integration/search": {
+            "instances": [
+                {"name": "testmodule", "brand": "testmodule"},
+                {"name": "Rasterize_default_instance", "brand": "Rasterize"},
+            ]
+        },
+        "/public_api/v1/correlations/get": {"objects": []},
+        "/public_api/v1/xql/get_datasets": [],
+    }
+    monkeypatch.setattr(CTTInventoryCheck, "core_post", lambda uri, body: replies[uri])
+    monkeypatch.setattr(CTTInventoryCheck, "run_xql", lambda query, days: [{"object_name": "asean_test1", "creator": "s@x.com"}])
+    errors: list[str] = []
+    objects = collect_objects(errors)
+    assert errors == []
+    assert [(o["kind"], o["name"]) for o in objects] == [
+        ("Script", "GetLabUsers"),
+        ("Job", "Nightly"),
+        ("Integration instance", "Rasterize_default_instance"),
+        ("Data collector", "asean_test1"),
+    ]
+    assert objects[0]["tags"] == ["ali"]
+    assert objects[1]["tags"] == ["bob"]
+    collector = check_object(objects[-1], REGISTRY)
+    assert collector[0]["guideline"] == "CTT-TAG-01"
+    assert collector[0]["owner"] == "s@x.com"

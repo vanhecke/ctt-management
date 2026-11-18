@@ -308,6 +308,16 @@ OWNER_INDEX_QUERY = f"""{EXTRACT}
 | comp earliest(actor) as first_actor, latest(actor) as last_editor, max(is_create) as has_create, max(_time) as last_ts by object_kind, object_name
 | alter creator = if(has_create = 1, first_actor, ""), last_change = format_timestamp("%Y-%m-%dT%H:%M:%SZ", last_ts)
 | fields object_kind, object_name, creator, last_editor, last_change"""
+# Data collectors (HTTP collectors and other data collection) that no API lists: those created in the
+# window and neither edited nor deleted since. The audit log records a rename as an edit of the old
+# name, so an edited collector may carry another name now and is left out.
+INVENTORY_COLLECTOR_QUERY = f"""{EXTRACT}
+{ACTOR}
+| filter object_kind = "Data collector" and object_name != null and object_name != ""
+| alter is_create = if(action = "create", 1, 0)
+| comp count() as events, max(is_create) as has_create, earliest(actor) as creator by object_name
+| filter events = 1 and has_create = 1
+| fields object_name, creator"""
 ENDPOINT_OWNER_QUERY = f"""{ENDPOINT_BASE}
 | fields endpoint_id, endpoint_name, lab_ip, owner, owner_source"""
 # Rule stages the fix check reuses, so it judges an issue fixed by the rule's own logic.
@@ -328,6 +338,7 @@ FIX_ENDPOINT_QUERY = f"""{ENDPOINT_BASE}
 # case housekeeping always agree on object names and endpoint owners.
 GENERATED = [
     (SCRIPTS / "CTTOwnerIndex" / "CTTOwnerIndex.py", "OWNER_QUERY", OWNER_INDEX_QUERY),
+    (SCRIPTS / "CTTInventoryCheck" / "CTTInventoryCheck.py", "INVENTORY_COLLECTOR_QUERY", INVENTORY_COLLECTOR_QUERY),
     (SCRIPTS / "CTTCaseHousekeeping" / "CTTCaseHousekeeping.py", "ENDPOINT_OWNER_QUERY", ENDPOINT_OWNER_QUERY),
     (SCRIPTS / "CTTHygieneFixCheck" / "CTTHygieneFixCheck.py", "FIX_POLICY_QUERY", FIX_POLICY_QUERY),
     (SCRIPTS / "CTTHygieneFixCheck" / "CTTHygieneFixCheck.py", "FIX_ENDPOINT_QUERY", FIX_ENDPOINT_QUERY),
