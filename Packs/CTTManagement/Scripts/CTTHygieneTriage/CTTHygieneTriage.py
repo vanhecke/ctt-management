@@ -78,6 +78,41 @@ def rename_target(kind: str, name: str, tag: str) -> str:
     return f"{tag}{sep}{rest}"
 
 
+ITEM_RE = re.compile(r"^(?P<kind>[A-Za-z][A-Za-z ]*?) '(?P<name>.+?)': (?P<detail>.+)$")
+MAX_NAMES = 8
+
+
+def summarize_items(lines: list[str]) -> str:
+    """The inventory items for the DM: items of one kind with the same finding on one line
+    ("Endpoints 'A', 'B': no registered endpoint or server tag"), and the reason the owner was
+    chosen once at the end when all items share it."""
+    groups: dict[tuple[str, str], list[str]] = {}
+    notes: list[str] = []
+    for line in lines:
+        m = ITEM_RE.match(line)
+        if not m:
+            groups.setdefault(("", line), [])
+            continue
+        detail, _, note = m.group("detail").partition("; owner: ")
+        groups.setdefault((m.group("kind"), detail), []).append(m.group("name"))
+        notes.append(note)
+    shared = notes[0] if notes and all(n == notes[0] for n in notes) else ""
+    parts = []
+    for (kind, detail), names in groups.items():
+        if not kind:
+            parts.append(detail)
+            continue
+        quoted = ", ".join(f"'{n}'" for n in names[:MAX_NAMES]) + (
+            f" and {len(names) - MAX_NAMES} more" if len(names) > MAX_NAMES else ""
+        )
+        label = kind if len(names) == 1 else (kind[:-1] + "ies" if kind.endswith("y") else kind + "s")
+        parts.append(f"{label} {quoted}: {detail}")
+    text = "; ".join(parts[:4]) + ("; ..." if len(parts) > 4 else "") + "."
+    if shared:
+        text += f" Why you: {shared}."
+    return text
+
+
 def compose(gid: str, title: str, details: str, tags: list[str], lab_octet: str) -> tuple[str, list[str]]:
     """FOUND sentence and FIX steps for the DM, per guideline, from the issue text."""
     tag = tags[0] if tags else "<your tag>"
@@ -88,7 +123,7 @@ def compose(gid: str, title: str, details: str, tags: list[str], lab_octet: str)
     finding = m.group("finding") if m else ""
     lines = [line[2:] for line in (details or "").splitlines() if line.startswith("- ")]
     if lines:  # an inventory check issue: a list of items
-        found = f"The inventory check found {len(lines)} item(s): " + "; ".join(lines[:4]) + ("; ..." if len(lines) > 4 else ".")
+        found = f"The inventory check found {len(lines)} item(s): " + summarize_items(lines)
         tag02 = []
         if any(line.startswith("Playbook ") for line in lines):
             tag02.append(f"Add one of your tags ({', '.join(tags) or tag}) to each playbook's Tags field")

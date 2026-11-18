@@ -138,3 +138,31 @@ def test_compose_inventory_policy_and_endpoints():
     found, fix = compose("CTT-LAB-02", "Endpoints without an owner tag", lab02, ["sfi"], "")
     assert found == "The inventory check found 1 item(s): Endpoint 'PC1': no registered endpoint or server tag."
     assert fix[0] == "Add sfi as an endpoint tag on each endpoint (Endpoints > All Endpoints > Endpoint Tags)"
+
+
+def test_compose_groups_inventory_items():
+    """Items of one kind with the same finding share a line; a shared owner reason is said once."""
+    details = (
+        "The inventory check found 4 item(s) for owner s@x.com that break guideline CTT-LAB-02.\n"
+        + "".join(
+            f"- Endpoint '{n}': no registered endpoint or server tag; owner: creator of installer XDR_Windows\n"
+            for n in ("PC1", "PC2", "PC3", "PC4")
+        )
+        + "[owner: s@x.com]"
+    )
+    found, _ = compose("CTT-LAB-02", "Endpoints without an owner tag", details, ["sfi"], "")
+    assert found == (
+        "The inventory check found 4 item(s): Endpoints 'PC1', 'PC2', 'PC3', 'PC4': no registered endpoint or server tag."
+        " Why you: creator of installer XDR_Windows."
+    )
+    mixed = (
+        "The inventory check found 3 item(s) for owner s@x.com that break guideline CTT-TAG-01.\n"
+        "- Policy profile 'SF - Labs': prefix 'sf' is not a registered tag\n"
+        "- Policy rule 'SF - Labs': prefix 'sf' is not a registered tag\n"
+        "- Policy rule 'SF - Test': prefix 'sf' is not a registered tag\n[owner: s@x.com]"
+    )
+    found, _ = compose("CTT-TAG-01", "Objects without a registered owner tag", mixed, ["sfi"], "")
+    assert found == (
+        "The inventory check found 3 item(s): Policy profile 'SF - Labs': prefix 'sf' is not a registered tag;"
+        " Policy rules 'SF - Labs', 'SF - Test': prefix 'sf' is not a registered tag."
+    )
