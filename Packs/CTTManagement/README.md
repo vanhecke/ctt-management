@@ -23,10 +23,10 @@ after a day and resolved as Security Testing after 7 days.
 | Correlation rule | CTT - Hygiene - Policy rule not scoped by your tag | Every 30 min: policy rule targets endpoint names or someone else's tags (CTT-TAG-02) |
 | Correlation rule | CTT - Hygiene - Centrally managed setting changed | Every 30 min, High: settings, permissions, SSO, packs, managed integrations or `CTT` content changed by a non-admin (CTT-CEN-01) |
 | Correlation rule | CTT - Hygiene - Endpoint outside owner's lab range | Daily: endpoint in an unassigned or someone else's lab range (10.x.0.0/16 or 172.16.x.0/24); owner from tags, its installer's creator or its policy's editor (CTT-LAB-01) |
-| (not shipped) | CTT - Hygiene - Endpoint without owner tag | Spec in tools/, ships once CTT-LAB-02 is accepted |
+| (not shipped) | CTT - Hygiene - Endpoint without owner tag | Spec in tools/; CTT-LAB-02 is covered by the inventory check instead (one issue per owner, not per endpoint) |
 | (not shipped) | CTT - Hygiene - API key created without expiry | Spec in tools/, ships once CTT-CEN-02 is accepted |
 | Job + playbook | CTT - Registry Sync | Every hour: Google Sheet registry to the `ctt_registry` lookup and the `CTT - Registry` list, then the audit log to the `ctt_object_owners` lookup |
-| Job + playbook | CTT - Hygiene - Inventory Check | 08:30 SGT: objects that already exist without a tag, playbook Tags fields, inactive owners; one issue per guideline and owner |
+| Job + playbook | CTT - Hygiene - Inventory Check | 08:30 SGT: objects that already exist without a tag (also data collectors, policy profiles and the policy rules in use), playbook Tags fields, policy rule scopes, untagged endpoints (CTT-LAB-02), inactive owners; one issue per guideline and owner |
 | Job + playbook | CTT - Hygiene - Fix Check | Every hour: resolves open rule issues whose fix it can verify and that have no running playbook, with a close note saying why; closes hygiene cases whose issues are all resolved |
 | Job + playbook | CTT - Hygiene - Reminders | Daily 10:00 SGT: one Slack digest per owner with their hygiene issues open for more than a day |
 | Job + playbook | CTT - Case Housekeeping | Every 4 h: assigns Security cases unassigned for a day, reminds owners to close quiet cases, resolves cases open for 7 days (starred cases are skipped) |

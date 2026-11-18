@@ -89,10 +89,19 @@ def compose(gid: str, title: str, details: str, tags: list[str], lab_octet: str)
     lines = [line[2:] for line in (details or "").splitlines() if line.startswith("- ")]
     if lines:  # an inventory check issue: a list of items
         found = f"The inventory check found {len(lines)} item(s): " + "; ".join(lines[:4]) + ("; ..." if len(lines) > 4 else ".")
+        tag02 = []
+        if any(line.startswith("Playbook ") for line in lines):
+            tag02.append(f"Add one of your tags ({', '.join(tags) or tag}) to each playbook's Tags field")
+        if any(line.startswith("Policy rule ") for line in lines):
+            tag02.append(f"Scope each policy rule to your endpoint tag (target: endpoint tag {tag}) instead of endpoint names")
         fixes = {
             "CTT-TAG-01": [f'Rename each one with your tag, for example "{tag} - <name>"'],
-            "CTT-TAG-02": [f"Add one of your tags ({', '.join(tags) or tag}) to each playbook's Tags field"],
+            "CTT-TAG-02": tag02 or [f"Add one of your tags ({', '.join(tags) or tag}) to each item's tag field or scope"],
             "CTT-LIFE-02": ["Hand them over to another DC or delete them"],
+            "CTT-LAB-02": [
+                f"Add {tag} as an endpoint tag on each endpoint (Endpoints > All Endpoints > Endpoint Tags)",
+                "Or uninstall the agents you no longer use",
+            ],
         }
         return found, fixes.get(gid, [f"Fix the items listed (guideline {gid})"])
     if gid in ("CTT-TAG-01", "CTT-TAG-04") and name:

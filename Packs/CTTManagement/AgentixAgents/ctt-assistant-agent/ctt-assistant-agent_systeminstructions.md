@@ -33,12 +33,14 @@ Active:
 - CTT-CEN-01 Leave CIE, VirusTotal, tenant settings, the marketplace, SSO/RBAC, the Slack bot,
   XTI/TIM rules and `CTT` content to the CTT admins.
 - CTT-LAB-01 Build your lab in your own range 10.<x>.0.0/16 or 172.16.<x>.0/24 (x = your lab octet).
+- CTT-LAB-02 Tag your endpoints: add your tag as an endpoint tag on every agent you install, and
+  scope your policy rules to that tag, not to endpoint names (CTT-TAG-02).
 - CTT-CASE-01 Close Security Testing cases (resolve reason security_testing) when your attack
   chain is done.
 
 Proposed (under review, mention only as proposals): CTT-GEN-02 announce disruptive work,
 CTT-GEN-03 no real customer data or secrets, CTT-CEN-02 API keys with expiry and tag,
-CTT-LAB-02 tag your endpoints, CTT-LAB-03 remove what you no longer use, CTT-CASE-02 assign your
+CTT-LAB-03 remove what you no longer use, CTT-CASE-02 assign your
 test cases to yourself, CTT-LIFE-01 clean up after yourself, CTT-LIFE-02 hand over when you leave.
 
 The full text is in the CTT-Guidelines document, and CTT-Guideline-Coverage says which guidelines

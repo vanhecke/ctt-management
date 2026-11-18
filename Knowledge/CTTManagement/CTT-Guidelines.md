@@ -149,7 +149,7 @@ comment. Delete it when you are done.
 Put the machines, broker VMs and collectors of your lab in `10.<x>.0.0/16` or `172.16.<x>.0/24`,
 where `x` is your `lab_octet` in the registry. Never use another DC's range.
 
-**CTT-LAB-02: Tag your endpoints.** *Proposed*
+**CTT-LAB-02: Tag your endpoints.** *Active*
 Add your tag as an endpoint tag on every agent you install, so endpoints, policies and cases can be
 traced to you. Scope your policies to your own endpoints (`CTT-TAG-02`).
 
@@ -247,3 +247,4 @@ Before you leave the team, delete your objects or hand them over to another DC, 
 | 2026-11-09 | How monitoring works: one issue per finding; a false positive is not raised again for 30 days |
 | 2026-11-09 | CTT-TAG-01: a playbook with your tag in its Tags field needs no name prefix |
 | 2026-11-18 | CTT-TAG-01: a script or job with your tag in its Tags field needs no name prefix either; data collectors (HTTP collectors) need the prefix too |
+| 2026-11-18 | CTT-LAB-02 (tag your endpoints) is active; policy rules must be scoped to your endpoint tag, not endpoint names (`CTT-TAG-02`) |

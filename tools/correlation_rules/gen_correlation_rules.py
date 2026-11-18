@@ -202,7 +202,7 @@ RULES = [
         "name": "CTT - Hygiene - Endpoint without owner tag",
         "guideline": "CTT-LAB-02",
         "enabled": False,
-        "description": "An endpoint carries no registered tag as an endpoint or server tag (CTT-LAB-02, proposed guideline; ships disabled).",
+        "description": "An endpoint carries no registered tag as an endpoint or server tag (CTT-LAB-02; not shipped: the inventory check reports untagged endpoints once per owner instead of one issue per endpoint).",
         "xql": f"""{ENDPOINT_BASE}
 | filter tag_owner = null
 | alter guideline_id = "CTT-LAB-02", title = "Endpoint without owner tag", finding = if(owner != null, concat("no endpoint tag; likely owner ", owner), "no endpoint tag and no owner found")
@@ -330,6 +330,26 @@ FIX_POLICY_QUERY = f"""{AUDIT}
 {SCOPE_STAGES.splitlines()[1]}
 | dedup object_name by desc _time
 | fields _time, object_name, action, actor, scope_target, scope_tags"""
+# Inventory check: the policies in use (assigned to an installed endpoint, built-in defaults left out)
+# and their latest scope from the audit log; no API lists policy rules.
+INVENTORY_POLICY_NAMES_QUERY = """dataset = endpoints
+| dedup endpoint_id by desc last_seen
+| filter endpoint_status != ENUM.UNINSTALLED
+| alter policy_names = arraycreate(coalesce(assigned_prevention_policy, ""), coalesce(assigned_extensions_policy, ""))
+| arrayexpand policy_names
+| filter policy_names != "" and policy_names !~= "^[A-Za-z]+ Default$"
+| comp count() as endpoints by policy_names
+| fields policy_names, endpoints"""
+INVENTORY_POLICY_SCOPE_QUERY = FIX_POLICY_QUERY
+# Inventory check, CTT-LAB-02: installed endpoints without a registered endpoint or server tag.
+INVENTORY_ENDPOINT_QUERY = (
+    ENDPOINT_BASE.replace(
+        "| dedup endpoint_id by desc last_seen", "| dedup endpoint_id by desc last_seen\n| filter endpoint_status != ENUM.UNINSTALLED", 1
+    )
+    + """
+| filter tag_owner = null
+| fields endpoint_name, owner, owner_source"""
+)
 FIX_ENDPOINT_QUERY = f"""{ENDPOINT_BASE}
 | filter endpoint_name in ("__NAMES__")
 | alter violating = if(lab_ip != null and (range_owner = null or (owner != null and range_owner != owner)), 1, 0)
@@ -339,6 +359,9 @@ FIX_ENDPOINT_QUERY = f"""{ENDPOINT_BASE}
 GENERATED = [
     (SCRIPTS / "CTTOwnerIndex" / "CTTOwnerIndex.py", "OWNER_QUERY", OWNER_INDEX_QUERY),
     (SCRIPTS / "CTTInventoryCheck" / "CTTInventoryCheck.py", "INVENTORY_COLLECTOR_QUERY", INVENTORY_COLLECTOR_QUERY),
+    (SCRIPTS / "CTTInventoryCheck" / "CTTInventoryCheck.py", "INVENTORY_POLICY_NAMES_QUERY", INVENTORY_POLICY_NAMES_QUERY),
+    (SCRIPTS / "CTTInventoryCheck" / "CTTInventoryCheck.py", "INVENTORY_POLICY_SCOPE_QUERY", INVENTORY_POLICY_SCOPE_QUERY),
+    (SCRIPTS / "CTTInventoryCheck" / "CTTInventoryCheck.py", "INVENTORY_ENDPOINT_QUERY", INVENTORY_ENDPOINT_QUERY),
     (SCRIPTS / "CTTCaseHousekeeping" / "CTTCaseHousekeeping.py", "ENDPOINT_OWNER_QUERY", ENDPOINT_OWNER_QUERY),
     (SCRIPTS / "CTTHygieneFixCheck" / "CTTHygieneFixCheck.py", "FIX_POLICY_QUERY", FIX_POLICY_QUERY),
     (SCRIPTS / "CTTHygieneFixCheck" / "CTTHygieneFixCheck.py", "FIX_ENDPOINT_QUERY", FIX_ENDPOINT_QUERY),

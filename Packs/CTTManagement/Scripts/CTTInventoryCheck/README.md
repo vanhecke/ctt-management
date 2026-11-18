@@ -5,7 +5,7 @@ objects that already exist.
 It reads the registry from the `CTT - Registry` list (written by CTTRegistrySync), inventories
 custom playbooks, scripts, jobs, integration instances, correlation rules and lookup datasets
 through the tenant API, and data collectors (HTTP collectors and other data collection) from the
-audit log, and checks them against the CTT guidelines. No API lists data collectors, and the audit
+audit log, custom policy profiles through the profiles API, the policy rules in use (assigned to an installed endpoint) with their latest scope from the audit log, and installed endpoints, and checks them against the CTT guidelines. No API lists data collectors, and the audit
 log records a rename as an edit of the old name, so it lists collectors created in the last year and
 never edited or deleted since. It skips platform objects with fixed names: the `testmodule` instance
 and the user hook scripts (`CommonServerUserPython`, `CommonServerUserPowerShell`, `CommonUserServer`).
@@ -13,7 +13,8 @@ and the user hook scripts (`CommonServerUserPython`, `CommonServerUserPowerShell
 | Guideline | Check |
 | --- | --- |
 | CTT-TAG-01 | Name has no tag prefix, or the prefix is not a registered tag (objects that already exist) |
-| CTT-TAG-02 | A playbook's Tags field lacks one of its owner's tags (tag fields are not in the audit log) |
+| CTT-TAG-02 | A playbook's Tags field lacks one of its owner's tags (tag fields are not in the audit log), or a policy rule in use is scoped to endpoint names, Any or someone else's tags instead of one of its owner's tags |
+| CTT-LAB-02 | An installed endpoint has no registered endpoint or server tag (reported to its likely owner, as for CTT-LAB-01) |
 | CTT-LIFE-02 | The tag's owner is marked inactive in the registry |
 
 The owner of an untagged object is its creator from the API when that is a person, else whoever

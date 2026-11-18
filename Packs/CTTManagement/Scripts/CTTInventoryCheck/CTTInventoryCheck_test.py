@@ -183,8 +183,8 @@ def test_tagged_in_tags_field_needs_no_prefix():
 
 
 def test_collect_objects_skips_platform_objects_and_lists_collectors(monkeypatch):
-    """testmodule and the user hook scripts exist on every tenant under fixed names; data collectors
-    come from the audit log query (created and never edited or deleted)."""
+    """testmodule and the user hook scripts exist on every tenant under fixed names; data collectors,
+    the policies in use and untagged endpoints come from XQL; custom profiles from the profiles API."""
     replies = {
         "/playbook/search": {"playbooks": []},
         "/automation/search": {
@@ -204,8 +204,32 @@ def test_collect_objects_skips_platform_objects_and_lists_collectors(monkeypatch
         "/public_api/v1/correlations/get": {"objects": []},
         "/public_api/v1/xql/get_datasets": [],
     }
-    monkeypatch.setattr(CTTInventoryCheck, "core_post", lambda uri, body: replies[uri])
-    monkeypatch.setattr(CTTInventoryCheck, "run_xql", lambda query, days: [{"object_name": "asean_test1", "creator": "s@x.com"}])
+    profiles = {
+        "prevention": [
+            {"PROFILE_NAME": "Default", "PROFILE_IS_DEFAULT": True, "PROFILE_CREATED_BY": "Palo Alto Networks"},
+            {"PROFILE_NAME": "SF - Labs", "PROFILE_IS_DEFAULT": False, "PROFILE_CREATED_BY": "s@x.com"},
+            {"PROFILE_NAME": "SF - Labs", "PROFILE_IS_DEFAULT": False, "PROFILE_CREATED_BY": "s@x.com"},
+        ],
+        "extension": [],
+    }
+
+    def core_post(uri, body):
+        if uri == "/public_api/v1/endpoints/get_profiles":
+            return profiles[body["request_data"]["type"]]
+        return replies[uri]
+
+    def run_xql(query, days):
+        if query is CTTInventoryCheck.INVENTORY_COLLECTOR_QUERY:
+            return [{"object_name": "asean_test1", "creator": "s@x.com"}]
+        if query is CTTInventoryCheck.INVENTORY_POLICY_NAMES_QUERY:
+            return [{"policy_names": "SF - Labs", "endpoints": 4}]
+        if query is CTTInventoryCheck.INVENTORY_ENDPOINT_QUERY:
+            return [{"endpoint_name": "KENZIE-LAPTOP", "owner": "s@x.com", "owner_source": "creator of installer XDR_Windows"}]
+        assert '"SF - Labs"' in query  # the scope query, with the names in use
+        return [{"object_name": "SF - Labs", "action": "modify", "scope_target": "endpoint in KENZIE-LAPTOP", "scope_tags": None}]
+
+    monkeypatch.setattr(CTTInventoryCheck, "core_post", core_post)
+    monkeypatch.setattr(CTTInventoryCheck, "run_xql", run_xql)
     errors: list[str] = []
     objects = collect_objects(errors)
     assert errors == []
@@ -214,9 +238,46 @@ def test_collect_objects_skips_platform_objects_and_lists_collectors(monkeypatch
         ("Job", "Nightly"),
         ("Integration instance", "Rasterize_default_instance"),
         ("Data collector", "asean_test1"),
+        ("Policy profile", "SF - Labs"),
+        ("Policy rule", "SF - Labs"),
+        ("Endpoint", "KENZIE-LAPTOP"),
     ]
     assert objects[0]["tags"] == ["ali"]
     assert objects[1]["tags"] == ["bob"]
-    collector = check_object(objects[-1], REGISTRY)
+    assert objects[5]["scope_target"] == "endpoint in KENZIE-LAPTOP"
+    collector = check_object(objects[3], REGISTRY)
     assert collector[0]["guideline"] == "CTT-TAG-01"
     assert collector[0]["owner"] == "s@x.com"
+
+
+def test_policy_rule_scope_and_untagged_endpoints():
+    """CTT-TAG-02: a policy rule's scope must target one of its owner's tags; CTT-LAB-02: endpoints
+    come in without a registered tag and are reported to their likely owner."""
+    owners = owner_index([{"object_kind": "Policy rule", "object_name": "SF - Labs", "creator": "alice@x.com"}])
+    policy = {
+        "kind": "Policy rule",
+        "name": "SF - Labs",
+        "creator": "",
+        "scope_target": "endpoint in PC1, PC2",
+        "scope_tags": None,
+    }
+    found = check_object(policy, REGISTRY, owners)
+    assert [(f["guideline"], f["owner"]) for f in found] == [("CTT-TAG-01", "alice@x.com"), ("CTT-TAG-02", "alice@x.com")]
+    assert found[1]["detail"] == "its scope targets endpoint in PC1, PC2, not one of the owner's tags"
+    tagged = {**policy, "name": "alice - Labs"}
+    assert check_object({**tagged, "scope_target": "tags = ali", "scope_tags": "ALI"}, REGISTRY) == []
+    other = check_object({**tagged, "scope_target": "tags = bob", "scope_tags": "bob"}, REGISTRY)
+    assert other[0]["detail"] == "its scope targets tag bob, not one of the owner's tags"
+    # Without a known scope (older than the audit window) only the name is checked.
+    assert check_object({**tagged, "scope_target": None}, REGISTRY) == []
+    endpoint = {"kind": "Endpoint", "name": "PC1", "creator": "alice@x.com", "owner_source": "creator of installer XDR_Windows"}
+    assert check_object(endpoint, REGISTRY) == [
+        {
+            "kind": "Endpoint",
+            "name": "PC1",
+            "guideline": "CTT-LAB-02",
+            "owner": "alice@x.com",
+            "detail": "no registered endpoint or server tag; owner: creator of installer XDR_Windows",
+        }
+    ]
+    assert check_object({**endpoint, "creator": ""}, REGISTRY)[0]["owner"] == "unknown"

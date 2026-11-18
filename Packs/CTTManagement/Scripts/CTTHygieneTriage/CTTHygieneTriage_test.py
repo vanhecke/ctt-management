@@ -122,3 +122,19 @@ def test_compose_policy_scope():
         "lnx-2.europe-west1-b.c.prod.internal instead of your endpoint tag."
     )
     assert fix[0] == "Change its target to endpoints tagged jva"
+
+
+def test_compose_inventory_policy_and_endpoints():
+    tag02 = (
+        "The inventory check found 1 item(s) for owner s@x.com that break guideline CTT-TAG-02.\n"
+        "- Policy rule 'SF - Labs': its scope targets endpoint in PC1, not one of the owner's tags\n[owner: s@x.com]"
+    )
+    _, fix = compose("CTT-TAG-02", "Owner tag missing from a tag field or policy scope", tag02, ["sfi"], "")
+    assert fix == ["Scope each policy rule to your endpoint tag (target: endpoint tag sfi) instead of endpoint names"]
+    lab02 = (
+        "The inventory check found 1 item(s) for owner s@x.com that break guideline CTT-LAB-02.\n"
+        "- Endpoint 'PC1': no registered endpoint or server tag\n[owner: s@x.com]"
+    )
+    found, fix = compose("CTT-LAB-02", "Endpoints without an owner tag", lab02, ["sfi"], "")
+    assert found == "The inventory check found 1 item(s): Endpoint 'PC1': no registered endpoint or server tag."
+    assert fix[0] == "Add sfi as an endpoint tag on each endpoint (Endpoints > All Endpoints > Endpoint Tags)"
