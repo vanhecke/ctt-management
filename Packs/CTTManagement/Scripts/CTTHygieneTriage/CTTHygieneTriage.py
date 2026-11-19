@@ -244,16 +244,23 @@ def get_json_list(name: str, default):
 
 
 def tenant_users() -> list[dict]:  # pragma: no cover
-    """The tenant's users with their last sign-in (rbac/get_users), or [] when the API can't be reached."""
-    res = demisto.executeCommand(
-        "core-api-post", {"uri": "/public_api/v1/rbac/get_users", "body": json.dumps({"request_data": {}})}
-    )
-    if is_error(res):
-        demisto.debug(f"rbac/get_users failed: {get_error(res)}")
+    """The tenant's users (rbac/get_users), or [] when the API can't be reached: then the issue goes to the
+    registry email."""
+    try:
+        res = demisto.executeCommand(
+            "core-api-post", {"uri": "/public_api/v1/rbac/get_users", "body": json.dumps({"request_data": {}})}
+        )
+        if is_error(res):
+            raise DemistoException(get_error(res))
+        contents = res[0].get("Contents") or {}
+        if isinstance(contents, str):
+            contents = json.loads(contents)
+        response = contents.get("response") or {}
+        users = response.get("reply", response) if isinstance(response, dict) else response
+        return users if isinstance(users, list) else []
+    except Exception as e:
+        demisto.debug(f"rbac/get_users failed: {e}")
         return []
-    response = (res[0].get("Contents") or {}).get("response") or {}
-    users = response.get("reply", response) if isinstance(response, dict) else response
-    return users if isinstance(users, list) else []
 
 
 def main():  # pragma: no cover
