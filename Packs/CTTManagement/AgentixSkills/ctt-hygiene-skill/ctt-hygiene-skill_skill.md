@@ -20,7 +20,8 @@ Objects without a tag prefix are attributed to their creator when the tenant rec
 Hygiene issues are Medium health issues named `CTT - Hygiene - <ID> - <what happened>`. Find the
 open ones for a person with <action=CortexRunXQLQuery>, timeframe 30 days, widget name
 "CTT hygiene issues", widget description "Open CTT hygiene issues", and this query (replace the
-email):
+email with their registry email, owner_email from <action=CTTRegistryLookupAction>; for a CTT SSO
+sign-in `jdoe@asean.ctt` that is `jdoe@paloaltonetworks.com`):
 
 ```
 dataset = issues

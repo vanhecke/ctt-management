@@ -28,12 +28,15 @@ MANAGED_BRANDS = [
     "Cortex Core - IOC", "XQL Query Engine", "GoogleSheets", "GoogleDrive", "GoogleDocs", "GoogleCalendar",
 ]
 AUDIT_FIELDS = "| fields _time, actor, actor_email, actor_registered, object_kind, object_name, obj_tag, obj_owner, action, subtype, finding, guideline_id, title, description"
-AUDIT_LINK = 'dataset = management_auditing | filter email = "$actor_email" or lowercase(user_name) = "$actor" | sort desc _time'
+# CTT SSO accounts (<user>@asean.ctt) are the same people as <user>@paloaltonetworks.com, the email in
+# the CTT registry: every query maps a sign-in email to the registry email with CANON_EMAIL.
+CANON_EMAIL = 'replex(lowercase(email), "@asean\\.ctt$", "@paloaltonetworks.com")'
+AUDIT_LINK = f'dataset = management_auditing | filter {CANON_EMAIL} = "$actor_email" or lowercase(user_name) = "$actor" | sort desc _time'
 
-LOGIN_BASE = """dataset = management_auditing
+LOGIN_BASE = f"""dataset = management_auditing
 | filter management_auditing_type = ENUM.MANAGEMENT_AUDIT_AUTHENTICATION and subtype in ("Login", "SSO") and management_auditing_result = ENUM.MANAGEMENT_AUDIT_SUCCESS
 | filter email contains "@" and email !~= "@crtxtool\\.invalid$"
-| alter actor_email = lowercase(email), actor_name = lowercase(user_name)
+| alter actor_email = {CANON_EMAIL}, actor_name = lowercase(user_name)
 | comp count() as logins, max(_time) as last_login by actor_email, actor_name"""
 
 ENDPOINT_BASE = """dataset = endpoints
@@ -75,7 +78,7 @@ RULES = [
         "window": "24 hours",
         "suppress": ["actor_email"],
         "owner_field": "actor_email",
-        "link": 'dataset = management_auditing | filter email = "$actor_email" | sort desc _time',
+        "link": f'dataset = management_auditing | filter {CANON_EMAIL} = "$actor_email" | sort desc _time',
         "fields": {"actor_effective_username": "actor_email"},
     },
     {
@@ -224,7 +227,7 @@ RULES = [
         "xql": """dataset = management_auditing
 | filter management_auditing_type = ENUM.MANAGEMENT_AUDIT_API_KEY and subtype = "Add New Key" and description contains "Expiration UTC Time: Not specified"
 | filter management_auditing_result = ENUM.MANAGEMENT_AUDIT_SUCCESS and email contains "@"
-| alter actor_email = if(email contains "@", lowercase(email), null), actor_name = lowercase(user_name)
+| alter actor_email = if(email contains "@", replex(lowercase(email), "@asean\\.ctt$", "@paloaltonetworks.com"), null), actor_name = lowercase(user_name)
 """
         + ACTOR
         + """

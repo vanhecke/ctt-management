@@ -7,6 +7,7 @@ from CTTCaseHousekeeping import (
     decide_dm,
     host_endpoint_ids,
     lab_octets,
+    pick_assignee,
     pick_owner,
     plan_case,
     prune_state,
@@ -109,3 +110,14 @@ def test_prune_state():
 def test_lab_octets_include_172_16_addresses():
     case = {"hosts": ["172.16.21.9:172.16.21.9"], "description": "10.20.1.2 to 172.16.33.4, not 172.17.1.1 or 192.168.1.1"}
     assert lab_octets(case) == ["21", "20", "33"]
+
+
+def test_case_assignee_is_the_panw_account_when_it_exists():
+    owner = "jdoe@paloaltonetworks.com"
+    users = [{"user_email": owner}, {"user_email": "jdoe@asean.ctt"}]
+    assert pick_assignee(owner, users) == owner
+    assert pick_assignee(owner, users[1:]) == "jdoe@asean.ctt"
+
+
+def test_pick_owner_maps_sso_endpoint_owners():
+    assert pick_owner([], ["JDoe@asean.ctt"], [], {}, {}) == ("jdoe@paloaltonetworks.com", "endpoint owner")

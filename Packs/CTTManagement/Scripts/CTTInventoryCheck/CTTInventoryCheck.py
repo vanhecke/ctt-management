@@ -48,8 +48,8 @@ INVENTORY_COLLECTOR_QUERY = (
     'pment", "Cortex Automation")\n'
     '| filter user_name = null or user_name !~= "^(Public API - [0-9]+|APIKeyUser_[0-9]+|XSIAM Automation'
     '|Cortex Automation)$"\n'
-    '| alter actor_email = if(email contains "@", lowercase(email), null), actor_name = lowercase(user_na'
-    "me)\n"
+    '| alter actor_email = if(email contains "@", replex(lowercase(email), "@asean\\.ctt$", "@paloaltonetw'
+    'orks.com"), null), actor_name = lowercase(user_name)\n'
     '| alter object_kind = coalesce(arrayindex(regextract(subtype, "^[A-Za-z ]+ - (.+)$"), 0), replex(to_'
     'string(management_auditing_type), "^(MANAGEMENT_AUDIT_|management_auditing_type_)", ""))\n'
     '| alter action = if(subtype ~= "^(Add|Upload|Copy|Create|New|Save as new|Import)" or subtype ~= "^(C'
@@ -143,8 +143,8 @@ INVENTORY_POLICY_SCOPE_QUERY = (
     'pment", "Cortex Automation")\n'
     '| filter user_name = null or user_name !~= "^(Public API - [0-9]+|APIKeyUser_[0-9]+|XSIAM Automation'
     '|Cortex Automation)$"\n'
-    '| alter actor_email = if(email contains "@", lowercase(email), null), actor_name = lowercase(user_na'
-    "me)\n"
+    '| alter actor_email = if(email contains "@", replex(lowercase(email), "@asean\\.ctt$", "@paloaltonetw'
+    'orks.com"), null), actor_name = lowercase(user_name)\n'
     '| alter object_kind = coalesce(arrayindex(regextract(subtype, "^[A-Za-z ]+ - (.+)$"), 0), replex(to_'
     'string(management_auditing_type), "^(MANAGEMENT_AUDIT_|management_auditing_type_)", ""))\n'
     '| alter action = if(subtype ~= "^(Add|Upload|Copy|Create|New|Save as new|Import)" or subtype ~= "^(C'
@@ -281,6 +281,17 @@ PAGE = 100  # the public API refuses search sizes above 100
 # ---------- pure helpers (unit tested) ----------
 
 
+# CTT SSO accounts (<user>@asean.ctt) are the same people as <user>@paloaltonetworks.com, the email in
+# the CTT registry. Every email from the tenant goes through canonical_email before a registry lookup.
+SSO_DOMAIN, HOME_DOMAIN = "@asean.ctt", "@paloaltonetworks.com"
+
+
+def canonical_email(email) -> str:
+    """The registry email for a sign-in email: <user>@asean.ctt (CTT SSO) is <user>@paloaltonetworks.com."""
+    e = str(email or "").strip().lower()
+    return e[: -len(SSO_DOMAIN)] + HOME_DOMAIN if e.endswith(SSO_DOMAIN) else e
+
+
 def parse_tag(name: str) -> str | None:
     m = TAG_RE.match(name or "")
     return m.group(1).lower() if m else None
@@ -290,7 +301,7 @@ SYSTEM_CREATORS = {"dbot@demisto.com", "dbot", "palo alto networks", "n/a"}
 
 
 def normalize_creator(creator: str | None) -> str:
-    c = (creator or "").strip().lower()
+    c = canonical_email(creator)
     return "unknown" if not c or c in SYSTEM_CREATORS else c
 
 

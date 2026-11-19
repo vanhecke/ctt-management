@@ -217,3 +217,10 @@ def test_check_listed_tags_field():
     # CTT-TAG-04 (someone else's tag in the name) still needs the rename.
     tags04 = {("Playbook", "Local copy"): {"jvanhecke"}}
     assert check_listed(dict(item, guideline="CTT-TAG-04"), names, tags04, {"jvanhecke"})[0] == "open"
+
+
+def test_parse_issue_maps_sso_accounts_to_the_registry_email():
+    raw = issue("CTT - Hygiene - CTT-LAB-01 - x", "Endpoint a: y. [owner: unknown]", assigned_user_mail="Sfi@asean.ctt")
+    assert parse_issue(raw)["owner"] == "sfi@paloaltonetworks.com"
+    raw = issue("CTT - Hygiene - CTT-LAB-01 - x", "Endpoint a: y. [owner: sfi@asean.ctt]")
+    assert parse_issue(raw)["owner"] == "sfi@paloaltonetworks.com"

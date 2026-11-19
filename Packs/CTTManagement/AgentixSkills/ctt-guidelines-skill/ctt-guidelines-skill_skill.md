@@ -34,7 +34,8 @@ To list the CTT admins, look up with an empty query and keep the people whose ro
 
 ## "Show my CTT registration" (my tags, lab octet, IP ranges)
 
-Look up the signed-in user's email and answer with a short table: their primary tag and aliases,
+Look up the signed-in user's email (a CTT SSO email `<user>@asean.ctt` finds their
+`<user>@paloaltonetworks.com` row) and answer with a short table: their primary tag and aliases,
 their lab octet, both lab ranges (10.<x>.0.0/16 and 172.16.<x>.0/24), their role (DC or CTT admin)
 and whether they are active. Remind them to prefix everything they
 create with one of their tags and to tag their endpoints. If they are not in the registry, say so and

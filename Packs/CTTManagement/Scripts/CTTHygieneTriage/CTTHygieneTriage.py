@@ -11,17 +11,45 @@ NO_OWNER = {"", "unknown", "unassigned", "central", "null", "empty", "none"}
 NOTIFY_STATE = "CTT - Notify State"
 
 
+# CTT SSO accounts (<user>@asean.ctt) are the same people as <user>@paloaltonetworks.com, the email in
+# the CTT registry. Every email from the tenant goes through canonical_email before a registry lookup.
+SSO_DOMAIN, HOME_DOMAIN = "@asean.ctt", "@paloaltonetworks.com"
+
+
+def canonical_email(email) -> str:
+    """The registry email for a sign-in email: <user>@asean.ctt (CTT SSO) is <user>@paloaltonetworks.com."""
+    e = str(email or "").strip().lower()
+    return e[: -len(SSO_DOMAIN)] + HOME_DOMAIN if e.endswith(SSO_DOMAIN) else e
+
+
+def sso_account(email) -> str:
+    """The CTT SSO account (<user>@asean.ctt) of a registry email, or '' for other domains."""
+    e = canonical_email(email)
+    return e[: -len(HOME_DOMAIN)] + SSO_DOMAIN if e.endswith(HOME_DOMAIN) else ""
+
+
+def pick_assignee(owner: str, users: list[dict]) -> str:
+    """The owner's tenant account to assign to: the registry email (<user>@paloaltonetworks.com) when that
+    user exists on the tenant, else their CTT SSO account (<user>@asean.ctt) when that one exists, else the
+    registry email. users: rbac/get_users rows."""
+    emails = {str(u.get("user_email") or "").strip().lower() for u in users or []}
+    sso = sso_account(owner)
+    if owner not in emails and sso and sso in emails:
+        return sso
+    return owner
+
+
 def find_owner(issue: dict) -> str:
     """The owner marker the CTT rules and sweep put in every issue description, else a mapped field."""
     custom = issue.get("CustomFields") or {}
     for text in (issue.get("details"), issue.get("description"), custom.get("description")):
         m = OWNER_RE.search(text or "")
         if m:
-            return m.group(1).strip().lower()
+            return canonical_email(m.group(1))
     for field in ("actor_effective_username", "actoreffectiveusername"):
         value = issue.get(field) or custom.get(field)
         if value:
-            return str(value).strip().lower()
+            return canonical_email(value)
     return ""
 
 
@@ -215,6 +243,19 @@ def get_json_list(name: str, default):
         return default
 
 
+def tenant_users() -> list[dict]:  # pragma: no cover
+    """The tenant's users with their last sign-in (rbac/get_users), or [] when the API can't be reached."""
+    res = demisto.executeCommand(
+        "core-api-post", {"uri": "/public_api/v1/rbac/get_users", "body": json.dumps({"request_data": {}})}
+    )
+    if is_error(res):
+        demisto.debug(f"rbac/get_users failed: {get_error(res)}")
+        return []
+    response = (res[0].get("Contents") or {}).get("response") or {}
+    users = response.get("reply", response) if isinstance(response, dict) else response
+    return users if isinstance(users, list) else []
+
+
 def main():  # pragma: no cover
     try:
         issue = demisto.incident() or {}
@@ -256,6 +297,7 @@ def main():  # pragma: no cover
             "guideline_title": guideline.get("title", ""),
             "guideline_text": guideline.get("text", ""),
             "owner_email": owner,
+            "assignee_email": pick_assignee(owner, tenant_users()) if assign else owner,
             "owner_name": entry.get("owner_name", ""),
             "first_name": first_name,
             "slack_id": entry.get("slack_id", ""),
@@ -270,7 +312,9 @@ def main():  # pragma: no cover
             "fallback_message": fallback_message(first_name, title, details, gid, guideline.get("title", ""), url),
         }
         md = tableToMarkdown(
-            "CTT hygiene triage", out, headers=["guideline_id", "owner_email", "slack_id", "assign", "notify", "reason"]
+            "CTT hygiene triage",
+            out,
+            headers=["guideline_id", "owner_email", "assignee_email", "slack_id", "assign", "notify", "reason"],
         )
         return_results(CommandResults(readable_output=md, outputs_prefix="CTT.Triage", outputs_key_field="issue_id", outputs=out))
     except Exception as e:

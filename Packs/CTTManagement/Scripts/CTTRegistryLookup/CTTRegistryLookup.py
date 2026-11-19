@@ -9,13 +9,24 @@ REGISTRY_LIST = "CTT - Registry"
 IP_RE = re.compile(r"^(?:10\.(\d{1,3})\.\d{1,3}\.\d{1,3}|172\.16\.(\d{1,3})\.\d{1,3})$")
 
 
+# CTT SSO accounts (<user>@asean.ctt) are the same people as <user>@paloaltonetworks.com, the email in
+# the CTT registry. Every email from the tenant goes through canonical_email before a registry lookup.
+SSO_DOMAIN, HOME_DOMAIN = "@asean.ctt", "@paloaltonetworks.com"
+
+
+def canonical_email(email) -> str:
+    """The registry email for a sign-in email: <user>@asean.ctt (CTT SSO) is <user>@paloaltonetworks.com."""
+    e = str(email or "").strip().lower()
+    return e[: -len(SSO_DOMAIN)] + HOME_DOMAIN if e.endswith(SSO_DOMAIN) else e
+
+
 def lab_range(octet: str) -> str:
     return f"10.{octet}.0.0/16, 172.16.{octet}.0/24" if octet else ""
 
 
 def lookup(rows: list[dict], query: str) -> tuple[str, list[dict]]:
     """Match a tag, email, name, lab octet or lab address (10.x.y.z, 172.16.x.y). Returns (match type, rows)."""
-    q = (query or "").strip().lower()
+    q = canonical_email(query)
     if not q:
         return "all", rows
     m = IP_RE.match(q)

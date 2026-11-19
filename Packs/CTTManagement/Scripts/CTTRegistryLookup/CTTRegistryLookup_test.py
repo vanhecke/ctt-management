@@ -71,3 +71,10 @@ def test_summarise_groups_by_person():
     assert len(people) == 1
     assert people[0]["tags"] == ["ali", "alice"]
     assert people[0]["lab_range"] == "10.1.0.0/16, 172.16.1.0/24"
+
+
+def test_lookup_by_sso_email_finds_the_registry_person():
+    rows = [{**ROWS[2], "owner_email": "bob@paloaltonetworks.com"}]
+    kind, found = lookup(rows, "Bob@asean.ctt")
+    assert kind == "email"
+    assert [r["tag"] for r in found] == ["bob"]

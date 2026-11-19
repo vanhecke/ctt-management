@@ -57,6 +57,11 @@ Lookups the pack keeps: `ctt_registry` (tags, owners, lab octets, Slack IDs) and
 `ctt_object_owners` (who created and last changed each object, from the audit log). The rules
 join both.
 
+People are identified by their registry email (`<user>@paloaltonetworks.com`). A CTT SSO account
+(`<user>@asean.ctt`) is the same person: the rules, scripts, dashboard and agent map it to the
+registry email. Issues and cases are assigned to the `@paloaltonetworks.com` account when it exists
+on the tenant, else to the `@asean.ctt` account.
+
 ## Requirements
 
 - A Core REST API instance (used by all scripts).

@@ -6,9 +6,20 @@ import json
 REGISTRY_LIST = "CTT - Registry"
 
 
+# CTT SSO accounts (<user>@asean.ctt) are the same people as <user>@paloaltonetworks.com, the email in
+# the CTT registry. Every email from the tenant goes through canonical_email before a registry lookup.
+SSO_DOMAIN, HOME_DOMAIN = "@asean.ctt", "@paloaltonetworks.com"
+
+
+def canonical_email(email) -> str:
+    """The registry email for a sign-in email: <user>@asean.ctt (CTT SSO) is <user>@paloaltonetworks.com."""
+    e = str(email or "").strip().lower()
+    return e[: -len(SSO_DOMAIN)] + HOME_DOMAIN if e.endswith(SSO_DOMAIN) else e
+
+
 def resolve_owner(rows: list[dict], who: str) -> tuple[str, set[str]]:
     """Returns (owner email, all tags of that owner) for a tag or an email."""
-    q = (who or "").strip().lower()
+    q = canonical_email(who)
     match = next((r for r in rows if r.get("tag") == q), None) or next((r for r in rows if r.get("owner_email") == q), None)
     if not match:
         return (q if "@" in q else ""), set()

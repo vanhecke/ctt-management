@@ -39,6 +39,10 @@ synced into the tenant every hour.
 - Your **lab range** is `10.<octet>.0.0/16` and `172.16.<octet>.0/24`, where the octet is your number
   in the registry.
 - The registry also records your Slack member ID and whether you are a CTT admin.
+- You can sign in with your Palo Alto Networks account or your CTT SSO account
+  (`<username>@asean.ctt`). Both are you: the registry keeps your `@paloaltonetworks.com` email,
+  and the CTT checks treat `<username>@asean.ctt` as that email. Hygiene issues are assigned to your
+  `@paloaltonetworks.com` account when it exists on the tenant.
 
 The registry sheet has two tabs: `ctt_asean_users` (tag, octet, owner_email, owner_name,
 slack_id, ctt_admin, active) and `ctt_asean_extra_tags` (tag, owner_email, owner_name,

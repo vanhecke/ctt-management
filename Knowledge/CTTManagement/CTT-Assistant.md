@@ -9,7 +9,8 @@ installed by the CTTManagement pack and is public: everyone on the tenant can us
 
 Open the Agentic Assistant, pick **CTT Assistant**, and ask in plain language or click a conversation
 starter. It knows who you are (the signed-in user) and looks you up in the CTT registry for your tags
-and lab range. Some answers take a minute or two (your footprint runs the inventory check); it says so.
+and lab range. Signed in with your CTT SSO account (`<username>@asean.ctt`), you are the same person as
+your `@paloaltonetworks.com` registry email. Some answers take a minute or two (your footprint runs the inventory check); it says so.
 
 Conversation starters:
 

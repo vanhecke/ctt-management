@@ -29,3 +29,11 @@ def test_filter_for_owner():
     inventory, findings = filter_for_owner(SWEEP, "alice@x.com", {"alice", "ali"})
     assert [i["name"] for i in inventory] == ["ali_Thing", "Loose"]
     assert [f["name"] for f in findings] == ["Loose"]
+
+
+def test_resolve_owner_by_sso_email():
+    rows = [
+        {"tag": "jdoe", "owner_email": "jdoe@paloaltonetworks.com"},
+        {"tag": "jdo", "owner_email": "jdoe@paloaltonetworks.com"},
+    ]
+    assert resolve_owner(rows, "jdoe@asean.ctt") == ("jdoe@paloaltonetworks.com", {"jdoe", "jdo"})

@@ -21,6 +21,8 @@ HYGIENE = (
     'dataset = issues\n| filter xdm.issue.name ~= "^CTT - Hygiene - "\n| dedup xdm.issue.id by desc _insert_time\n'
     '| alter guideline = arrayindex(regextract(xdm.issue.name, "(CTT-[A-Z]+-[0-9]+)"), 0)'
 )
+# CTT SSO accounts (<user>@asean.ctt) are <user>@paloaltonetworks.com in the registry.
+CANON_EMAIL = 'replex(lowercase(email), "@asean\\.ctt$", "@paloaltonetworks.com")'
 REGISTRY_BY_EMAIL = (
     '| join type = left (dataset = ctt_registry | filter owner_email != "" | comp count() as tags by owner_email '
     "| alter reg_email = owner_email | fields reg_email, tags) as r r.reg_email = actor_email"
@@ -43,8 +45,10 @@ ROWS = [
         ("Changes by person", "Successful create, edit, delete and install actions per person in the management audit log.", "column",
          "dataset = management_auditing\n| filter management_auditing_result = ENUM.MANAGEMENT_AUDIT_SUCCESS and email contains \"@\"\n"
          '| filter subtype ~= "^(Add|Upload|Copy|Create|New|Edit|Delete|Change|Update|Install)"\n'
-         "| comp count() as changes by user_name\n| sort desc changes\n| limit 15\n"
-         '| view graph type = column subtype = grouped header = "Changes by person" xaxis = user_name yaxis = changes', 7, 50),
+         # One bar per person: the email username is the same for the CTT SSO and the PANW account.
+         '| alter person = arrayindex(regextract(lowercase(email), "^([^@]+)@"), 0)\n'
+         "| comp count() as changes by person\n| sort desc changes\n| limit 15\n"
+         '| view graph type = column subtype = grouped header = "Changes by person" xaxis = person yaxis = changes', 7, 50),
     ],
     [
         ("Objects created without a tag prefix", "Objects created in the last 7 days whose name does not start with a tag.", "table",
@@ -67,8 +71,9 @@ ROWS = [
         ("Active users not in the registry", "People who signed in during the last 30 days but have no registry row.", "table",
          "dataset = management_auditing\n"
          '| filter management_auditing_type = ENUM.MANAGEMENT_AUDIT_AUTHENTICATION and subtype in ("Login", "SSO") and email contains "@"\n'
-         "| alter actor_email = lowercase(email)\n| comp count() as logins, max(_time) as last_login by actor_email, user_name\n"
-         f"{REGISTRY_BY_EMAIL}\n| filter reg_email = null\n| fields actor_email, user_name, logins, last_login\n| sort desc logins", 30, 50),
+         f"| alter actor_email = {CANON_EMAIL}\n"
+         "| comp count() as logins, max(_time) as last_login, values(user_name) as user_names by actor_email\n"
+         f"{REGISTRY_BY_EMAIL}\n| filter reg_email = null\n| fields actor_email, user_names, logins, last_login\n| sort desc logins", 30, 50),
     ],
     [
         ("CTT registry", "The registry synced from the Google Sheet: one row per tag.", "table",

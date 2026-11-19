@@ -34,7 +34,10 @@ outputs:
   description: The guideline's full text.
   type: String
 - contextPath: CTT.Triage.owner_email
-  description: The owner the issue is assigned to.
+  description: The owner's registry email (a CTT SSO sign-in, <user>@asean.ctt, maps to <user>@paloaltonetworks.com).
+  type: String
+- contextPath: CTT.Triage.assignee_email
+  description: The account to assign the issue to, owner_email when that user exists on the tenant, else the owner's CTT SSO account (<user>@asean.ctt) when that one exists.
   type: String
 - contextPath: CTT.Triage.owner_name
   description: Owner name from the registry.

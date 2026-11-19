@@ -1,4 +1,15 @@
-from CTTHygieneTriage import compose, decide, fallback_message, find_owner, owner_entry, owner_tags, rename_target, strip_marker
+from CTTHygieneTriage import (
+    canonical_email,
+    compose,
+    decide,
+    fallback_message,
+    find_owner,
+    owner_entry,
+    owner_tags,
+    pick_assignee,
+    rename_target,
+    strip_marker,
+)
 
 REGISTRY = [
     {"tag": "jva", "owner_email": "j@x.com", "owner_name": "Joris V", "slack_id": "U1", "role": "admin", "tag_kind": "extra"},
@@ -166,3 +177,22 @@ def test_compose_groups_inventory_items():
         "The inventory check found 3 item(s): Policy profile 'SF - Labs': prefix 'sf' is not a registered tag;"
         " Policy rules 'SF - Labs', 'SF - Test': prefix 'sf' is not a registered tag."
     )
+
+
+def test_sso_accounts_map_to_the_registry_email():
+    assert canonical_email(" JVanhecke@ASEAN.ctt ") == "jvanhecke@paloaltonetworks.com"
+    assert canonical_email("jvanhecke@paloaltonetworks.com") == "jvanhecke@paloaltonetworks.com"
+    assert canonical_email("someone@asean.ctt.example") == "someone@asean.ctt.example"
+    assert find_owner({"details": "x. [owner: jdoe@asean.ctt]"}) == "jdoe@paloaltonetworks.com"
+    assert find_owner({"CustomFields": {"actor_effective_username": "jdoe@asean.ctt"}}) == "jdoe@paloaltonetworks.com"
+
+
+def test_pick_assignee_prefers_the_panw_account():
+    owner = "jdoe@paloaltonetworks.com"
+    csp = {"user_email": owner, "last_logged_in": 100}
+    sso = {"user_email": "jdoe@asean.ctt", "last_logged_in": 200}
+    assert pick_assignee(owner, [csp, sso]) == owner
+    assert pick_assignee(owner, [sso]) == "jdoe@asean.ctt"
+    assert pick_assignee(owner, [csp]) == owner
+    assert pick_assignee(owner, []) == owner
+    assert pick_assignee("bob@x.com", [sso]) == "bob@x.com"

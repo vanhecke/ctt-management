@@ -12,7 +12,7 @@ xql_query: |
   dataset = management_auditing
   | filter management_auditing_type = ENUM.MANAGEMENT_AUDIT_AUTHENTICATION and subtype in ("Login", "SSO") and management_auditing_result = ENUM.MANAGEMENT_AUDIT_SUCCESS
   | filter email contains "@" and email !~= "@crtxtool\.invalid$"
-  | alter actor_email = lowercase(email), actor_name = lowercase(user_name)
+  | alter actor_email = replex(lowercase(email), "@asean\.ctt$", "@paloaltonetworks.com"), actor_name = lowercase(user_name)
   | comp count() as logins, max(_time) as last_login by actor_email, actor_name
   | join type = left (dataset = ctt_registry | filter owner_email != "" | alter is_adm = if(role = "admin", 1, 0) | comp max(is_adm) as reg_actor_admin by owner_email | alter reg_actor_email = owner_email | fields reg_actor_email, reg_actor_admin) as ra ra.reg_actor_email = actor_email
   | join type = left (dataset = ctt_registry | filter owner_email != "" | alter is_adm = if(role = "admin", 1, 0), reg_name_key = lowercase(owner_name) | comp max(is_adm) as reg_name_admin, max(owner_email) as reg_name_email by reg_name_key | fields reg_name_key, reg_name_admin, reg_name_email) as rn rn.reg_name_key = actor_name
@@ -37,6 +37,6 @@ suppression_enabled: true
 suppression_duration: 1 days
 suppression_fields:
 - actor_email
-investigation_query_link: dataset = management_auditing | filter email = "$actor_email" | sort desc _time
+investigation_query_link: dataset = management_auditing | filter replex(lowercase(email), "@asean\.ctt$", "@paloaltonetworks.com") = "$actor_email" | sort desc _time
 drilldown_query_timeframe: ALERT
 lookup_mapping: []

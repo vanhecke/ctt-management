@@ -65,8 +65,8 @@ FIX_POLICY_QUERY = (
     'pment", "Cortex Automation")\n'
     '| filter user_name = null or user_name !~= "^(Public API - [0-9]+|APIKeyUser_[0-9]+|XSIAM Automation'
     '|Cortex Automation)$"\n'
-    '| alter actor_email = if(email contains "@", lowercase(email), null), actor_name = lowercase(user_na'
-    "me)\n"
+    '| alter actor_email = if(email contains "@", replex(lowercase(email), "@asean\\.ctt$", "@paloaltonetw'
+    'orks.com"), null), actor_name = lowercase(user_name)\n'
     '| alter object_kind = coalesce(arrayindex(regextract(subtype, "^[A-Za-z ]+ - (.+)$"), 0), replex(to_'
     'string(management_auditing_type), "^(MANAGEMENT_AUDIT_|management_auditing_type_)", ""))\n'
     '| alter action = if(subtype ~= "^(Add|Upload|Copy|Create|New|Save as new|Import)" or subtype ~= "^(C'
@@ -200,6 +200,17 @@ FIX_ENDPOINT_QUERY = (
 # ---------- parsing ----------
 
 
+# CTT SSO accounts (<user>@asean.ctt) are the same people as <user>@paloaltonetworks.com, the email in
+# the CTT registry. Every email from the tenant goes through canonical_email before a registry lookup.
+SSO_DOMAIN, HOME_DOMAIN = "@asean.ctt", "@paloaltonetworks.com"
+
+
+def canonical_email(email) -> str:
+    """The registry email for a sign-in email: <user>@asean.ctt (CTT SSO) is <user>@paloaltonetworks.com."""
+    e = str(email or "").strip().lower()
+    return e[: -len(SSO_DOMAIN)] + HOME_DOMAIN if e.endswith(SSO_DOMAIN) else e
+
+
 def parse_issue(issue: dict) -> dict | None:
     """The fields a fix check needs, or None for issues it doesn't handle."""
     name, desc = str(issue.get("name") or ""), str(issue.get("description") or "")
@@ -207,9 +218,9 @@ def parse_issue(issue: dict) -> dict | None:
     if not m or desc.startswith(INVENTORY_MARKERS):
         return None
     obj, marker = OBJ_RE.search(desc), OWNER_RE.search(desc)
-    owner = (marker.group(1) if marker else "").strip().lower()
+    owner = canonical_email(marker.group(1) if marker else "")
     if owner in NO_OWNER:
-        owner = str(issue.get("assigned_user_mail") or "").lower()
+        owner = canonical_email(issue.get("assigned_user_mail"))
     endpoint, email = ENDPOINT_RE.match(desc), EMAIL_RE.match(desc)
     return {
         "id": str(issue.get("id")),
@@ -219,7 +230,7 @@ def parse_issue(issue: dict) -> dict | None:
         "name": obj.group("name") if obj else "",
         "owner": "" if owner in NO_OWNER else owner,
         "endpoint": endpoint.group("name") if endpoint else "",
-        "email": email.group("email").lower() if email else "",
+        "email": canonical_email(email.group("email")) if email else "",
         "created": int(issue.get("_insert_time") or 0),
         "cases": [str(c) for c in issue.get("case_ids") or []],
         "playbook": str(issue.get("playbook_run_status") or "").lower(),
@@ -764,7 +775,7 @@ def main():  # pragma: no cover
             else ("confirm" if argToBoolean(args.get("confirm") or "false") else "check")
         )
         ids = [i.strip() for i in str(args.get("issue_id") or "").split(",") if i.strip()]
-        owner_filter = str(args.get("owner") or "").strip().lower()
+        owner_filter = canonical_email(args.get("owner"))
         if (mode != "check" or watch) and not ids and not owner_filter:
             raise DemistoException("confirm, false_positive and watch need issue_id (or owner).")
         cfg = get_list_json(CONFIG_LIST, {})

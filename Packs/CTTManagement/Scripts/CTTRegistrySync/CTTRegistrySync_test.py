@@ -85,3 +85,14 @@ def test_tags_to_remove():
 def test_to_lookup_row_renames_tag():
     row = to_lookup_row({"tag": "alice", "owner_email": "a@x.com"})
     assert row == {"ctt_tag": "alice", "owner_email": "a@x.com"}
+
+
+def test_build_registry_stores_the_panw_email_for_an_sso_email():
+    users = [USERS[0], ["jdoe", "3", "JDoe@asean.ctt", "J Doe", "U3", "no", "yes"]]
+    extra = [EXTRA[0], ["jdo", "jdoe@paloaltonetworks.com", "J Doe", "jdoe"]]
+    records, errors = build_registry(rows_to_dicts(users), rows_to_dicts(extra), [])
+    assert errors == []
+    assert {r["tag"]: r["owner_email"] for r in records} == {
+        "jdoe": "jdoe@paloaltonetworks.com",
+        "jdo": "jdoe@paloaltonetworks.com",
+    }

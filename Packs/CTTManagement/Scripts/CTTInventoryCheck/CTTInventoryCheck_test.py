@@ -2,6 +2,7 @@ import CTTInventoryCheck
 from CTTInventoryCheck import (
     collect_objects,
     find_owner,
+    normalize_creator,
     owner_index,
     reported_names,
     check_object,
@@ -281,3 +282,8 @@ def test_policy_rule_scope_and_untagged_endpoints():
         }
     ]
     assert check_object({**endpoint, "creator": ""}, REGISTRY)[0]["owner"] == "unknown"
+
+
+def test_creator_sso_account_is_the_registry_email():
+    assert normalize_creator("JDoe@asean.ctt") == "jdoe@paloaltonetworks.com"
+    assert normalize_creator("dbot@demisto.com") == "unknown"

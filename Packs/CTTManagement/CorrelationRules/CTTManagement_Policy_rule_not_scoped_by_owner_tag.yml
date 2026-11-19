@@ -13,7 +13,7 @@ xql_query: |
   | filter management_auditing_result = ENUM.MANAGEMENT_AUDIT_SUCCESS
   | filter email != null and email != "" and email not in ("Palo Alto Networks", "N/A", "Xpanse Development", "Cortex Automation")
   | filter user_name = null or user_name !~= "^(Public API - [0-9]+|APIKeyUser_[0-9]+|XSIAM Automation|Cortex Automation)$"
-  | alter actor_email = if(email contains "@", lowercase(email), null), actor_name = lowercase(user_name)
+  | alter actor_email = if(email contains "@", replex(lowercase(email), "@asean\.ctt$", "@paloaltonetworks.com"), null), actor_name = lowercase(user_name)
   | alter object_kind = coalesce(arrayindex(regextract(subtype, "^[A-Za-z ]+ - (.+)$"), 0), replex(to_string(management_auditing_type), "^(MANAGEMENT_AUDIT_|management_auditing_type_)", ""))
   | alter action = if(subtype ~= "^(Add|Upload|Copy|Create|New|Save as new|Import)" or subtype ~= "^(Create|Upload lookup|Addition)", "create", if(subtype ~= "(Delete|Remove)", "delete", if(subtype ~= "(Edit|Change|Update|Modif|Adopt|Detach|Enable|Disable|Rename|Scope Edit)", "modify", "other")))
   | alter object_name = coalesce(
@@ -88,6 +88,6 @@ suppression_duration: 1 days
 suppression_fields:
 - actor
 - object_name
-investigation_query_link: dataset = management_auditing | filter email = "$actor_email" or lowercase(user_name) = "$actor" | sort desc _time
+investigation_query_link: dataset = management_auditing | filter replex(lowercase(email), "@asean\.ctt$", "@paloaltonetworks.com") = "$actor_email" or lowercase(user_name) = "$actor" | sort desc _time
 drilldown_query_timeframe: ALERT
 lookup_mapping: []

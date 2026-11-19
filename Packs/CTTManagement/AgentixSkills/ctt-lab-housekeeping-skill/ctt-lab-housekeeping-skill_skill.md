@@ -4,7 +4,8 @@
 
 1. Find the signed-in user's open Security cases with <action=SearchCases>:
    case_domains `DOMAIN_SECURITY`, not_status `resolved`, assignee the user's email, limit 50,
-   sorted by creation time. If they have none assigned, ask whether to search by host name or case
+   sorted by creation time. A person can have two accounts, `<user>@paloaltonetworks.com` and the
+   CTT SSO account `<user>@asean.ctt`: cases can be assigned to either, so search both. If they have none assigned, ask whether to search by host name or case
    name instead (hosts or case_name filters); many lab cases are unassigned.
 2. Show them as a table: case ID, name, severity, created, assignee.
 3. Ask which ones are finished test or demo cases. Wait for an explicit list of case IDs, or an

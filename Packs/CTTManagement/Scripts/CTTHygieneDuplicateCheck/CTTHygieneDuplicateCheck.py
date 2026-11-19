@@ -20,6 +20,17 @@ DAY_MS = 86_400_000
 PAGE = 100
 
 
+# CTT SSO accounts (<user>@asean.ctt) are the same people as <user>@paloaltonetworks.com, the email in
+# the CTT registry. Every email from the tenant goes through canonical_email before a registry lookup.
+SSO_DOMAIN, HOME_DOMAIN = "@asean.ctt", "@paloaltonetworks.com"
+
+
+def canonical_email(email) -> str:
+    """The registry email for a sign-in email: <user>@asean.ctt (CTT SSO) is <user>@paloaltonetworks.com."""
+    e = str(email or "").strip().lower()
+    return e[: -len(SSO_DOMAIN)] + HOME_DOMAIN if e.endswith(SSO_DOMAIN) else e
+
+
 def strip_marker(text: str) -> str:
     return OWNER_RE.sub("", text or "").strip()
 
@@ -37,7 +48,7 @@ def object_key(name: str, text: str) -> tuple[str, str]:
         return f"{gid}|endpoint|{endpoint.group('name').lower()}", f"endpoint {endpoint.group('name')}"
     email = EMAIL_RE.match(text)
     if email:
-        return f"{gid}|user|{email.group('email').lower()}", email.group("email").lower()
+        return f"{gid}|user|{canonical_email(email.group('email'))}", canonical_email(email.group("email"))
     obj = OBJ_RE.search(text)
     if obj:
         return f"{gid}|{obj.group('kind').lower()}|{obj.group('name')}", f"{obj.group('kind').lower()} '{obj.group('name')}'"

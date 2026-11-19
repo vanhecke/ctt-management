@@ -87,6 +87,34 @@ ENDPOINT_OWNER_QUERY = (
 # ---------- pure helpers (unit tested) ----------
 
 
+# CTT SSO accounts (<user>@asean.ctt) are the same people as <user>@paloaltonetworks.com, the email in
+# the CTT registry. Every email from the tenant goes through canonical_email before a registry lookup.
+SSO_DOMAIN, HOME_DOMAIN = "@asean.ctt", "@paloaltonetworks.com"
+
+
+def canonical_email(email) -> str:
+    """The registry email for a sign-in email: <user>@asean.ctt (CTT SSO) is <user>@paloaltonetworks.com."""
+    e = str(email or "").strip().lower()
+    return e[: -len(SSO_DOMAIN)] + HOME_DOMAIN if e.endswith(SSO_DOMAIN) else e
+
+
+def sso_account(email) -> str:
+    """The CTT SSO account (<user>@asean.ctt) of a registry email, or '' for other domains."""
+    e = canonical_email(email)
+    return e[: -len(HOME_DOMAIN)] + SSO_DOMAIN if e.endswith(HOME_DOMAIN) else ""
+
+
+def pick_assignee(owner: str, users: list[dict]) -> str:
+    """The owner's tenant account to assign to: the registry email (<user>@paloaltonetworks.com) when that
+    user exists on the tenant, else their CTT SSO account (<user>@asean.ctt) when that one exists, else the
+    registry email. users: rbac/get_users rows."""
+    emails = {str(u.get("user_email") or "").strip().lower() for u in users or []}
+    sso = sso_account(owner)
+    if owner not in emails and sso and sso in emails:
+        return sso
+    return owner
+
+
 def parse_tag(name: str) -> str | None:
     m = TAG_RE.match(name or "")
     return m.group(1).lower() if m else None
@@ -137,7 +165,7 @@ def pick_owner(
     most frequent owner wins."""
     candidates = [
         ("correlation rule tag", [tag_owner.get(parse_tag(n) or "", "") for n in rule_names]),
-        ("endpoint owner", [o.lower() for o in endpoint_owners if o]),
+        ("endpoint owner", [canonical_email(o) for o in endpoint_owners if o]),
         ("lab range", [octet_owner.get(o, "") for o in octets]),
     ]
     for source, owners in candidates:
@@ -319,6 +347,16 @@ def run_xql(query: str, timeout: int = 300) -> list[dict]:
         time.sleep(5)
 
 
+def tenant_users() -> list[dict]:
+    """The tenant's users with their last sign-in (rbac/get_users), or [] when the API can't be reached."""
+    try:
+        users = core_post("/public_api/v1/rbac/get_users", {"request_data": {}})
+    except Exception as e:
+        demisto.debug(f"rbac/get_users failed: {e}")
+        return []
+    return users if isinstance(users, list) else []
+
+
 def update_case(case_id: Any, data: dict) -> None:
     core_post(f"/public_api/v1/case/update/{case_id}", {"request_data": {"update_data": data}})
 
@@ -383,13 +421,14 @@ def main():  # pragma: no cover
                             ),
                         },
                     )
-                owner = str(c.get("assigned_user_mail") or "").lower()
+                owner = canonical_email(c.get("assigned_user_mail"))
                 if owner:
                     digest.setdefault(owner, {}).setdefault("close", []).append(c)
                 rows.append({"Case": cid, "Action": "closed", "Owner": owner or "-"})
             except Exception as e:
                 errors.append(f"close {cid}: {e}")
 
+        users = None  # the tenant's users, fetched for the first assignment
         for c in assigns:
             cid = str(c.get("case_id"))
             names = [
@@ -408,19 +447,22 @@ def main():  # pragma: no cover
                 rows.append({"Case": cid, "Action": "no owner found", "Owner": "-"})
                 continue
             try:
+                if users is None:
+                    users = tenant_users()
+                account = pick_assignee(owner, users)
                 if not dry_run:
-                    update_case(cid, {"assigned_user": owner})
-                entry["assigned"] = owner
+                    update_case(cid, {"assigned_user": account})
+                entry["assigned"] = account
                 c["assigned_user_mail"] = owner
                 digest.setdefault(owner, {}).setdefault("assign", []).append(c)
-                rows.append({"Case": cid, "Action": f"assigned ({source})", "Owner": owner})
+                rows.append({"Case": cid, "Action": f"assigned ({source})", "Owner": account})
             except Exception as e:
                 errors.append(f"assign {cid} to {owner}: {e}")
 
         assigned_now = {str(c.get("case_id")) for c in assigns if state.get(str(c.get("case_id")), {}).get("assigned")}
         for c in cases:
             cid = str(c.get("case_id"))
-            owner = str(c.get("assigned_user_mail") or "").lower()
+            owner = canonical_email(c.get("assigned_user_mail"))
             if "suggest" not in plans[cid] or not owner:
                 continue
             state.setdefault(cid, {})["suggested"] = now_ms

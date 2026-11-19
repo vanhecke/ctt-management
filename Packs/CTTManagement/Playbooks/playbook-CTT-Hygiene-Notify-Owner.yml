@@ -301,7 +301,7 @@ tasks:
       id: 7d52e7e1-0c27-5593-9320-e66ddbbb5c51
       version: -1
       name: Assign the issue to its owner
-      description: Sets the issue assignee to the owner's email.
+      description: 'Sets the issue assignee to the owner: their @paloaltonetworks.com account when it exists, else their CTT SSO account (@asean.ctt).'
       type: regular
       iscommand: true
       brand: Cortex Core - Platform
@@ -318,7 +318,7 @@ tasks:
       id:
         simple: ${CTT.Triage.issue_id}
       assigned_user_mail:
-        simple: ${CTT.Triage.owner_email}
+        simple: ${CTT.Triage.assignee_email}
     continueonerror: true
     nexttasks:
       '#none#':

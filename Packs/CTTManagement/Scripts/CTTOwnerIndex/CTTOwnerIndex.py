@@ -20,8 +20,8 @@ OWNER_QUERY = (
     'pment", "Cortex Automation")\n'
     '| filter user_name = null or user_name !~= "^(Public API - [0-9]+|APIKeyUser_[0-9]+|XSIAM Automation'
     '|Cortex Automation)$"\n'
-    '| alter actor_email = if(email contains "@", lowercase(email), null), actor_name = lowercase(user_na'
-    "me)\n"
+    '| alter actor_email = if(email contains "@", replex(lowercase(email), "@asean\\.ctt$", "@paloaltonetw'
+    'orks.com"), null), actor_name = lowercase(user_name)\n'
     '| alter object_kind = coalesce(arrayindex(regextract(subtype, "^[A-Za-z ]+ - (.+)$"), 0), replex(to_'
     'string(management_auditing_type), "^(MANAGEMENT_AUDIT_|management_auditing_type_)", ""))\n'
     '| alter action = if(subtype ~= "^(Add|Upload|Copy|Create|New|Save as new|Import)" or subtype ~= "^(C'

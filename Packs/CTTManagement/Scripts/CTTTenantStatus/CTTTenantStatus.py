@@ -50,14 +50,17 @@ QUERIES = {
             "dataset = management_auditing",
             'filter management_auditing_type = ENUM.MANAGEMENT_AUDIT_AUTHENTICATION and subtype in ("Login", "SSO")',
             'filter email contains "@"',
-            "comp count() as logins, count_distinct(email) as users",
+            # A CTT SSO account (<user>@asean.ctt) and <user>@paloaltonetworks.com are one person.
+            'alter person = arrayindex(regextract(lowercase(email), "^([^@]+)@"), 0)',
+            "comp count() as logins, count_distinct(person) as users",
         ],
         "changers": [
             "dataset = management_auditing",
             "filter management_auditing_result = ENUM.MANAGEMENT_AUDIT_SUCCESS",
             'filter email contains "@" and management_auditing_type != ENUM.MANAGEMENT_AUDIT_AUTHENTICATION',
             'filter subtype ~= "^(Add|Upload|Copy|Create|New|Edit|Delete|Change|Update|Install)"',
-            "comp count() as changes by user_name",
+            'alter person = arrayindex(regextract(lowercase(email), "^([^@]+)@"), 0)',
+            "comp count() as changes by person",
             "sort desc changes",
             "limit 5",
         ],
@@ -239,7 +242,7 @@ def build_canvas(r: dict, days: int, now: datetime, tenant_url: str = "") -> str
     owners = dict(sorted(owners.items(), key=lambda kv: -kv[1]))
     playbooks = top_rows(r["playbooks"], "runs", 50)
     logins = r["logins"][0] if r["logins"] else {}
-    builders = ", ".join(f"{c.get('user_name')} ({c.get('changes')})" for c in top_rows(r["changers"], "changes", 5)) or "none"
+    builders = ", ".join(f"{c.get('person')} ({c.get('changes')})" for c in top_rows(r["changers"], "changes", 5)) or "none"
     lines = [
         "CTT TENANT STATUS",
         f"Updated {now.strftime('%a %d %b %Y %H:%M')} SGT by the CTT Management pack",

@@ -16,6 +16,17 @@ TRUE_VALUES = {"yes", "y", "true", "1", "x"}
 # ---------- pure helpers (unit tested) ----------
 
 
+# CTT SSO accounts (<user>@asean.ctt) are the same people as <user>@paloaltonetworks.com, the email in
+# the CTT registry. Every email from the tenant goes through canonical_email before a registry lookup.
+SSO_DOMAIN, HOME_DOMAIN = "@asean.ctt", "@paloaltonetworks.com"
+
+
+def canonical_email(email) -> str:
+    """The registry email for a sign-in email: <user>@asean.ctt (CTT SSO) is <user>@paloaltonetworks.com."""
+    e = str(email or "").strip().lower()
+    return e[: -len(SSO_DOMAIN)] + HOME_DOMAIN if e.endswith(SSO_DOMAIN) else e
+
+
 def norm_header(value: Any) -> str:
     return re.sub(r"[^a-z0-9]+", "_", str(value or "").strip().lower()).strip("_")
 
@@ -61,7 +72,7 @@ def build_registry(
 
     for u in users:
         tag = u.get("tag", "").strip().lower()
-        email = u.get("owner_email", "").strip().lower()
+        email = canonical_email(u.get("owner_email", ""))
         if not TAG_RE.match(tag):
             errors.append(f"Invalid tag '{u.get('tag', '')}' (2-16 letters or digits)")
             continue
@@ -100,7 +111,7 @@ def build_registry(
     for e in extra:
         tag = e.get("tag", "").strip().lower()
         original = (e.get("original_tag") or "").strip().lower()
-        email = e.get("owner_email", "").strip().lower()
+        email = canonical_email(e.get("owner_email", ""))
         if not TAG_RE.match(tag):
             errors.append(f"Invalid extra tag '{e.get('tag', '')}'")
             continue

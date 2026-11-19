@@ -133,9 +133,9 @@ def notify_playbook() -> dict:
     t["2"] = base("2", "condition", "Can the issue be assigned to a person?", "", 1080)
     t["2"]["conditions"] = [{"label": "yes", "condition": is_true("assign")}]
     t["2"]["nexttasks"] = {"#default#": [WATCH["watch"]], "yes": ["3"]}
-    t["3"] = base("3", "regular", "Assign the issue to its owner", "Sets the issue assignee to the owner's email.", 1240, x=250,
+    t["3"] = base("3", "regular", "Assign the issue to its owner", "Sets the issue assignee to the owner: their @paloaltonetworks.com account when it exists, else their CTT SSO account (@asean.ctt).", 1240, x=250,
                   task_extra={"script": "Cortex Core - Platform|||core-update-issue", "iscommand": True, "brand": "Cortex Core - Platform"})
-    t["3"]["scriptarguments"] = {"id": arg("issue_id"), "assigned_user_mail": arg("owner_email")}
+    t["3"]["scriptarguments"] = {"id": arg("issue_id"), "assigned_user_mail": arg("assignee_email")}
     t["3"]["continueonerror"] = True
     t["3"]["nexttasks"] = {"#none#": ["4"]}
     t["4"] = base("4", "regular", "Set the issue to In Progress", "The issue now waits for the owner's fix.", 1400, x=250,
