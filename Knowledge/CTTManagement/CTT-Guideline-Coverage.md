@@ -88,7 +88,7 @@ What each fix check verifies:
 | CTT-GEN-01 | The person is in the CTT registry |
 | CTT-TAG-01, CTT-TAG-04 | No playbook, script, job, integration instance, correlation rule or dataset has that name any more (renamed or deleted). For CTT-TAG-01 a playbook, script or job also passes when its Tags field carries one of the owner's tags. Other object types, data collectors included: owner confirmation |
 | CTT-TAG-02 | The policy rule's latest scope targets one of the owner's tags, or it was deleted (audit log, 90 days) |
-| CTT-OOTB-01 | Playbooks and scripts: attached to their pack again, renamed with the owner's tag, or deleted. Other object types: owner confirmation |
+| CTT-OOTB-01 | Deletes: nothing is left to fix, so the issue closes by itself about an hour after it opens (after the owner's DM). Edits on playbooks and scripts: attached to their pack again, renamed with the owner's tag, or deleted. Edits on jobs, integration instances, datasets and policy profiles: nothing has that name any more (renamed or deleted), or a job's Tags field carries the owner's tag; policy rules: deleted (audit log). An undone edit can't be seen, so these also close on the owner's Mark as Fixed. Other object types (correlation rules, dashboards, layouts, endpoint groups): owner confirmation |
 | CTT-LAB-01 | The endpoint no longer breaks the rule (the rule's own query), or it no longer reports |
 
 The Tenant Status canvas shows closes by way, median time to fix per guideline, top fixers and the

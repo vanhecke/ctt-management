@@ -13,6 +13,11 @@ NAME_RE = re.compile(r"^CTT - Hygiene - (CTT-[A-Z]+-\d+) - ")
 # Same object pattern as CTTHygieneTriage: "<actor> created|saved|ran ... on <kind> '<name>'".
 OBJ_RE = re.compile(r"\b(?:created|saved|on) (?P<kind>[A-Za-z][\w ]*?) '(?P<name>[^']+)'")
 OWNER_RE = re.compile(r"\[owner: ([^\]]*)\]")
+# The audit subtype in a rule issue ("<actor> ran '<subtype>' on <kind> '<name>'"), classified as
+# the rules do: a create pattern first, then delete.
+RAN_RE = re.compile(r"\bran '(?P<subtype>[^']+)' on ")
+CREATE_RE = re.compile(r"^(Add|Upload|Copy|Create|New|Save as new|Import)")
+DELETE_RE = re.compile(r"(Delete|Remove)")
 ENDPOINT_RE = re.compile(r"^Endpoint (?P<name>.+?): ")
 EMAIL_RE = re.compile(r"^(?P<email>[^\s@]+@[^\s@]+) signed in")
 TAG_RE = re.compile(r"^\s*([A-Za-z0-9]{2,16})\s*[-_]")
@@ -36,6 +41,15 @@ LISTED_KINDS = {
     "Dataset": "Dataset",
 }
 BUILTIN_KINDS = {"Playbook": "Playbook", "Script": "Script", "Automation": "Script"}
+# OOTB-01 edits on these kinds are checked against a complete list of the tenant's objects (custom
+# and built-in), so a missing name means renamed or deleted. Correlation rules are not here: their
+# list leaves out the built-in rules.
+OOTB_LISTED_KINDS = {k: v for k, v in LISTED_KINDS.items() if v in ("Job", "Integration instance", "Dataset")} | {
+    "Policy profile": "Policy profile"
+}
+# A deleted object leaves nothing to fix: its OOTB-01 issue closes by itself once the owner has been
+# told. A little under the watch interval, so the watch's second check (an hour after the DM) closes it.
+NOTICE_MS = 50 * 60 * 1000
 NO_CHECK = {
     "CTT-OWN-01": "it records a change to someone else's object, which can't be undone automatically",
     "CTT-CEN-01": "it records a change in a centrally managed area",
@@ -223,6 +237,8 @@ def parse_issue(issue: dict) -> dict | None:
     if owner in NO_OWNER:
         owner = canonical_email(issue.get("assigned_user_mail"))
     endpoint, email = ENDPOINT_RE.match(desc), EMAIL_RE.match(desc)
+    ran = RAN_RE.search(desc)
+    subtype = ran.group("subtype") if ran else ""
     return {
         "id": str(issue.get("id")),
         "guideline": m.group(1),
@@ -232,10 +248,23 @@ def parse_issue(issue: dict) -> dict | None:
         "owner": "" if owner in NO_OWNER else owner,
         "endpoint": endpoint.group("name") if endpoint else "",
         "email": canonical_email(email.group("email")) if email else "",
+        "deleted": bool(subtype and DELETE_RE.search(subtype) and not CREATE_RE.match(subtype)),
         "created": int(issue.get("_insert_time") or 0),
         "cases": [str(c) for c in issue.get("case_ids") or []],
         "playbook": str(issue.get("playbook_run_status") or "").lower(),
     }
+
+
+def kind_label(kind: str) -> str:
+    """Audit-log kinds as words: ENDPOINT_GROUPS -> endpoint group, Integrations -> integration instance."""
+    raw = {
+        "Integrations": "Integration instance",
+        "Integration": "Integration instance",
+        "JobCenter": "Job",
+        "Automation": "Script",
+    }
+    label = (raw.get(kind) or kind).replace("_", " ").lower()
+    return label[:-1] if label.endswith("groups") else label
 
 
 def what(item: dict) -> str:
@@ -243,13 +272,16 @@ def what(item: dict) -> str:
     if item["endpoint"]:
         return f"endpoint {item['endpoint']}"
     if item["name"]:
-        return f"{item['kind'].lower()} '{item['name']}'"
+        return f"{kind_label(item['kind'])} '{item['name']}'"
     if item["email"]:
         return item["email"]
     return item["title"].split(" - ", 3)[-1]
 
 
-# ---------- checks: each returns (verdict, text), verdict fixed | open | unchecked ----------
+# ---------- checks: each returns (verdict, text), verdict fixed | open | pending | unchecked ----------
+# open: the check still sees the problem, so the owner's Mark as Fixed keeps the issue open.
+# pending: not fixed yet as far as the check can tell, but it can't see every fix, so the owner's
+# Mark as Fixed closes it; the watch keeps checking. unchecked: no automatic check.
 
 
 def registry_people(rows: list[dict]) -> dict[str, dict]:
@@ -314,6 +346,39 @@ def check_builtin(item: dict, found: dict | None, tags: set[str]) -> tuple[str, 
     return "open", f"{what(item)} is still untagged custom content"
 
 
+def check_deleted(item: dict, now_ms: int) -> tuple[str, str]:
+    """OOTB-01 delete: nothing is left to fix. Pending until the owner has been told (the DM goes out
+    right after the issue opens), then fixed."""
+    text = f"{what(item)} was deleted, so nothing is left to fix"
+    if item["created"] and now_ms - item["created"] < NOTICE_MS:
+        return "pending", f"{text}; the issue closes by itself within an hour"
+    return "fixed", f"{text} (the owner was told)"
+
+
+def check_untagged(
+    item: dict, names: set[str] | None, field_tags: dict[tuple[str, str], set[str]], tags: set[str]
+) -> tuple[str, str]:
+    """OOTB-01 edit on a kind the API lists completely: fixed once nothing has that name any more
+    (renamed or deleted) or its Tags field carries one of the owner's tags. An edit that was undone
+    can't be seen, so otherwise the owner's confirmation closes it."""
+    kind = OOTB_LISTED_KINDS[item["kind"]]
+    if names is None:
+        return "unchecked", f"the {kind.lower()}s could not be listed"
+    if item["name"] not in names:
+        return "fixed", f"{what(item)} no longer exists under that name (renamed or deleted)"
+    mine = field_tags.get((kind, item["name"]), set()) & tags
+    if mine:
+        return "fixed", f"{what(item)} carries your tag {', '.join(sorted(mine))} in its Tags field"
+    return "pending", f"{what(item)} still exists under that name; the check can't tell whether the change was undone"
+
+
+def check_untagged_policy(item: dict, row: dict | None) -> tuple[str, str]:
+    """OOTB-01 edit on a policy rule (no API lists them): fixed once the audit log shows it deleted."""
+    if row and row.get("action") == "delete":
+        return "fixed", f"{what(item)} was deleted"
+    return "pending", f"{what(item)} was not deleted since; the check can't tell whether the change was undone"
+
+
 def check_policy(item: dict, row: dict | None, tags: set[str]) -> tuple[str, str]:
     """TAG-02: the latest scope of the policy rule targets one of the owner's tags, or it was deleted."""
     if not row:
@@ -348,8 +413,16 @@ def check_item(item: dict, ctx: dict) -> tuple[str, str]:
         return check_registry(item, ctx["people"])
     if gid in ("CTT-TAG-01", "CTT-TAG-04") and kind in LISTED_KINDS and item["name"]:
         return check_listed(item, ctx["names"], ctx.get("field_tags"), ctx["tags"](item["owner"]))
+    if gid == "CTT-OOTB-01" and item.get("deleted") and item["name"]:
+        return check_deleted(item, ctx.get("now_ms") or int(time.time() * 1000))
     if gid == "CTT-OOTB-01" and kind in BUILTIN_KINDS and item["name"]:
         return check_builtin(item, ctx["builtin"].get((BUILTIN_KINDS[kind], item["name"])), ctx["tags"](item["owner"]))
+    if gid == "CTT-OOTB-01" and kind in OOTB_LISTED_KINDS and item["name"]:
+        return check_untagged(
+            item, ctx["names"].get(OOTB_LISTED_KINDS[kind]), ctx.get("field_tags") or {}, ctx["tags"](item["owner"])
+        )
+    if gid == "CTT-OOTB-01" and kind == "Policy rule" and item["name"]:
+        return check_untagged_policy(item, ctx["policies"].get(item["name"]))
     if gid == "CTT-TAG-02" and item["name"]:
         return check_policy(item, ctx["policies"].get(item["name"]), ctx["tags"](item["owner"]))
     if gid == "CTT-LAB-01" and item["endpoint"]:
@@ -385,7 +458,7 @@ def decide(item: dict, verdict: str, text: str, mode: str, now_ms: int) -> dict:
                 "reason": FIXED_REASON,
                 "note": f"Confirmed fixed by {owner} and verified: {text} ({sgt(now_ms)}).",
             }
-        if verdict == "unchecked":
+        if verdict in ("unchecked", "pending"):
             return {"action": "resolve", "reason": FIXED_REASON, "note": f"Confirmed fixed by {owner} on {sgt(now_ms)} ({text})."}
         return {
             "action": "keep",
@@ -576,6 +649,12 @@ def listed_names(
             )
             or []
         ],
+        "Policy profile": lambda: [
+            p.get("PROFILE_NAME")
+            for ptype in ("prevention", "extension")
+            for p in core_post("/public_api/v1/endpoints/get_profiles", {"request_data": {"type": ptype}}) or []
+            if isinstance(p, dict)
+        ],
         "Dataset": lambda: [
             d.get("Dataset Name")
             for d in core_post("/public_api/v1/xql/get_datasets", {"request_data": {}}) or []
@@ -734,6 +813,10 @@ def build_context(items: list[dict], registry: list[dict], errors: list[str]) ->
     ctx["tags"] = lambda owner: tag_cache.setdefault(owner, owner_tags(registry, owner))
     listed = {
         LISTED_KINDS[i["kind"]] for i in items if i["guideline"] in ("CTT-TAG-01", "CTT-TAG-04") and i["kind"] in LISTED_KINDS
+    } | {
+        OOTB_LISTED_KINDS[i["kind"]]
+        for i in items
+        if i["guideline"] == "CTT-OOTB-01" and not i.get("deleted") and i["kind"] in OOTB_LISTED_KINDS
     }
     if listed:
         ctx["names"] = listed_names(listed, errors, ctx["field_tags"])
@@ -744,7 +827,15 @@ def build_context(items: list[dict], registry: list[dict], errors: list[str]) ->
                 ctx["builtin"][key] = builtin_object(*key)
             except Exception as e:
                 errors.append(f"looking up {i['name']}: {e}")
-    policies = [i["name"] for i in items if i["guideline"] == "CTT-TAG-02" and i["name"]]
+    policies = [
+        i["name"]
+        for i in items
+        if i["name"]
+        and (
+            i["guideline"] == "CTT-TAG-02"
+            or (i["guideline"] == "CTT-OOTB-01" and i["kind"] == "Policy rule" and not i.get("deleted"))
+        )
+    ]
     if policies:
         try:
             rows = run_xql(FIX_POLICY_QUERY.replace('"__NAMES__"', quoted(policies)), days=90)
@@ -788,6 +879,7 @@ def main():  # pragma: no cover
         if args.get("guideline"):
             items = [i for i in items if i["guideline"] == str(args["guideline"]).upper()]
         ctx = build_context(items, registry, errors) if mode != "false_positive" else {}
+        ctx["now_ms"] = now_ms
         run_state: dict[str, Any] = {}
         results = []
         for item in items:
@@ -813,7 +905,8 @@ def main():  # pragma: no cover
                 )
             if plan["action"] == "resolve" and not resolve_now:
                 row.update(playbook_close(plan))
-            elif plan["action"] == "resolve" and mode == "check" and item["playbook"] in ACTIVE_PLAYBOOK:
+            elif plan["action"] == "resolve" and mode == "check" and item["playbook"] in ACTIVE_PLAYBOOK and not ids:
+                # The job leaves issues to their running playbook; a run for named issues decides them.
                 row["action"] = "left to its playbook"
             elif plan["action"] == "resolve" and not dry_run:
                 try:
@@ -852,7 +945,7 @@ def main():  # pragma: no cover
         if errors:
             md += "\n**Errors**\n" + "\n".join(f"- {e}" for e in errors)
         scheduled = None
-        if watch and results and results[0]["verdict"] == "open":
+        if watch and results and results[0]["verdict"] in ("open", "pending"):
             # Polling: run again in an hour until the check sees it fixed (or the issue closes).
             md += f"\nStill open; checking again in {WATCH_SECONDS // 60} minutes."
             scheduled = ScheduledCommand(

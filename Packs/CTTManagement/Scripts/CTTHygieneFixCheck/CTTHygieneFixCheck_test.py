@@ -3,10 +3,13 @@ from CTTHygieneFixCheck import (
     build_digest,
     case_close_note,
     check_builtin,
+    check_deleted,
     check_endpoint,
     check_item,
     check_listed,
     check_policy,
+    check_untagged,
+    check_untagged_policy,
     check_registry,
     decide,
     owner_tags,
@@ -96,6 +99,79 @@ def test_check_builtin(found, verdict):
 def test_check_builtin_custom_object_renamed_with_owner_tag():
     item = {"kind": "Playbook", "name": "JVA - my copy", "endpoint": "", "email": "", "title": ""}
     assert check_builtin(item, {"packID": ""}, {"jva"})[0] == "fixed"
+
+
+OOTB = "CTT - Hygiene - CTT-OOTB-01 - Built-in or untagged content changed"
+
+
+def ootb(subtype, kind, name, created=1_000):
+    return parse_issue(
+        issue(
+            OOTB,
+            f"juc@x.com ran '{subtype}' on {kind} '{name}' (object has no owner tag). Duplicate built-in content and "
+            "change the copy under your own tag (guideline CTT-OOTB-01). [owner: juc@x.com]",
+            _insert_time=created,
+        )
+    )
+
+
+@pytest.mark.parametrize(
+    "subtype, deleted",
+    [("Delete Group", True), ("Delete - Playbook", True), ("Remove", True), ("Edit - Playbook", False), ("Edit", False)],
+)
+def test_parse_issue_flags_deletes(subtype, deleted):
+    assert ootb(subtype, "ENDPOINT_GROUPS", "Workstation Group")["deleted"] is deleted
+
+
+def test_check_deleted_closes_once_the_owner_was_told():
+    item = ootb("Delete Group", "ENDPOINT_GROUPS", "Workstation Group", created=1_000)
+    assert check_deleted(item, 1_000 + 60_000) == (
+        "pending",
+        "endpoint group 'Workstation Group' was deleted, so nothing is left to fix; the issue closes by itself within an hour",
+    )
+    assert check_deleted(item, 1_000 + 3_600_000) == (
+        "fixed",
+        "endpoint group 'Workstation Group' was deleted, so nothing is left to fix (the owner was told)",
+    )
+    # check_item routes deletes of any kind there, playbooks included
+    pb = ootb("Delete - Playbook", "Playbook", "Test")
+    assert check_item(pb, {"now_ms": 1_000 + 3_600_000})[0] == "fixed"
+
+
+def test_check_untagged():
+    item = ootb("Edit - Integrations", "Integrations", "Cortex Core - Platform_default_instance")
+    names = {"Cortex Core - Platform_default_instance", "jva - mine"}
+    assert check_untagged(item, None, {}, {"juc"})[0] == "unchecked"
+    assert check_untagged(item, names, {}, {"juc"})[0] == "pending"
+    assert check_untagged(item, {"jva - mine"}, {}, {"juc"}) == (
+        "fixed",
+        "integration instance 'Cortex Core - Platform_default_instance' no longer exists under that name (renamed or deleted)",
+    )
+    job = ootb("Edit", "Job", "nightly")
+    assert check_untagged(job, {"nightly"}, {("Job", "nightly"): {"juc"}}, {"juc"})[0] == "fixed"
+
+
+def test_check_item_routes_ootb_edits():
+    ctx = {
+        "names": {"Policy profile": {"SF - Labs"}},
+        "field_tags": {},
+        "policies": {"SF - Labs": {"action": "delete"}},
+        "builtin": {},
+        "tags": lambda owner: {"juc"},
+    }
+    assert check_item(ootb("Edit", "Policy profile", "SF - Labs"), ctx)[0] == "pending"
+    assert check_item(ootb("Edit", "Policy rule", "SF - Labs"), ctx) == ("fixed", "policy rule 'SF - Labs' was deleted")
+    assert check_untagged_policy(ootb("Edit", "Policy rule", "x"), None)[0] == "pending"
+    # no complete list for correlation rules (built-in ones are left out): owner confirmation
+    assert check_item(ootb("Edit", "Correlation rule", "r"), ctx)[0] == "unchecked"
+
+
+def test_decide_pending_closes_on_confirmation_only():
+    item = ootb("Edit", "Policy profile", "SF - Labs")
+    assert decide(item, "pending", "x", "check", 0)["action"] == "none"
+    confirmed = decide(item, "pending", "policy profile 'SF - Labs' still exists under that name", "confirm", 0)
+    assert confirmed["action"] == "resolve"
+    assert confirmed["note"].startswith("Confirmed fixed by juc@x.com")
 
 
 def test_check_policy():

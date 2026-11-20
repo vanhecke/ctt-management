@@ -191,6 +191,22 @@ def compose(gid: str, title: str, details: str, tags: list[str], lab_octet: str)
             [f"Ask {owner} before changing their objects", "To make your own version, duplicate it under your tag"],
         )
     if gid in ("CTT-OOTB-01", "CTT-OOTB-02") and name:
+        ran = RAN_RE.search(details)
+        action = ran.group("action") if ran else ""
+        if (
+            gid == "CTT-OOTB-01"
+            and re.search(r"(Delete|Remove)", action)
+            and not re.match(r"(Add|Upload|Copy|Create|New|Save as new|Import)", action)
+        ):
+            # Same rule as CTTHygieneFixCheck: a delete leaves nothing to fix, the issue closes by itself.
+            return (
+                f'You deleted {kind} "{name}", which had no registered owner tag ({finding or "built-in or untagged"}).',
+                [
+                    "Nothing to undo: this issue closes by itself within an hour",
+                    "Built-in or marketplace content? Reinstall its pack to get it back",
+                    "Someone else's? Let them know",
+                ],
+            )
         return (
             f'You changed {kind} "{name}", which has no registered owner tag ({finding or "built-in or untagged"}).',
             ["Leave built-in and marketplace content as it is", f'Duplicate it and change the copy, named "{tag} - <name>"'],

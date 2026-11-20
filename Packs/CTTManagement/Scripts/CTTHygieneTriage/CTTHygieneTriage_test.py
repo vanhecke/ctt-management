@@ -103,6 +103,20 @@ def test_compose_owner_rule():
     assert fix[0] == "Ask j@x.com before changing their objects"
 
 
+def test_compose_ootb_delete_has_nothing_to_undo():
+    details = (
+        "juchua@x.com ran 'Delete Group' on ENDPOINT_GROUPS 'Workstation Group' (object has no owner tag). "
+        "Duplicate built-in content and change the copy under your own tag (guideline CTT-OOTB-01)."
+    )
+    found, fix = compose("CTT-OOTB-01", "Built-in or untagged content changed", details, ["juc"], "")
+    assert found == 'You deleted ENDPOINT_GROUPS "Workstation Group", which had no registered owner tag (built-in or untagged).'
+    assert fix[0] == "Nothing to undo: this issue closes by itself within an hour"
+    edit = details.replace("'Delete Group'", "'Edit Group'")
+    found, fix = compose("CTT-OOTB-01", "Built-in or untagged content changed", edit, ["juc"], "")
+    assert found.startswith('You changed ENDPOINT_GROUPS "Workstation Group"')
+    assert fix[0] == "Leave built-in and marketplace content as it is"
+
+
 def test_compose_sweep_and_lab():
     details = (
         "The inventory check found 2 item(s) for owner j@x.com that break guideline CTT-TAG-01.\n"
