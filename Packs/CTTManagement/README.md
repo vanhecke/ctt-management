@@ -84,7 +84,7 @@ on the tenant, else to the `@asean.ctt` account.
    `ctt_object_owners` lookups that the correlation rules join on (the owner index reads 365 days
    of audit log on its first run). The rules raise nothing until both exist.
 3. Enable the suggested `CTT - Hygiene - Notify Owner` rule under Automation Rules. The pack doesn't enable
-   it (no `is_auto_enabled`: that system flag is for autonomous SOC rules).
+   it (no `is_auto_enabled`: that system flag is for autonomous SOC rules). Pack upgrades keep it enabled.
 4. Run `!CTTInventoryCheck dry_run=true`, `!CTTCaseHousekeeping dry_run=true` and
    `!CTTHygieneFixCheck dry_run=true` once to preview what the first real runs will do.
 5. Run `!CTTEnsureJobs remove_obsolete=true` in the playground. Pack uploads to XSIAM 8.15 skip the Jobs folder, so
