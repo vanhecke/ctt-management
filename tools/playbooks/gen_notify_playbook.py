@@ -341,9 +341,10 @@ def trigger() -> dict:
         "description": "Runs the CTT - Hygiene - Notify Owner playbook on every CTT hygiene health issue.",
         "trigger_name": NAME,
         "fromVersion": "8.15.0",
-        # Without this the tenant installs the trigger only as a suggested automation rule that
-        # an admin has to accept; with it the rule is enabled on install.
-        "is_auto_enabled": True,
+        # The tenant installs this as a suggested automation rule; an admin enables it once in the UI.
+        # Never set is_auto_enabled: it is a system flag for autonomous SOC rules. In 1.2.0-1.4.0 it
+        # turned this rule into a system rule (not editable, its playbook runs affected), per
+        # support 2026-11-26.
         "alerts_filter": {
             "filter": {
                 "AND": [

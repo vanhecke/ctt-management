@@ -33,7 +33,7 @@ after a day and resolved as Security Testing after 7 days.
 | Job + playbook | CTT - Tenant Status | Daily 09:00 SGT: replaces the Tenant Status canvas and sets the CTT channel topic |
 | Job + playbooks | CTT - Marketplace Updates (+ sub-playbook CTT - Marketplace Release Analysis) | Mon-Thu 05:00 SGT: TypeSafe Jev reviews newer pack releases, approved updates are installed and verified, held or failed ones get a review case, and a summary goes to the CTT channel |
 | Playbooks | CTT - Hygiene - Notify Owner (+ sub-playbook CTT - Hygiene - Ask Owner) | Per CTT hygiene issue, in this order: close it as Duplicate Issue when the same problem is already open or was marked a false positive in the last 30 days; close it when the guideline's check already sees it fixed; otherwise assign it to its owner, set it In Progress, and run Ask Owner (Slack DM with Mark as Fixed / Mark as False Positive / View Issue, FOUND / RULE / FIX template or AI text with `notify.use_ai`; Mark as Fixed runs the fix check and, when it can't confirm the fix, Ask Owner runs again with what is still wrong, Mark as False Positive records a false positive) next to an hourly watch (scheduled command) that closes the issue once fixed. The owner gets a thank-you DM when their answer or the watch closes it. The playbook closes the issue in the last task of a branch |
-| Automation rule | CTT - Hygiene - Notify Owner | Runs the playbook on every Medium or higher health issue named `CTT - Hygiene - …`; enabled on install (`is_auto_enabled`) |
+| Automation rule | CTT - Hygiene - Notify Owner | Runs the playbook on every Medium or higher health issue named `CTT - Hygiene - …`; installs as a suggested rule: enable it once under Automation Rules |
 | Script | CTTRegistrySync, CTTOwnerIndex, CTTInventoryCheck, CTTCaseHousekeeping, CTTTenantStatus, CTTMarketplaceUpdates (JavaScript) | Backing scripts for the jobs |
 | Script | CTTSlackPost | Posts a message to the CTT Slack channel (used for the marketplace summary) |
 | Script | CTTHygieneDuplicateCheck, CTTHygieneTriage, CTTHygieneMessagePrompt (optional AI prompt), CTTHygieneAskLinks, CTTHygieneSendDM, CTTHygieneFixCheck | Backing scripts for notifying owners and closing fixed issues |
@@ -83,7 +83,8 @@ on the tenant, else to the `@asean.ctt` account.
 2. Run `!CTTRegistrySync` and `!CTTOwnerIndex` once. They create the `ctt_registry` and
    `ctt_object_owners` lookups that the correlation rules join on (the owner index reads 365 days
    of audit log on its first run). The rules raise nothing until both exist.
-3. Check under Automation Rules that `CTT - Hygiene - Notify Owner` is enabled.
+3. Enable the suggested `CTT - Hygiene - Notify Owner` rule under Automation Rules. The pack doesn't enable
+   it (no `is_auto_enabled`: that system flag is for autonomous SOC rules).
 4. Run `!CTTInventoryCheck dry_run=true`, `!CTTCaseHousekeeping dry_run=true` and
    `!CTTHygieneFixCheck dry_run=true` once to preview what the first real runs will do.
 5. Run `!CTTEnsureJobs remove_obsolete=true` in the playground. Pack uploads to XSIAM 8.15 skip the Jobs folder, so
@@ -112,6 +113,7 @@ JSON.
 - New `CTT - Hygiene - Reminders` job (daily): one digest per owner of their open hygiene issues.
 - Tenant Status: closes by way, median time to fix, top fixers, oldest open issue.
 - CTT Assistant: `CTTHygieneConfirmFixAction` ("I fixed issue 1234").
+- The Notify Owner automation rule is no longer enabled on install (`is_auto_enabled` removed): enable the suggested rule once.
 
 ### 1.3.0
 
