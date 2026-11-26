@@ -1,5 +1,5 @@
 {
-    "trigger_id": "e9e3124278f75292832cde07a52ec93f",
+    "trigger_id": "2d9e44c1b03255b3b4be17b49cc4d9b0",
     "playbook_id": "CTT - Hygiene - Notify Owner",
     "suggestion_reason": "Assign CTT hygiene issues to their owner and notify them on Slack",
     "description": "Runs the CTT - Hygiene - Notify Owner playbook on every CTT hygiene health issue.",

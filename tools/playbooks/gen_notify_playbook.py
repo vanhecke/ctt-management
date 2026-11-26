@@ -335,7 +335,9 @@ def add_round(t: dict, r: dict, y: int) -> None:
 
 def trigger() -> dict:
     return {
-        "trigger_id": uuid.uuid5(NS, "trigger").hex,
+        # "trigger-2": the old ID (uuid5 "trigger", e9e3124278f75292832cde07a52ec93f) still belongs to the system
+        # rule that is_auto_enabled created, and while it exists the tenant offers no suggestion for that ID.
+        "trigger_id": uuid.uuid5(NS, "trigger-2").hex,
         "playbook_id": NAME,
         "suggestion_reason": "Assign CTT hygiene issues to their owner and notify them on Slack",
         "description": "Runs the CTT - Hygiene - Notify Owner playbook on every CTT hygiene health issue.",

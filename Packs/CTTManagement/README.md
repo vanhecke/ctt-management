@@ -85,6 +85,8 @@ on the tenant, else to the `@asean.ctt` account.
    of audit log on its first run). The rules raise nothing until both exist.
 3. Enable the suggested `CTT - Hygiene - Notify Owner` rule under Automation Rules. The pack doesn't enable
    it (no `is_auto_enabled`: that system flag is for autonomous SOC rules). Pack upgrades keep it enabled.
+   Coming from 1.2.0-1.4.0's auto-enabled rule (Source: System, can't be edited or deleted)? Disable that one
+   when you adopt the new one, or Notify Owner runs twice per issue; support can delete the old one.
 4. Run `!CTTInventoryCheck dry_run=true`, `!CTTCaseHousekeeping dry_run=true` and
    `!CTTHygieneFixCheck dry_run=true` once to preview what the first real runs will do.
 5. Run `!CTTEnsureJobs remove_obsolete=true` in the playground. Pack uploads to XSIAM 8.15 skip the Jobs folder, so
